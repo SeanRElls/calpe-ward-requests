@@ -495,7 +495,6 @@
     let activeCell = null;       // { td, userId, date }
     const pendingEdits = {};     // in-memory only for now
 
-    let requestsCache = new Map(); 
 // key: `${user_id}_${date}` -> { id, user_id, date, value, important_rank }
 
     /* =========================================================
@@ -923,6 +922,7 @@ async function loadRota() {
   </script>
 </body>
 </html>
+
 
 
 

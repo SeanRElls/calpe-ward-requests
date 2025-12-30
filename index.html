@@ -354,6 +354,8 @@
     const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const STORAGE_KEY = "calpeward.loggedInUserId";
+
 
     /* =========================================================
        2) HELPERS (dates, formatting)
@@ -524,6 +526,8 @@
 
         // ✅ PIN correct: unlock this user (or admin unlocks all)
         currentUser = selectedUser;
+        localStorage.setItem(STORAGE_KEY, currentUser.id);
+
 
         closePinModal();
         applyUnlockState();
@@ -546,41 +550,56 @@
       loginBadge.textContent = `Logged in: ${currentUser.name}`;
       adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
     }
+/* =========================================================
+   7) DATA LOADING (users + dates)
+   ========================================================= */
+async function loadRota() {
+  // 1) Load users
+  const { data: users, error: userError } = await supabaseClient
+    .from("users")
+    .select("id, name, role_id, is_admin, roles(name)")
+    .order("name");
 
-    /* =========================================================
-       7) DATA LOADING (users + dates)
-       ========================================================= */
-    async function loadRota(){
-      const { data: users, error: userError } = await supabaseClient
-        .from("users")
-        .select("id, name, role_id, is_admin, roles(name)")
-        .order("name");
+  if (userError) {
+    console.error("Users load error:", userError);
+    alert("Failed to load users.");
+    return;
+  }
 
-      if(userError){
-        console.error("Users load error:", userError);
-        alert("Failed to load users.");
-        return;
-      }
+  // ✅ Restore login from localStorage (must happen after users load)
+  const savedId = localStorage.getItem(STORAGE_KEY);
+  if (savedId) {
+    const found = users.find(u => u.id === savedId);
+    if (found) currentUser = found;
+  }
 
-      const { data: dates, error: dateError } = await supabaseClient
-        .from("rota_dates")
-        .select("date, rota_weeks(open)")
-        .order("date");
+  // 2) Load dates
+  const { data: dates, error: dateError } = await supabaseClient
+    .from("rota_dates")
+    .select("date, rota_weeks(open)")
+    .order("date");
 
-      if(dateError){
-        console.error("Dates load error:", dateError);
-        alert("Failed to load dates.");
-        return;
-      }
+  if (dateError) {
+    console.error("Dates load error:", dateError);
+    alert("Failed to load dates.");
+    return;
+  }
 
-      const weeks = groupDatesIntoWeeks(dates);
-      render(users, weeks);
+  // 3) Render
+  const weeks = groupDatesIntoWeeks(dates);
+  render(users, weeks);
 
-      if(weeks.length){
-        document.getElementById("periodLabel").textContent =
-          `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length-1].weekEnd)} (Sun–Sat weeks)`;
-      }
-    }
+  // 4) Update period label
+  if (weeks.length) {
+    document.getElementById("periodLabel").textContent =
+      `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
+  }
+
+  // 5) Re-apply lock state + badges (important after restoring currentUser)
+  applyUnlockState();
+  updateBadges();
+}
+
 
     /* =========================================================
        8) RENDER (table header + grouped rows)
@@ -743,3 +762,4 @@
   </script>
 </body>
 </html>
+

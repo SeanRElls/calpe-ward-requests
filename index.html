@@ -1069,7 +1069,15 @@ function render(users, weeks){
     const th = document.createElement("th");
     th.className = "week-label " + (w.open ? "" : "closed");
     th.colSpan = 7;
-    th.textContent = `${fmt(w.weekStart)} – ${fmt(w.weekEnd)}`;
+    th.innerHTML = `
+  <span class="week-label">${fmt(w.weekStart)} – ${fmt(w.weekEnd)}</span>
+  <button
+    class="week-comment-btn"
+    type="button"
+    data-week-id="${w.days[0].rota_weeks.id ?? w.week_id}"
+    title="Week comment"
+  >💬</button>
+`;
     r1.appendChild(th);
 
     if(idx !== weeks.length - 1){
@@ -1253,76 +1261,6 @@ if (pe.shift === "O") {
       });
     }
 
-        /* =========================================================
-       11) MODAL COMMENTS
-       ========================================================= */ 
-    function openWeekCommentModal(){
-  weekCommentModal.style.display = "flex";
-  weekCommentModal.setAttribute("aria-hidden", "false");
-}
-
-function closeWeekCommentModal(){
-  weekCommentModal.style.display = "none";
-  weekCommentModal.setAttribute("aria-hidden", "true");
-  activeWeekIdForComment = null;
-  weekCommentInput.value = "";
-  weekCommentAdminList.innerHTML = "";
-  weekCommentAdminList.style.display = "none";
-}
-
-weekCommentCancel.addEventListener("click", closeWeekCommentModal);
-weekCommentModal.addEventListener("click", (e) => {
-  if (e.target === weekCommentModal) closeWeekCommentModal();
-});
-
-    document.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".week-comment-btn");
-  if (!btn) return;
-
-  const weekId = btn.dataset.weekId;
-  activeWeekIdForComment = weekId;
-
-  try {
-    const comments = await fetchWeekComments(weekId);
-
-    // Everyone: load own comment
-    const mine = comments.find(c => c.user_id === currentUserId);
-    weekCommentInput.value = mine?.comment || "";
-
-    // Admin: show everyone's comments for the week
-    if (isAdmin) {
-      weekCommentAdminList.style.display = "block";
-      weekCommentAdminList.innerHTML = comments.map(c => {
-        const name = (staffById?.get?.(c.user_id)?.name) || c.user_id;
-        const safe = (c.comment || "").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-        return `
-          <div style="padding:6px 4px; border-bottom:1px solid #eee;">
-            <div style="font-weight:700;">${name}</div>
-            <div style="white-space:pre-wrap;">${safe || "<em style='color:#777;'>No comment</em>"}</div>
-          </div>`;
-      }).join("");
-    }
-
-    openWeekCommentModal();
-  } catch (err) {
-    console.error(err);
-    alert("Could not load week comments. Check console.");
-  }
-});
-
-weekCommentSave.addEventListener("click", async () => {
-  if (!activeWeekIdForComment) return;
-
-  const comment = weekCommentInput.value || "";
-
-  try {
-    await upsertWeekComment(activeWeekIdForComment, currentUserId, comment);
-    toast("Week comment saved");
-    closeWeekCommentModal();
-  } catch (err) {
-    console.error(err);
-    alert("Save failed. Check console.");
-  }
 });
     /* =========================================================
        10) BOOT
@@ -1331,6 +1269,7 @@ weekCommentSave.addEventListener("click", async () => {
   </script>
 </body>
 </html>
+
 
 
 

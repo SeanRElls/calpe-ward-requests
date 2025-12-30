@@ -485,15 +485,18 @@
       ].filter(g => g.items.length > 0);
     }
 
-    /* =========================================================
-       3) STATE (who is logged in / what is unlocked)
-       ========================================================= */
-    let currentUser = null;      // user object when logged in (by PIN)
-    let selectedUser = null;     // user you clicked before PIN entry
+/* =========================================================
+   3) STATE (who is logged in / what is unlocked)
+   ========================================================= */
+let currentUser = null;      // user object when logged in (by PIN)
+let selectedUser = null;     // user you clicked before PIN entry
 
-    // Patch 2 (shift picker)
-    let activeCell = null;       // { td, userId, date }
-    const pendingEdits = {};     // in-memory only for now
+/* =========================================================
+   3b) STATE (editing + requests)
+   ========================================================= */
+let activeCell = null;           // { td, userId, date }
+const pendingEdits = {};         // key -> { userId, date, shift }
+const requestsCache = new Map(); // key -> { id, user_id, date, value, important_rank }
 
 // key: `${user_id}_${date}` -> { id, user_id, date, value, important_rank }
 
@@ -659,7 +662,7 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
     closeShiftModal();
   });
 });
-    const requestsCache = new Map();
+    
 /* =========================================================
    7) DATA LOADING (users + dates + requests)
    ========================================================= */
@@ -922,6 +925,7 @@ async function loadRota() {
   </script>
 </body>
 </html>
+
 
 
 

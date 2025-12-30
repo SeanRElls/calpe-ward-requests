@@ -808,16 +808,6 @@ async function upsertRequestCell(userId, date, value, importantRank){
   };
 
 
-  const { data, error } = await supabaseClient
-    .from("requests")
-    .upsert(payload, { onConflict: "user_id,date" })
-    .select("id, user_id, date, value, important_rank")
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
 // Delete a cell completely (optional, but nice for CLEAR)
 async function deleteRequestCell(userId, date){
   const { error } = await supabaseClient
@@ -1133,6 +1123,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

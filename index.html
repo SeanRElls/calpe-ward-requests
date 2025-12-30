@@ -515,10 +515,42 @@ function countUserRequestsThisWeek(userId, dateStr){
   return count;
 }
 
-    function nextOffPriority(currentRank){
-  if (currentRank === 1) return 2;
-  if (currentRank === 2) return null;
-  return 1;
+function nextOffPrioritySmart(currentRank, taken){
+  // cycle intent: null -> 1 -> 2 -> null
+  let desired = (currentRank === null) ? 1 : (currentRank === 1 ? 2 : null);
+
+  // If desired is 1 but already taken elsewhere, use 2 if available
+  if (desired === 1 && taken.has(1)) desired = taken.has(2) ? null : 2;
+
+  // If desired is 2 but already taken elsewhere, fall back to null
+  if (desired === 2 && taken.has(2)) desired = null;
+
+  return desired;
+}
+    
+function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
+  const ws = getWeekStartSundayIso(dateStr); // you already have this or equivalent
+  const taken = new Set();
+
+  // include saved rows
+  for (const [k, r] of requestsCache.entries()){
+    if (k === excludeKey) continue;
+    if (r.user_id !== userId) continue;
+    if (getWeekStartSundayIso(r.date) !== ws) continue;
+    if (r.value !== "O") continue;
+    if (r.important_rank === 1 || r.important_rank === 2) taken.add(r.important_rank);
+  }
+
+  // include pending edits (most recent)
+  for (const [k, pe] of Object.entries(pendingEdits)){
+    if (k === excludeKey) continue;
+    if (pe.userId !== userId) continue;
+    if (getWeekStartSundayIso(pe.date) !== ws) continue;
+    if (pe.shift !== "O") continue;
+    if (pe.important_rank === 1 || pe.important_rank === 2) taken.add(pe.important_rank);
+  }
+
+  return taken;
 }
 
 
@@ -689,10 +721,17 @@ const existing = requestsCache.get(key);
 let rankToSave = null;
 
 if (shift === "O") {
-  const currentRank = existing?.important_rank ?? null;
-  rankToSave = nextOffPriority(currentRank);
-}
+  const pe = pendingEdits[key];
+  const existing = requestsCache.get(key);
 
+  const currentRank =
+    (pe && pe.shift === "O") ? (pe.important_rank ?? null) :
+    (existing?.value === "O") ? (existing.important_rank ?? null) :
+    null;
+
+  const taken = getTakenOffRanksThisWeek(userId, date, key);
+  rankToSave = nextOffPrioritySmart(currentRank, taken);
+}
  
 
     /* -----------------------------
@@ -1136,6 +1175,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

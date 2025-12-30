@@ -25,82 +25,283 @@
       --na-band: #a8e6a1;
     }
 
-    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; color: var(--text); background: #f7f7f7; }
-    .wrap{ background: var(--sheet-bg); border: 1px solid var(--grid); border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 14px 14px 10px; overflow: auto; }
-    .titlebar{ display:flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 2px 2px 12px; }
-    h1{ font-size: 22px; margin: 0; font-weight: 750; letter-spacing: 0.2px; }
-    .subtitle{ font-size: 13px; color: var(--muted); }
-    .rightbits{ display:flex; gap: 10px; align-items: center; }
-    .badge{ font-size: 12px; padding: 4px 8px; border-radius: 999px; background:#eee; color:#222; }
-    .badge.admin{ background:#222; color:#fff; }
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 18px;
+      color: var(--text);
+      background: #f7f7f7;
+    }
 
-    table{ border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 12px; }
-    th, td{ border-right: 1px solid var(--grid-soft); border-bottom: 1px solid var(--grid-soft); text-align: center; vertical-align: middle; padding: 0; height: 24px; background: #fff; min-width: 34px; }
+    .wrap{
+      background: var(--sheet-bg);
+      border: 1px solid var(--grid);
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      padding: 14px 14px 10px;
+      overflow: auto;
+    }
+
+    .titlebar{
+      display:flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 2px 2px 12px;
+    }
+
+    h1{
+      font-size: 22px;
+      margin: 0;
+      font-weight: 750;
+      letter-spacing: 0.2px;
+    }
+
+    .subtitle{
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .rightbits{
+      display:flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .badge{
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background:#eee;
+      color:#222;
+      white-space: nowrap;
+    }
+
+    .badge.admin{
+      background:#222;
+      color:#fff;
+    }
+
+    table{
+      border-collapse: separate;
+      border-spacing: 0;
+      width: max-content;
+      min-width: 100%;
+      font-size: 12px;
+    }
+
+    th, td{
+      border-right: 1px solid var(--grid-soft);
+      border-bottom: 1px solid var(--grid-soft);
+      text-align: center;
+      vertical-align: middle;
+      padding: 0;
+      height: 24px;
+      background: #fff;
+      min-width: 34px;
+    }
 
     table tr:first-child th{ border-top: 1px solid var(--grid); }
     table tr th:first-child, table tr td:first-child{ border-left: 1px solid var(--grid); }
     table tr:last-child td{ border-bottom: 1px solid var(--grid); }
     table tr th{ border-bottom: 1px solid var(--grid); }
 
-    thead th{ position: sticky; top: 0; z-index: 5; background: var(--header); }
+    thead th{
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--header);
+    }
+
     .name-col{
-      position: sticky; left: 0; z-index: 6; background: #fff;
-      text-align: left; padding: 0 10px; min-width: 220px; font-weight: 650;
+      position: sticky;
+      left: 0;
+      z-index: 6;
+      background: #fff;
+      text-align: left;
+      padding: 0 10px;
+      min-width: 220px;
+      font-weight: 650;
       border-right: 2px solid var(--sep);
       cursor: pointer;
     }
-    thead .name-col{ background: var(--header); z-index: 10; font-weight: 750; cursor: default; }
 
-    th.week-label{ font-weight: 800; font-size: 12px; letter-spacing: 0.2px; color: #222; height: 28px; background: #ededed; }
-    th.day{ font-weight: 800; height: 22px; color: #222; }
-    th.date{ font-weight: 700; height: 22px; color: #222; }
+    thead .name-col{
+      background: var(--header);
+      z-index: 10;
+      font-weight: 750;
+      cursor: default;
+    }
 
-    .week-sep{ min-width: 14px; width: 14px; background: var(--sep-fill) !important; border-right: 2px solid var(--sep) !important; border-left: 0 !important; }
+    th.week-label{
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      color: #222;
+      height: 28px;
+      background: #ededed;
+    }
 
-    .closed{ background: var(--closed-fill) !important; color: #9b9b9b; }
-    .weekend{ background: var(--weekend-fill); }
+    th.day{
+      font-weight: 800;
+      height: 22px;
+      color: #222;
+    }
 
-    tr.section-row td{ height: 22px; font-weight: 850; text-align: left; padding: 0 10px; border-top: 2px solid #9a9a9a; border-bottom: 2px solid #9a9a9a; }
-    tr.section-row td span{ color: #1b1b1b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; }
+    th.date{
+      font-weight: 700;
+      height: 22px;
+      color: #222;
+    }
+
+    .week-sep{
+      min-width: 14px;
+      width: 14px;
+      background: var(--sep-fill) !important;
+      border-right: 2px solid var(--sep) !important;
+      border-left: 0 !important;
+    }
+
+    .closed{
+      background: var(--closed-fill) !important;
+      color: #9b9b9b;
+    }
+
+    .weekend{
+      background: var(--weekend-fill);
+    }
+
+    tr.section-row td{
+      height: 22px;
+      font-weight: 850;
+      text-align: left;
+      padding: 0 10px;
+      border-top: 2px solid #9a9a9a;
+      border-bottom: 2px solid #9a9a9a;
+    }
+
+    tr.section-row td span{
+      color: #1b1b1b;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
     td.section-cn { background: var(--cn-band) !important; }
     td.section-sn { background: var(--sn-band) !important; }
     td.section-na { background: var(--na-band) !important; }
 
-    td.cell{ font-size: 12px; color: #111; }
-    td.cell:hover{ background: #f6fbff; }
+    td.cell{
+      font-size: 12px;
+      color: #111;
+    }
 
-    /* Locked vs unlocked rows */
+    td.cell:hover{
+      background: #f6fbff;
+    }
+
     tr.locked td.cell{ opacity: 0.55; }
     tr.locked td.cell:hover{ background: #fff; }
     tr.unlocked td.cell{ opacity: 1; }
     tr.unlocked td.cell.editable{ outline: 2px solid rgba(0,0,0,0.08); cursor: text; }
 
-    /* Modal */
+    /* ===== PIN MODAL (mobile-safe) ===== */
     .modal-backdrop{
-      position: fixed; inset: 0; background: rgba(0,0,0,0.35);
-      display: none; align-items: center; justify-content: center; z-index: 1000;
-      padding: 16px;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 14px;
     }
+
     .modal{
-      width: 360px; max-width: 100%;
-      background: #fff; border-radius: 12px;
+      width: min(520px, 100%);
+      background: #fff;
+      border-radius: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
       padding: 14px;
     }
-    .modal h2{ margin: 0 0 8px 0; font-size: 16px; }
-    .modal p{ margin: 0 0 10px 0; font-size: 13px; color: #444; }
-    .row{ display:flex; gap: 8px; align-items: center; }
+
+    .modal h2{
+      margin: 0 0 8px 0;
+      font-size: 16px;
+    }
+
+    .modal p{
+      margin: 0 0 12px 0;
+      font-size: 13px;
+      color: #444;
+      line-height: 1.35;
+    }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      align-items: stretch;
+      flex-wrap: wrap;
+    }
+
     input.pin{
-      flex: 1; font-size: 16px; padding: 10px 10px;
-      border-radius: 10px; border: 1px solid #ccc;
-      letter-spacing: 6px; text-align: center;
+      flex: 1 1 220px;
+      font-size: 18px;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      letter-spacing: 10px;
+      text-align: center;
+      min-width: 220px;
     }
+
+    .btns{
+      display:flex;
+      gap: 10px;
+      flex: 1 1 200px;
+      justify-content: flex-end;
+      min-width: 200px;
+    }
+
     button{
-      font-size: 13px; padding: 10px 12px; border-radius: 10px;
-      border: 1px solid #ccc; background: #f7f7f7; cursor: pointer;
+      font-size: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background: #f7f7f7;
+      cursor: pointer;
+      flex: 1;
+      min-width: 110px;
     }
-    button.primary{ background:#111; border-color:#111; color:#fff; }
-    .err{ margin-top: 8px; font-size: 12px; color: #b00020; display:none; }
+
+    button.primary{
+      background:#111;
+      border-color:#111;
+      color:#fff;
+    }
+
+    button:disabled{
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .err{
+      margin-top: 10px;
+      font-size: 12px;
+      color: #b00020;
+      display:none;
+    }
+
+    @media (max-width: 480px){
+      body{ margin: 12px; }
+      .wrap{ padding: 12px; }
+      .titlebar{ flex-direction: column; align-items: flex-start; }
+      .rightbits{ justify-content: flex-start; }
+      input.pin{ flex: 1 1 100%; min-width: 0; }
+      .btns{ flex: 1 1 100%; min-width: 0; }
+      button{ min-width: 0; }
+    }
   </style>
 </head>
 
@@ -121,15 +322,19 @@
   </div>
 
   <!-- PIN Modal -->
-  <div class="modal-backdrop" id="pinModal">
-    <div class="modal">
+  <div class="modal-backdrop" id="pinModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
       <h2 id="pinTitle">Enter PIN</h2>
-      <p id="pinDesc">Enter your 4-digit PIN to unlock your row.</p>
+      <p id="pinDesc">Enter your 4-digit PIN to unlock editing.</p>
+
       <div class="row">
         <input class="pin" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••" />
-        <button id="pinCancel">Cancel</button>
-        <button class="primary" id="pinConfirm">Unlock</button>
+        <div class="btns">
+          <button id="pinCancel" type="button">Cancel</button>
+          <button class="primary" id="pinConfirm" type="button">Unlock</button>
+        </div>
       </div>
+
       <div class="err" id="pinErr">Wrong PIN.</div>
     </div>
   </div>
@@ -138,10 +343,6 @@
     // === CONFIG ===
     const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
-
-    // IMPORTANT: replace this with your Edge Function endpoint once created
-    // Example: https://tbclufdtyefexwwitfsz.supabase.co/functions/v1/verify-pin
-    const VERIFY_PIN_URL = SUPABASE_URL + "/functions/v1/verify-pin";
 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -212,6 +413,8 @@
     const pinErr = document.getElementById("pinErr");
     const pinTitle = document.getElementById("pinTitle");
     const pinDesc = document.getElementById("pinDesc");
+    const pinConfirmBtn = document.getElementById("pinConfirm");
+    const pinCancelBtn = document.getElementById("pinCancel");
 
     function openPinModal(user){
       selectedUser = user;
@@ -220,41 +423,57 @@
       pinErr.style.display = "none";
       pinInput.value = "";
       modal.style.display = "flex";
+      modal.setAttribute("aria-hidden", "false");
       setTimeout(() => pinInput.focus(), 50);
     }
+
     function closePinModal(){
       modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
       selectedUser = null;
+      pinConfirmBtn.disabled = false;
     }
 
-    document.getElementById("pinCancel").addEventListener("click", closePinModal);
+    pinCancelBtn.addEventListener("click", closePinModal);
     modal.addEventListener("click", (e) => { if(e.target === modal) closePinModal(); });
 
-    document.getElementById("pinConfirm").addEventListener("click", async () => {
+    // Press Enter to submit PIN
+    pinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        pinConfirmBtn.click();
+      }
+    });
+
+    pinConfirmBtn.addEventListener("click", async () => {
       const pin = pinInput.value.trim();
       if(!selectedUser) return;
+
       if(!/^\d{4}$/.test(pin)){
         pinErr.textContent = "PIN must be 4 digits.";
         pinErr.style.display = "block";
         return;
       }
 
+      pinConfirmBtn.disabled = true;
+      pinErr.style.display = "none";
+
       try{
-        const res = await fetch(VERIFY_PIN_URL, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ user_id: selectedUser.id, pin })
+        // ✅ Correct way: invoke Supabase Edge Function with proper headers
+        const { data, error } = await supabaseClient.functions.invoke("verify-pin", {
+          body: { user_id: selectedUser.id, pin }
         });
 
-        if(!res.ok){
+        if (error) {
+          console.error(error);
           pinErr.textContent = "Wrong PIN.";
           pinErr.style.display = "block";
+          pinConfirmBtn.disabled = false;
           return;
         }
 
-        const payload = await res.json();
-        sessionToken = payload.token;
-        currentUser = payload.user;
+        sessionToken = data.token;
+        currentUser = data.user;
 
         closePinModal();
         applyUnlockState();
@@ -267,6 +486,7 @@
         console.error(err);
         pinErr.textContent = "Login error. Try again.";
         pinErr.style.display = "block";
+        pinConfirmBtn.disabled = false;
       }
     });
 
@@ -431,7 +651,6 @@
         r.classList.toggle("unlocked", !!isUnlocked);
         r.classList.toggle("locked", !isUnlocked);
 
-        // mark editable cells
         r.querySelectorAll("td.cell").forEach(td => {
           td.classList.toggle("editable", !!isUnlocked);
         });

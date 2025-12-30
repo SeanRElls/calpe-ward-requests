@@ -738,7 +738,24 @@ let weekWindowStart = 0; // index into allWeeks
     const pinCancelBtn = document.getElementById("pinCancel");
     const loginBadge = document.getElementById("loginBadge");
     const adminBadge = document.getElementById("adminBadge");
+const periodSelect = document.getElementById("periodSelect");
+const periodNavLabel = document.getElementById("periodNavLabel");
 
+    /* =========================================================
+   6) PERIOD DROPDOWN HANDLER
+   ========================================================= */
+if (periodSelect) {
+  periodSelect.addEventListener("change", async () => {
+    activePeriodId = Number(periodSelect.value) || periodSelect.value;
+
+    const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
+    setPeriodLabel(selected);
+
+    await loadRota();
+  });
+}
+
+    
     // Shift modal refs
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
@@ -1456,6 +1473,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

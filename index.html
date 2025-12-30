@@ -762,8 +762,15 @@ const saved = await upsertRequestCell(
         JSON.stringify(err);
 
       // Revert UI to last saved state
-      const existing = requestsCache.get(key);
-      td.textContent = existing?.value || "";
+   const existing = requestsCache.get(key);
+
+if (existing?.value === "O") {
+  if (existing.important_rank === 1) td.textContent = "O¹";
+  else if (existing.important_rank === 2) td.textContent = "O²";
+  else td.textContent = "O";
+} else {
+  td.textContent = existing?.value || "";
+}
       delete pendingEdits[key];
 
       if ((msg || "").toLowerCase().includes("max 5")) {
@@ -800,15 +807,7 @@ async function upsertRequestCell(userId, date, value, importantRank){
     important_rank: importantRank ?? null
   };
 
-  const { data, error } = await supabaseClient
-    .from("requests")
-    .upsert(payload, { onConflict: "user_id,date" })
-    .select("id, user_id, date, value, important_rank")
-    .single();
 
-  if (error) throw error;
-  return data;
-}
   const { data, error } = await supabaseClient
     .from("requests")
     .upsert(payload, { onConflict: "user_id,date" })
@@ -1134,6 +1133,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

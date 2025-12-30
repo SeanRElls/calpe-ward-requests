@@ -4,8 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Calpe Ward Off Duty Requests</title>
+
+  <!-- Supabase JS (v2) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
+  <!-- =========================
+       STYLES
+       ========================= -->
   <style>
     :root{
       --grid: #d9d9d9;
@@ -201,6 +206,7 @@
       background: #f6fbff;
     }
 
+    /* Locked vs unlocked rows */
     tr.locked td.cell{ opacity: 0.55; }
     tr.locked td.cell:hover{ background: #fff; }
     tr.unlocked td.cell{ opacity: 1; }
@@ -321,7 +327,9 @@
     <table id="rota"></table>
   </div>
 
-  <!-- PIN Modal -->
+  <!-- =========================
+       PIN MODAL (login)
+       ========================= -->
   <div class="modal-backdrop" id="pinModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
       <h2 id="pinTitle">Enter PIN</h2>
@@ -340,12 +348,16 @@
   </div>
 
   <script>
-    // === CONFIG ===
+    /* =========================================================
+       1) CONFIG
+       ========================================================= */
     const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
-
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+    /* =========================================================
+       2) HELPERS (dates, formatting)
+       ========================================================= */
     const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
     const isoDate = (d) => d.toISOString().slice(0,10);
 
@@ -359,55 +371,73 @@
     function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 
     function groupDatesIntoWeeks(dates){
+      // dates: [{ date: 'YYYY-MM-DD', rota_weeks: { open: boolean } }, ...]
       const map = new Map();
       for(const item of dates){
         const d = new Date(item.date);
         const ws = startOfWeekSunday(d);
         const key = isoDate(ws);
+
         if(!map.has(key)){
           map.set(key, { weekStart: ws, days: [], open: (item.rota_weeks && item.rota_weeks.open) ?? true });
         }
         map.get(key).days.push(item);
       }
+
       const weeks = [];
       for(const w of map.values()){
         const dayLookup = new Map(w.days.map(x => [x.date, x]));
         const ordered = [];
+
         for(let i=0;i<7;i++){
           const dd = addDays(w.weekStart, i);
           const ds = isoDate(dd);
           const row = dayLookup.get(ds) || { date: ds, rota_weeks: { open: w.open } };
           ordered.push(row);
         }
-        weeks.push({ weekStart: w.weekStart, weekEnd: addDays(w.weekStart,6), open: w.open, days: ordered });
+
+        weeks.push({
+          weekStart: w.weekStart,
+          weekEnd: addDays(w.weekStart, 6),
+          open: w.open,
+          days: ordered
+        });
       }
+
       weeks.sort((a,b) => a.weekStart - b.weekStart);
       return weeks;
     }
 
     function groupUsers(users){
+      // buckets by role
       const buckets = { charge_nurse: [], staff_nurse: [], nursing_assistant: [] };
+
       for(const u of users){
-        const label = u.roles?.name || (
-          u.role_id === 1 ? "charge_nurse" :
-          u.role_id === 2 ? "staff_nurse" :
-          u.role_id === 3 ? "nursing_assistant" : "staff_nurse"
-        );
+        const label =
+          u.roles?.name ||
+          (u.role_id === 1 ? "charge_nurse" :
+           u.role_id === 2 ? "staff_nurse" :
+           u.role_id === 3 ? "nursing_assistant" : "staff_nurse");
+
         (buckets[label] || buckets.staff_nurse).push(u);
       }
+
       return [
-        { title: "Charge Nurses", className: "section-cn", items: buckets.charge_nurse },
-        { title: "Staff Nurses", className: "section-sn", items: buckets.staff_nurse },
+        { title: "Charge Nurses",      className: "section-cn", items: buckets.charge_nurse },
+        { title: "Staff Nurses",       className: "section-sn", items: buckets.staff_nurse },
         { title: "Nursing Assistants", className: "section-na", items: buckets.nursing_assistant }
       ].filter(g => g.items.length > 0);
     }
 
-    // === STATE ===
-    let currentUser = null;      // { id, name, is_admin, role_id }
-    let sessionToken = null;     // UUID token returned by verify-pin
-    let selectedUser = null;     // user object clicked in table
+    /* =========================================================
+       3) STATE (who is logged in / what is unlocked)
+       ========================================================= */
+    let currentUser = null;   // user object when logged in (by PIN)
+    let selectedUser = null;  // user you clicked before PIN entry
 
-    // === MODAL ===
+    /* =========================================================
+       4) DOM REFERENCES
+       ========================================================= */
     const modal = document.getElementById("pinModal");
     const pinInput = document.getElementById("pinInput");
     const pinErr = document.getElementById("pinErr");
@@ -415,15 +445,23 @@
     const pinDesc = document.getElementById("pinDesc");
     const pinConfirmBtn = document.getElementById("pinConfirm");
     const pinCancelBtn = document.getElementById("pinCancel");
+    const loginBadge = document.getElementById("loginBadge");
+    const adminBadge = document.getElementById("adminBadge");
 
+    /* =========================================================
+       5) PIN MODAL (open/close)
+       ========================================================= */
     function openPinModal(user){
       selectedUser = user;
+
       pinTitle.textContent = `PIN for ${user.name}`;
       pinDesc.textContent = "Enter your 4-digit PIN to unlock editing.";
       pinErr.style.display = "none";
       pinInput.value = "";
+
       modal.style.display = "flex";
       modal.setAttribute("aria-hidden", "false");
+
       setTimeout(() => pinInput.focus(), 50);
     }
 
@@ -445,6 +483,9 @@
       }
     });
 
+    /* =========================================================
+       6) AUTH (verify PIN via RPC)
+       ========================================================= */
     pinConfirmBtn.addEventListener("click", async () => {
       const pin = pinInput.value.trim();
       if(!selectedUser) return;
@@ -458,90 +499,79 @@
       pinConfirmBtn.disabled = true;
       pinErr.style.display = "none";
 
-    try {
-  // ✅ Verify PIN via Postgres RPC (NO Edge Function)
-  const { data: ok, error } = await supabaseClient.rpc("verify_user_pin", {
-    p_user_id: selectedUser.id,
-    p_pin: pin
-  });
+      try{
+        // ✅ Verify PIN via Postgres RPC
+        // Function signature expected: verify_user_pin(p_user_id uuid, p_pin text) returns boolean
+        const { data: ok, error } = await supabaseClient.rpc("verify_user_pin", {
+          p_user_id: selectedUser.id,
+          p_pin: pin
+        });
 
-  if (error) {
-    console.error(error);
-    pinErr.textContent = "Server error.";
-    pinErr.style.display = "block";
-    pinConfirmBtn.disabled = false;
-    return;
-  }
+        if(error){
+          console.error("RPC error:", error);
+          pinErr.textContent = "Server error (RPC).";
+          pinErr.style.display = "block";
+          pinConfirmBtn.disabled = false;
+          return;
+        }
 
-  if (ok !== true) {
-    pinErr.textContent = "Wrong PIN.";
-    pinErr.style.display = "block";
-    pinConfirmBtn.disabled = false;
-    return;
-  }
-
-  // ✅ PIN correct
-  currentUser = selectedUser;
-  sessionToken = "rpc"; // placeholder, not used yet
-
-  closePinModal();
-  applyUnlockState();
-
-  const badge = document.getElementById("loginBadge");
-  badge.textContent = `Logged in: ${currentUser.name}`;
-
-  const adminBadge = document.getElementById("adminBadge");
-  adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
-
-} catch (err) {
-  console.error(err);
-  pinErr.textContent = "Login error.";
-  pinErr.style.display = "block";
-  pinConfirmBtn.disabled = false;
-}
-
-
-        if (error) {
-          console.error(error);
+        if(ok !== true){
           pinErr.textContent = "Wrong PIN.";
           pinErr.style.display = "block";
           pinConfirmBtn.disabled = false;
           return;
         }
 
-        sessionToken = data.token;
-        currentUser = data.user;
+        // ✅ PIN correct: unlock this user (or admin unlocks all)
+        currentUser = selectedUser;
 
         closePinModal();
         applyUnlockState();
+        updateBadges();
 
-        const badge = document.getElementById("loginBadge");
-        badge.textContent = `Logged in: ${currentUser.name}`;
-        const adminBadge = document.getElementById("adminBadge");
-        adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
       }catch(err){
-        console.error(err);
+        console.error("Login exception:", err);
         pinErr.textContent = "Login error. Try again.";
         pinErr.style.display = "block";
         pinConfirmBtn.disabled = false;
       }
     });
 
-    // === TABLE RENDERING ===
+    function updateBadges(){
+      if(!currentUser){
+        loginBadge.textContent = "Not logged in";
+        adminBadge.style.display = "none";
+        return;
+      }
+      loginBadge.textContent = `Logged in: ${currentUser.name}`;
+      adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
+    }
+
+    /* =========================================================
+       7) DATA LOADING (users + dates)
+       ========================================================= */
     async function loadRota(){
       const { data: users, error: userError } = await supabaseClient
         .from("users")
         .select("id, name, role_id, is_admin, roles(name)")
         .order("name");
 
-      if(userError){ console.error(userError); alert("Failed to load users"); return; }
+      if(userError){
+        console.error("Users load error:", userError);
+        alert("Failed to load users.");
+        return;
+      }
 
       const { data: dates, error: dateError } = await supabaseClient
         .from("rota_dates")
-        .select(`date, rota_weeks(open)`)
+        .select("date, rota_weeks(open)")
         .order("date");
 
-      if(dateError){ console.error(dateError); alert("Failed to load dates"); return; }
+      if(dateError){
+        console.error("Dates load error:", dateError);
+        alert("Failed to load dates.");
+        return;
+      }
 
       const weeks = groupDatesIntoWeeks(dates);
       render(users, weeks);
@@ -552,6 +582,9 @@
       }
     }
 
+    /* =========================================================
+       8) RENDER (table header + grouped rows)
+       ========================================================= */
     function render(users, weeks){
       const table = document.getElementById("rota");
       table.innerHTML = "";
@@ -561,7 +594,7 @@
       table.appendChild(thead);
       table.appendChild(tbody);
 
-      // header row 1: week labels
+      // ----- Header row 1: week labels
       const r1 = document.createElement("tr");
       const hName = document.createElement("th");
       hName.className = "name-col";
@@ -583,7 +616,7 @@
       });
       thead.appendChild(r1);
 
-      // header row 2: day letters
+      // ----- Header row 2: day letters
       const r2 = document.createElement("tr");
       const blank2 = document.createElement("th");
       blank2.className = "name-col";
@@ -606,7 +639,7 @@
       });
       thead.appendChild(r2);
 
-      // header row 3: date numbers
+      // ----- Header row 3: date numbers
       const r3 = document.createElement("tr");
       const blank3 = document.createElement("th");
       blank3.className = "name-col";
@@ -630,9 +663,11 @@
       });
       thead.appendChild(r3);
 
-      // body
+      // ----- Body grouped by role
       const groups = groupUsers(users);
+
       for(const g of groups){
+        // section header row
         const sectionTr = document.createElement("tr");
         sectionTr.className = "section-row";
 
@@ -643,6 +678,7 @@
         sectionTr.appendChild(sectionTd);
         tbody.appendChild(sectionTr);
 
+        // user rows
         for(const u of g.items){
           const tr = document.createElement("tr");
           tr.dataset.userId = u.id;
@@ -660,7 +696,7 @@
               td.className = "cell" + (w.open ? "" : " closed") + (isWeekend ? " weekend" : "");
               td.dataset.userId = u.id;
               td.dataset.date = w.days[i].date;
-              td.textContent = "";
+              td.textContent = ""; // later: fill from requests table
               tr.appendChild(td);
             }
             if(idx !== weeks.length - 1){
@@ -675,15 +711,21 @@
       }
 
       applyUnlockState();
+      updateBadges();
     }
 
+    /* =========================================================
+       9) UNLOCK LOGIC (who can edit which row)
+       ========================================================= */
     function applyUnlockState(){
       const rows = document.querySelectorAll("#rota tbody tr");
+
       rows.forEach(r => {
         if(r.classList.contains("section-row")) return;
 
         const userId = r.dataset.userId;
-        const isUnlocked = currentUser && (currentUser.is_admin || currentUser.id === userId);
+        const isUnlocked =
+          currentUser && (currentUser.is_admin || currentUser.id === userId);
 
         r.classList.toggle("unlocked", !!isUnlocked);
         r.classList.toggle("locked", !isUnlocked);
@@ -694,8 +736,10 @@
       });
     }
 
+    /* =========================================================
+       10) BOOT
+       ========================================================= */
     loadRota();
   </script>
 </body>
 </html>
-

@@ -1075,7 +1075,7 @@ function render(users, weeks){
   <button
     class="week-comment-btn"
     type="button"
-    data-week-id="${w.week_id || w.days?.[0]?.rota_weeks?.id || ""}"
+    data-week-id="${w.days[0]?.rota_weeks?.id || ""}"
 
     title="Week comment"
   >💬</button>
@@ -1194,13 +1194,12 @@ if (pe.shift === "O") {
 } else {
   const r = requestsCache.get(key);
 
-  if (r?.value === "O") {
-    if (r.important_rank === 1) td.textContent = "O¹";
-    else if (r.important_rank === 2) td.textContent = "O²";
-    else td.textContent = "O";
-  } else {
-    td.textContent = r?.value || "";
-  }
+if (r?.value === "O") {
+  if (r.important_rank === 1) td.textContent = "O¹";
+  else if (r.important_rank === 2) td.textContent = "O²";
+  else if (r.important_rank === 3) td.textContent = "O³";
+  else td.textContent = "O";
+}
 }
           
 
@@ -1271,6 +1270,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

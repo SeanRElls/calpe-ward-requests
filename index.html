@@ -389,17 +389,6 @@
       <h2 id="shiftTitle">Select shift</h2>
       <p id="shiftDesc">Choose a request for this day.</p>
 
-    <!-- OFF priority (only shown for O) -->
-<div id="offPriorityRow" class="row" style="margin:10px 0 6px; display:none;">
-  <button id="prio1" type="button">1st OFF</button>
-  <button id="prio2" type="button">2nd OFF</button>
-  <button id="prioNone" type="button">No priority</button>
-</div>
-
-<p class="subtitle" id="prioHint" style="margin:0 0 6px; display:none;">
-  Choose priority for OFF (max 2 per week)
-</p>
-
 
       <div class="shift-grid">
         <button class="shift-btn" data-shift="LD" type="button">LD</button>
@@ -565,31 +554,9 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
 
-    // OFF priority state
-let activePriorityRank = null;
 
-// OFF priority DOM refs
-const offPriorityRow = document.getElementById("offPriorityRow");
-const prio1Btn = document.getElementById("prio1");
-const prio2Btn = document.getElementById("prio2");
-const prioNoneBtn = document.getElementById("prioNone");
-const prioHint = document.getElementById("prioHint");
 
-    function setOffPriority(rank){
-  activePriorityRank = rank;
 
-  [prio1Btn, prio2Btn, prioNoneBtn].forEach(b =>
-    b.classList.remove("primary")
-  );
-
-  if (rank === 1) prio1Btn.classList.add("primary");
-  else if (rank === 2) prio2Btn.classList.add("primary");
-  else prioNoneBtn.classList.add("primary");
-}
-
-prio1Btn.addEventListener("click", () => setOffPriority(1));
-prio2Btn.addEventListener("click", () => setOffPriority(2));
-prioNoneBtn.addEventListener("click", () => setOffPriority(null));
 
     /* =========================================================
        5) PIN MODAL (open/close)
@@ -692,21 +659,6 @@ prioNoneBtn.addEventListener("click", () => setOffPriority(null));
 
 function openShiftModal(){
   if (!activeCell) return;
-
-  const key = `${activeCell.userId}_${activeCell.date}`;
-  const existing = requestsCache.get(key);
-
-  // Preload OFF priority if editing an OFF
-  if (existing?.value === "O") {
-    offPriorityRow.style.display = "flex";
-    prioHint.style.display = "block";
-    setOffPriority(existing.important_rank ?? null);
-  } else {
-    offPriorityRow.style.display = "none";
-    prioHint.style.display = "none";
-    activePriorityRank = null;
-  }
-
   shiftModal.style.display = "flex";
   shiftModal.setAttribute("aria-hidden", "false");
 }
@@ -715,11 +667,6 @@ function closeShiftModal(){
   shiftModal.style.display = "none";
   shiftModal.setAttribute("aria-hidden", "true");
   activeCell = null;
-
-  // Reset OFF priority state
-  activePriorityRank = null;
-  offPriorityRow.style.display = "none";
-  prioHint.style.display = "none";
 }
 
 shiftCancelBtn.addEventListener("click", closeShiftModal);
@@ -746,7 +693,7 @@ if (shift === "O") {
   rankToSave = nextOffPriority(currentRank);
 }
 
-    const key = `${userId}_${date}`;
+ 
 
     /* -----------------------------
        STEP 1: Max 5 per week guard
@@ -762,20 +709,6 @@ if (shift === "O") {
       }
     }
 
-    /* -----------------------------
-       STEP 2: OFF priority handling
-       ----------------------------- */
-    if (shift === "O") {
-      offPriorityRow.style.display = "flex";
-      prioHint.style.display = "block";
-
-      const existing = requestsCache.get(key);
-      setOffPriority(existing?.important_rank ?? null);
-    } else {
-      offPriorityRow.style.display = "none";
-      prioHint.style.display = "none";
-      activePriorityRank = null;
-    }
 
     /* -----------------------------
        Optimistic UI update
@@ -806,9 +739,9 @@ if (shift === "O") {
         delete pendingEdits[key];
         toast(`Cleared + saved (${key})`);
       } else {
-        const rankToSave = (shift === "O") ? activePriorityRank : null;
 
-  const saved = await upsertRequestCell(
+
+const saved = await upsertRequestCell(
   userId,
   date,
   shift,
@@ -859,15 +792,23 @@ function toast(msg){
 }
 
 // Upsert a single cell to Supabase
-async function upsertRequestCell(userId, date, value){
-  // If you have a UNIQUE constraint on (user_id, date), this is perfect.
+async function upsertRequestCell(userId, date, value, importantRank){
   const payload = {
     user_id: userId,
     date: date,
-    value: value === "" ? null : value,  // blank -> null
-    important_rank: null
+    value: value === "" ? null : value,
+    important_rank: importantRank ?? null
   };
 
+  const { data, error } = await supabaseClient
+    .from("requests")
+    .upsert(payload, { onConflict: "user_id,date" })
+    .select("id, user_id, date, value, important_rank")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
   const { data, error } = await supabaseClient
     .from("requests")
     .upsert(payload, { onConflict: "user_id,date" })
@@ -1103,18 +1044,29 @@ function render(users, weeks){
           const key = `${u.id}_${dateStr}`;
 
           // Pending edits override everything visually
-          if (pendingEdits[key]) {
-            td.textContent = pendingEdits[key].shift || "";
-          } else {
-            const r = requestsCache.get(key);
-          if (r?.value === "O") {
-  if (r.important_rank === 1) td.textContent = "O¹";
-  else if (r.important_rank === 2) td.textContent = "O²";
-  else td.textContent = "O";
+if (pendingEdits[key]) {
+  const pe = pendingEdits[key];
+
+  if (pe.shift === "O") {
+    if (pe.important_rank === 1) td.textContent = "O¹";
+    else if (pe.important_rank === 2) td.textContent = "O²";
+    else td.textContent = "O";
+  } else {
+    td.textContent = pe.shift || "";
+  }
+
 } else {
-  td.textContent = r?.value || "";
+  const r = requestsCache.get(key);
+
+  if (r?.value === "O") {
+    if (r.important_rank === 1) td.textContent = "O¹";
+    else if (r.important_rank === 2) td.textContent = "O²";
+    else td.textContent = "O";
+  } else {
+    td.textContent = r?.value || "";
+  }
 }
-          }
+          
 
           tr.appendChild(td);
         }
@@ -1182,6 +1134,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

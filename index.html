@@ -563,27 +563,6 @@ function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
   return taken;
 }
 
-  // include saved rows
-  for (const [k, r] of requestsCache.entries()){
-    if (k === excludeKey) continue;
-    if (r.user_id !== userId) continue;
- if (getWeekStart(r.date) !== ws) continue;
-    if (r.value !== "O") continue;
-    if (r.important_rank === 1 || r.important_rank === 2) taken.add(r.important_rank);
-  }
-
-  // include pending edits (most recent)
-  for (const [k, pe] of Object.entries(pendingEdits)){
-    if (k === excludeKey) continue;
-    if (pe.userId !== userId) continue;
-if (getWeekStart(pe.date) !== ws) continue;
-    if (pe.shift !== "O") continue;
-    if (pe.important_rank === 1 || pe.important_rank === 2) taken.add(pe.important_rank);
-  }
-
-  return taken;
-}
-
 
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
@@ -1207,6 +1186,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

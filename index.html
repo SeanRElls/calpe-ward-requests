@@ -146,9 +146,9 @@
   font-weight: 650;
   border-right: 2px solid var(--sep);
 
-  width: 120px;
-  min-width: 120px;
-  max-width: 120px;
+   width: clamp(110px, 28vw, 170px);
+  min-width: clamp(110px, 28vw, 170px);
+  max-width: clamp(110px, 28vw, 170px);
 
   box-sizing: border-box;
   white-space: nowrap;
@@ -1414,6 +1414,7 @@ function render(users, weeks){
       const nameTd = document.createElement("td");
       nameTd.className = "name-col";
       nameTd.textContent = u.name;
+      nameTd.title = u.name;
       nameTd.addEventListener("click", () => openPinModal(u));
       tr.appendChild(nameTd);
 
@@ -1525,6 +1526,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

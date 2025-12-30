@@ -140,6 +140,22 @@
       cursor: default;
     }
 
+    .week-comment-btn {
+  margin-left: 6px;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+.week-comment-btn.has-comment {
+  border-color: #111;
+  font-weight: 700;
+}
+.week-label { font-weight: 600; }
+
+    
     th.week-label{
       font-weight: 800;
       font-size: 12px;
@@ -404,6 +420,27 @@
       </div>
     </div>
   </div>
+ <!-- =========================
+      COMMENTS 
+       ========================= -->
+  
+  <div class="modal-backdrop" id="weekCommentModal" aria-hidden="true" style="display:none;">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="weekCommentTitle">
+    <h2 id="weekCommentTitle">Week comments</h2>
+
+    <div id="weekCommentAdminList"
+         style="display:none; max-height:260px; overflow:auto; border:1px solid #ddd; border-radius:8px; padding:8px; margin-bottom:10px;">
+    </div>
+
+    <label style="display:block; font-weight:600; margin:8px 0 6px;">Your comment</label>
+    <textarea id="weekCommentInput" rows="4" style="width:100%;"></textarea>
+
+    <div class="btns" style="margin-top:10px;">
+      <button id="weekCommentCancel" type="button">Close</button>
+      <button id="weekCommentSave" class="primary" type="button">Save</button>
+    </div>
+  </div>
+</div>
 
 
   <script>
@@ -563,6 +600,32 @@ function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
   return taken;
 }
 
+async function fetchWeekComments(weekId){
+  const { data, error } = await supabaseClient
+    .from("week_comments")
+    .select("user_id, comment, updated_at")
+    .eq("week_id", weekId);
+
+  if (error) throw error;
+  return data || [];
+}
+
+async function upsertWeekComment(weekId, userId, comment){
+  const payload = {
+    week_id: weekId,
+    user_id: userId,
+    comment: comment ?? ""
+  };
+
+  const { data, error } = await supabaseClient
+    .from("week_comments")
+    .upsert(payload, { onConflict: "week_id,user_id" })
+    .select("week_id, user_id, comment, updated_at")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
 
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
@@ -595,6 +658,15 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
     // Shift modal refs
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
+    
+// Week comment modal refs
+const weekCommentModal = document.getElementById("weekCommentModal");
+const weekCommentCancel = document.getElementById("weekCommentCancel");
+const weekCommentSave = document.getElementById("weekCommentSave");
+const weekCommentInput = document.getElementById("weekCommentInput");
+const weekCommentAdminList = document.getElementById("weekCommentAdminList");
+
+let activeWeekIdForComment = null;
 
 
 
@@ -1181,6 +1253,77 @@ if (pe.shift === "O") {
       });
     }
 
+        /* =========================================================
+       11) MODAL COMMENTS
+       ========================================================= */ 
+    function openWeekCommentModal(){
+  weekCommentModal.style.display = "flex";
+  weekCommentModal.setAttribute("aria-hidden", "false");
+}
+
+function closeWeekCommentModal(){
+  weekCommentModal.style.display = "none";
+  weekCommentModal.setAttribute("aria-hidden", "true");
+  activeWeekIdForComment = null;
+  weekCommentInput.value = "";
+  weekCommentAdminList.innerHTML = "";
+  weekCommentAdminList.style.display = "none";
+}
+
+weekCommentCancel.addEventListener("click", closeWeekCommentModal);
+weekCommentModal.addEventListener("click", (e) => {
+  if (e.target === weekCommentModal) closeWeekCommentModal();
+});
+
+    document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".week-comment-btn");
+  if (!btn) return;
+
+  const weekId = btn.dataset.weekId;
+  activeWeekIdForComment = weekId;
+
+  try {
+    const comments = await fetchWeekComments(weekId);
+
+    // Everyone: load own comment
+    const mine = comments.find(c => c.user_id === currentUserId);
+    weekCommentInput.value = mine?.comment || "";
+
+    // Admin: show everyone's comments for the week
+    if (isAdmin) {
+      weekCommentAdminList.style.display = "block";
+      weekCommentAdminList.innerHTML = comments.map(c => {
+        const name = (staffById?.get?.(c.user_id)?.name) || c.user_id;
+        const safe = (c.comment || "").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+        return `
+          <div style="padding:6px 4px; border-bottom:1px solid #eee;">
+            <div style="font-weight:700;">${name}</div>
+            <div style="white-space:pre-wrap;">${safe || "<em style='color:#777;'>No comment</em>"}</div>
+          </div>`;
+      }).join("");
+    }
+
+    openWeekCommentModal();
+  } catch (err) {
+    console.error(err);
+    alert("Could not load week comments. Check console.");
+  }
+});
+
+weekCommentSave.addEventListener("click", async () => {
+  if (!activeWeekIdForComment) return;
+
+  const comment = weekCommentInput.value || "";
+
+  try {
+    await upsertWeekComment(activeWeekIdForComment, currentUserId, comment);
+    toast("Week comment saved");
+    closeWeekCommentModal();
+  } catch (err) {
+    console.error(err);
+    alert("Save failed. Check console.");
+  }
+});
     /* =========================================================
        10) BOOT
        ========================================================= */
@@ -1188,6 +1331,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

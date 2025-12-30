@@ -712,28 +712,29 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
         delete pendingEdits[key];
         toast(`Saved (${key}) = ${shift}`);
       }
-   } catch (err) {
-      console.error("Auto-save failed:", err);
+} catch (err) {
+  console.error("Auto-save failed:", err);
 
-      const msg =
-        err?.message ||
-        err?.error?.message ||
-        JSON.stringify(err);
+  const msg =
+    err?.message ||
+    err?.error?.message ||
+    err?.details ||
+    JSON.stringify(err);
 
-      // If backend says max 5, show nice message
-      if ((msg || "").toLowerCase().includes("max 5 requests per week")) {
-        alert("Max 5 requests per week. Clear one day to pick another.");
+  // Always revert UI back to last saved state on any error
+  const existing = requestsCache.get(key);
+  td.textContent = existing?.value || "";
+  delete pendingEdits[key];
 
-        // Revert the UI because the save did not happen
-        const key = `${userId}_${date}`;
-        const existing = requestsCache.get(key);
-        td.textContent = existing?.value || "";
-        delete pendingEdits[key];
-        return;
-      }
+  // Friendly message for max-5
+  if ((msg || "").toLowerCase().includes("max 5 requests per week")) {
+    alert("Max 5 requests per week. Clear one day to pick another.");
+    return;
+  }
 
-      alert("Save failed. Check console.");
-    }
+  alert("Save failed. Check console.");
+}
+
   });
 });
 
@@ -1065,6 +1066,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

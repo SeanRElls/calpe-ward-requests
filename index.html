@@ -728,66 +728,63 @@ if (shift === "O") {
 }
 
     closeShiftModal();
+/* -----------------------------
+   Auto-save to Supabase
+   ----------------------------- */
+try {
+  if (shift === "CLEAR") {
+    await deleteRequestCell(userId, date);
+    requestsCache.delete(key);
+    delete pendingEdits[key];
+    toast(`Cleared + saved (${key})`);
+  } else {
+    const saved = await upsertRequestCell(
+      userId,
+      date,
+      shift,
+      rankToSave
+    );
 
-    /* -----------------------------
-       Auto-save to Supabase
-       ----------------------------- */
-    try {
-      if (shift === "CLEAR") {
-        await deleteRequestCell(userId, date);
-        requestsCache.delete(key);
-        delete pendingEdits[key];
-        toast(`Cleared + saved (${key})`);
-      } else {
+    requestsCache.set(key, saved);
+    delete pendingEdits[key];
+    toast(`Saved (${key}) = ${shift}`);
+  }
+} catch (err) {
+  console.error("Auto-save failed:", err);
 
+  const msg =
+    err?.message ||
+    err?.error?.message ||
+    err?.details ||
+    JSON.stringify(err);
 
-const saved = await upsertRequestCell(
-  userId,
-  date,
-  shift,
-  shift === "O" ? rankToSave : null
-);
+  // Revert UI to last saved state (including OFF priority)
+  const existing = requestsCache.get(key);
 
-        requestsCache.set(key, saved);
-        delete pendingEdits[key];
-        toast(`Saved (${key}) = ${shift}`);
-      }
-    } catch (err) {
-      console.error("Auto-save failed:", err);
+  if (existing?.value === "O") {
+    if (existing.important_rank === 1) td.textContent = "O¹";
+    else if (existing.important_rank === 2) td.textContent = "O²";
+    else td.textContent = "O";
+  } else {
+    td.textContent = existing?.value || "";
+  }
 
-      const msg =
-        err?.message ||
-        err?.error?.message ||
-        err?.details ||
-        JSON.stringify(err);
+  delete pendingEdits[key];
 
-      // Revert UI to last saved state
-   const existing = requestsCache.get(key);
+  if ((msg || "").toLowerCase().includes("max 5")) {
+    alert("Max 5 requests per week. Clear one day to pick another.");
+    return;
+  }
 
-if (existing?.value === "O") {
-  if (existing.important_rank === 1) td.textContent = "O¹";
-  else if (existing.important_rank === 2) td.textContent = "O²";
-  else td.textContent = "O";
-} else {
-  td.textContent = existing?.value || "";
+  if ((msg || "").toLowerCase().includes("priority") ||
+      (msg || "").toLowerCase().includes("max 2")) {
+    alert("You can only have 2 priority OFF requests per week.");
+    return;
+  }
+
+  alert("Save failed. Check console.");
 }
-      delete pendingEdits[key];
 
-      if ((msg || "").toLowerCase().includes("max 5")) {
-        alert("Max 5 requests per week. Clear one day to pick another.");
-        return;
-      }
-
-      if ((msg || "").toLowerCase().includes("priority") ||
-          (msg || "").toLowerCase().includes("max 2")) {
-        alert("You can only have 2 priority OFF requests per week.");
-        return;
-      }
-
-      alert("Save failed. Check console.");
-    }
-  });
-});
 
     /* =========================================================
    PATCH 2B) AUTO-SAVE (write to Supabase after each selection)
@@ -1123,6 +1120,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

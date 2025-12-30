@@ -211,9 +211,9 @@
     tr.locked td.cell{ opacity: 0.55; }
     tr.locked td.cell:hover{ background: #fff; }
     tr.unlocked td.cell{ opacity: 1; }
-    tr.unlocked td.cell.editable{ outline: 2px solid rgba(0,0,0,0.08); cursor: text; }
+    tr.unlocked td.cell.editable{ outline: 2px solid rgba(0,0,0,0.08); cursor: pointer; }
 
-    /* ===== PIN MODAL (mobile-safe) ===== */
+    /* ===== MODALS (shared) ===== */
     .modal-backdrop{
       position: fixed;
       inset: 0;
@@ -309,40 +309,39 @@
       .btns{ flex: 1 1 100%; min-width: 0; }
       button{ min-width: 0; }
     }
-/* ===== SHIFT PICKER ===== */
-.shift-grid{
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin: 12px 0 16px;
-}
 
-.shift-btn{
-  padding: 14px 0;
-  font-size: 14px;
-  border-radius: 12px;
-  border: 1px solid #ccc;
-  background: #f7f7f7;
-  cursor: pointer;
-  font-weight: 700;
-}
+    /* ===== SHIFT PICKER ===== */
+    .shift-grid{
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 12px 0 16px;
+    }
 
-.shift-btn:hover{
-  background: #e9f2ff;
-}
+    .shift-btn{
+      padding: 14px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background: #f7f7f7;
+      cursor: pointer;
+      font-weight: 700;
+    }
 
-.shift-btn.off{
-  background: #ffecec;
-  border-color: #ffb3b3;
-}
+    .shift-btn:hover{
+      background: #e9f2ff;
+    }
 
-@media (max-width: 480px){
-  .shift-grid{
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
+    .shift-btn.off{
+      background: #ffecec;
+      border-color: #ffb3b3;
+    }
 
-  
+    @media (max-width: 480px){
+      .shift-grid{
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
   </style>
 </head>
 
@@ -382,30 +381,29 @@
     </div>
   </div>
 
-  <script>
-<!-- =========================
-     SHIFT PICKER MODAL
-     ========================= -->
-<div class="modal-backdrop" id="shiftModal" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shiftTitle">
-    <h2 id="shiftTitle">Select shift</h2>
-    <p id="shiftDesc">Choose a request for this day.</p>
+  <!-- =========================
+       SHIFT PICKER MODAL (Patch 2)
+       ========================= -->
+  <div class="modal-backdrop" id="shiftModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shiftTitle">
+      <h2 id="shiftTitle">Select shift</h2>
+      <p id="shiftDesc">Choose a request for this day.</p>
 
-    <div class="shift-grid">
-      <button class="shift-btn" data-shift="LD">LD</button>
-      <button class="shift-btn" data-shift="8-8">8–8</button>
-      <button class="shift-btn" data-shift="N">N</button>
-      <button class="shift-btn" data-shift="W">W</button>
-      <button class="shift-btn off" data-shift="O">O</button>
-    </div>
+      <div class="shift-grid">
+        <button class="shift-btn" data-shift="LD" type="button">LD</button>
+        <button class="shift-btn" data-shift="8-8" type="button">8–8</button>
+        <button class="shift-btn" data-shift="N" type="button">N</button>
+        <button class="shift-btn" data-shift="W" type="button">W</button>
+        <button class="shift-btn off" data-shift="O" type="button">O</button>
+      </div>
 
-    <div class="btns">
-      <button id="shiftCancel" type="button">Cancel</button>
+      <div class="btns">
+        <button id="shiftCancel" type="button">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
 
-    
+  <script>
     /* =========================================================
        1) CONFIG
        ========================================================= */
@@ -413,7 +411,6 @@
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
     const STORAGE_KEY = "calpeward.loggedInUserId";
-
 
     /* =========================================================
        2) HELPERS (dates, formatting)
@@ -431,7 +428,6 @@
     function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 
     function groupDatesIntoWeeks(dates){
-      // dates: [{ date: 'YYYY-MM-DD', rota_weeks: { open: boolean } }, ...]
       const map = new Map();
       for(const item of dates){
         const d = new Date(item.date);
@@ -469,7 +465,6 @@
     }
 
     function groupUsers(users){
-      // buckets by role
       const buckets = { charge_nurse: [], staff_nurse: [], nursing_assistant: [] };
 
       for(const u of users){
@@ -489,23 +484,16 @@
       ].filter(g => g.items.length > 0);
     }
 
- /* =========================================================
-   3) STATE (who is logged in / what is unlocked)
-   ========================================================= */
-let currentUser = null;      // user object when logged in (by PIN)
-let selectedUser = null;     // user you clicked before PIN entry
+    /* =========================================================
+       3) STATE (who is logged in / what is unlocked)
+       ========================================================= */
+    let currentUser = null;      // user object when logged in (by PIN)
+    let selectedUser = null;     // user you clicked before PIN entry
 
-// === NEW: request + editing state ===
-let requestsCache = [];     // loaded rota_requests (later)
-let activeCell = null;      // { td, userId, date }
-    
-/* =========================================================
-   PATCH 2) SHIFT PICKER STATE
-   ========================================================= */
-let activeCell = null;
+    // Patch 2 (shift picker)
+    let activeCell = null;       // { td, userId, date }
+    const pendingEdits = {};     // in-memory only for now
 
-// in-memory edits only (no DB yet)
-const pendingEdits = {};
     /* =========================================================
        4) DOM REFERENCES
        ========================================================= */
@@ -518,6 +506,10 @@ const pendingEdits = {};
     const pinCancelBtn = document.getElementById("pinCancel");
     const loginBadge = document.getElementById("loginBadge");
     const adminBadge = document.getElementById("adminBadge");
+
+    // Shift modal refs
+    const shiftModal = document.getElementById("shiftModal");
+    const shiftCancelBtn = document.getElementById("shiftCancel");
 
     /* =========================================================
        5) PIN MODAL (open/close)
@@ -546,7 +538,6 @@ const pendingEdits = {};
     pinCancelBtn.addEventListener("click", closePinModal);
     modal.addEventListener("click", (e) => { if(e.target === modal) closePinModal(); });
 
-    // Press Enter to submit PIN
     pinInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -571,8 +562,6 @@ const pendingEdits = {};
       pinErr.style.display = "none";
 
       try{
-        // ✅ Verify PIN via Postgres RPC
-        // Function signature expected: verify_user_pin(p_user_id uuid, p_pin text) returns boolean
         const { data: ok, error } = await supabaseClient.rpc("verify_user_pin", {
           p_user_id: selectedUser.id,
           p_pin: pin
@@ -593,10 +582,8 @@ const pendingEdits = {};
           return;
         }
 
-        // ✅ PIN correct: unlock this user (or admin unlocks all)
         currentUser = selectedUser;
         localStorage.setItem(STORAGE_KEY, currentUser.id);
-
 
         closePinModal();
         applyUnlockState();
@@ -619,104 +606,86 @@ const pendingEdits = {};
       loginBadge.textContent = `Logged in: ${currentUser.name}`;
       adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
     }
-/* =========================================================
-   PATCH 2) SHIFT PICKER LOGIC
-   ========================================================= */
-const shiftModal = document.getElementById("shiftModal");
-const shiftCancelBtn = document.getElementById("shiftCancel");
 
-function openShiftModal(){
-  if(!activeCell) return;
-  shiftModal.style.display = "flex";
-  shiftModal.setAttribute("aria-hidden", "false");
-}
-
-function closeShiftModal(){
-  shiftModal.style.display = "none";
-  shiftModal.setAttribute("aria-hidden", "true");
-  activeCell = null;
-}
-
-shiftCancelBtn.addEventListener("click", closeShiftModal);
-shiftModal.addEventListener("click", e => {
-  if(e.target === shiftModal) closeShiftModal();
-});
-
-// handle shift button clicks
-document.querySelectorAll(".shift-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    if(!activeCell) return;
-
-    const shift = btn.dataset.shift;
-
-    // update UI immediately
-    activeCell.td.textContent = shift;
-
-    // store in memory
-    const key = `${activeCell.userId}_${activeCell.date}`;
-    pendingEdits[key] = {
-      userId: activeCell.userId,
-      date: activeCell.date,
-      shift
-    };
-
-    console.log("Pending edits:", pendingEdits);
-
-    closeShiftModal();
-  });
-});
-
-    
     /* =========================================================
-   7) DATA LOADING (users + dates)
-   ========================================================= */
-async function loadRota() {
-  // 1) Load users
-  const { data: users, error: userError } = await supabaseClient
-    .from("users")
-    .select("id, name, role_id, is_admin, roles(name)")
-    .order("name");
+       PATCH 2) SHIFT PICKER LOGIC
+       ========================================================= */
+    function openShiftModal(){
+      if(!activeCell) return;
+      shiftModal.style.display = "flex";
+      shiftModal.setAttribute("aria-hidden", "false");
+    }
 
-  if (userError) {
-    console.error("Users load error:", userError);
-    alert("Failed to load users.");
-    return;
-  }
+    function closeShiftModal(){
+      shiftModal.style.display = "none";
+      shiftModal.setAttribute("aria-hidden", "true");
+      activeCell = null;
+    }
 
-  // ✅ Restore login from localStorage (must happen after users load)
-  const savedId = localStorage.getItem(STORAGE_KEY);
-  if (savedId) {
-    const found = users.find(u => u.id === savedId);
-    if (found) currentUser = found;
-  }
+    shiftCancelBtn.addEventListener("click", closeShiftModal);
+    shiftModal.addEventListener("click", (e) => { if(e.target === shiftModal) closeShiftModal(); });
 
-  // 2) Load dates
-  const { data: dates, error: dateError } = await supabaseClient
-    .from("rota_dates")
-    .select("date, rota_weeks(open)")
-    .order("date");
+    document.querySelectorAll(".shift-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if(!activeCell) return;
 
-  if (dateError) {
-    console.error("Dates load error:", dateError);
-    alert("Failed to load dates.");
-    return;
-  }
+        const shift = btn.dataset.shift;
 
-  // 3) Render
-  const weeks = groupDatesIntoWeeks(dates);
-  render(users, weeks);
+        // update UI immediately
+        activeCell.td.textContent = shift;
 
-  // 4) Update period label
-  if (weeks.length) {
-    document.getElementById("periodLabel").textContent =
-      `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
-  }
+        // store in memory
+        const key = `${activeCell.userId}_${activeCell.date}`;
+        pendingEdits[key] = { userId: activeCell.userId, date: activeCell.date, shift };
 
-  // 5) Re-apply lock state + badges (important after restoring currentUser)
-  applyUnlockState();
-  updateBadges();
-}
+        console.log("Saved in pendingEdits:", pendingEdits[key]);
+        closeShiftModal();
+      });
+    });
 
+    /* =========================================================
+       7) DATA LOADING (users + dates)
+       ========================================================= */
+    async function loadRota() {
+      const { data: users, error: userError } = await supabaseClient
+        .from("users")
+        .select("id, name, role_id, is_admin, roles(name)")
+        .order("name");
+
+      if (userError) {
+        console.error("Users load error:", userError);
+        alert("Failed to load users.");
+        return;
+      }
+
+      const savedId = localStorage.getItem(STORAGE_KEY);
+      if (savedId) {
+        const found = users.find(u => u.id === savedId);
+        if (found) currentUser = found;
+      }
+
+      const { data: dates, error: dateError } = await supabaseClient
+        .from("rota_dates")
+        .select("date, rota_weeks(open)")
+        .order("date");
+
+      if (dateError) {
+        console.error("Dates load error:", dateError);
+        alert("Failed to load dates.");
+        return;
+      }
+
+      const weeks = groupDatesIntoWeeks(dates);
+      render(users, weeks);
+
+      if (weeks.length) {
+        document.getElementById("periodLabel").textContent =
+          `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
+      }
+
+      applyUnlockState();
+      updateBadges();
+    }
 
     /* =========================================================
        8) RENDER (table header + grouped rows)
@@ -730,7 +699,6 @@ async function loadRota() {
       table.appendChild(thead);
       table.appendChild(tbody);
 
-      // ----- Header row 1: week labels
       const r1 = document.createElement("tr");
       const hName = document.createElement("th");
       hName.className = "name-col";
@@ -752,7 +720,6 @@ async function loadRota() {
       });
       thead.appendChild(r1);
 
-      // ----- Header row 2: day letters
       const r2 = document.createElement("tr");
       const blank2 = document.createElement("th");
       blank2.className = "name-col";
@@ -775,7 +742,6 @@ async function loadRota() {
       });
       thead.appendChild(r2);
 
-      // ----- Header row 3: date numbers
       const r3 = document.createElement("tr");
       const blank3 = document.createElement("th");
       blank3.className = "name-col";
@@ -799,11 +765,9 @@ async function loadRota() {
       });
       thead.appendChild(r3);
 
-      // ----- Body grouped by role
       const groups = groupUsers(users);
 
       for(const g of groups){
-        // section header row
         const sectionTr = document.createElement("tr");
         sectionTr.className = "section-row";
 
@@ -814,7 +778,6 @@ async function loadRota() {
         sectionTr.appendChild(sectionTd);
         tbody.appendChild(sectionTr);
 
-        // user rows
         for(const u of g.items){
           const tr = document.createElement("tr");
           tr.dataset.userId = u.id;
@@ -832,7 +795,7 @@ async function loadRota() {
               td.className = "cell" + (w.open ? "" : " closed") + (isWeekend ? " weekend" : "");
               td.dataset.userId = u.id;
               td.dataset.date = w.days[i].date;
-              td.textContent = ""; // later: fill from requests table
+              td.textContent = "";
               tr.appendChild(td);
             }
             if(idx !== weeks.length - 1){
@@ -866,29 +829,26 @@ async function loadRota() {
         r.classList.toggle("unlocked", !!isUnlocked);
         r.classList.toggle("locked", !isUnlocked);
 
-     r.querySelectorAll("td.cell").forEach(td => {
-  td.classList.toggle("editable", !!isUnlocked);
+        r.querySelectorAll("td.cell").forEach(td => {
+          td.classList.toggle("editable", !!isUnlocked);
 
-  // === NEW: attach click handler once ===
-  if (!td.dataset.bound) {
-    td.dataset.bound = "1";
+          // bind once
+          if (!td.dataset.bound) {
+            td.dataset.bound = "1";
+            td.addEventListener("click", () => {
+              if (!td.classList.contains("editable")) return;
 
-    td.addEventListener("click", () => {
-      if (!td.classList.contains("editable")) return;
+              activeCell = {
+                td,
+                userId: td.dataset.userId,
+                date: td.dataset.date
+              };
 
-      activeCell = {
-        td,
-        userId: td.dataset.userId,
-        date: td.dataset.date
-      };
-
-console.log("Cell selected:", activeCell);
-openShiftModal();
-
-      // next step: open shift picker
-    });
-  }
-});
+              console.log("Cell selected:", activeCell);
+              openShiftModal();
+            });
+          }
+        });
       });
     }
 
@@ -899,5 +859,3 @@ openShiftModal();
   </script>
 </body>
 </html>
-
-

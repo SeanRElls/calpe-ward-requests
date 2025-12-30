@@ -146,11 +146,10 @@
   font-weight: 650;
   border-right: 2px solid var(--sep);
 
-   width: clamp(110px, 28vw, 170px);
-  min-width: clamp(110px, 28vw, 170px);
-  max-width: clamp(110px, 28vw, 170px);
+  width: clamp(140px, 38vw, 220px);
+  min-width: clamp(140px, 38vw, 220px);
+  max-width: clamp(140px, 38vw, 220px);
 
-  box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -163,14 +162,12 @@
       cursor: default;
     }
     
-   @media (max-width: 480px){
+@media (max-width: 480px){
   .name-col{
-    width: 96px;
-    min-width: 96px;
-    max-width: 96px;
     font-size: 12px;
   }
 }
+
   .week-comment-btn{
   flex: 0 0 auto;          /* stop flex stretching */
   min-width: 0 !important; /* override global min-width:110px */
@@ -1526,6 +1523,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

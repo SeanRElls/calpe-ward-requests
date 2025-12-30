@@ -2,127 +2,337 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Calpe Ward Off Duty Requests</title>
 
-  <!-- Supabase JS client (ONLY once) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    :root{
+      --grid: #d9d9d9;
+      --grid-soft: #ececec;
+      --text: #111;
+      --muted: #6b6b6b;
+      --header: #f4f4f4;
+      --sheet-bg: #ffffff;
+      --sep: #cfcfcf;
+      --sep-fill: #e5e5e5;
+
+      --closed-fill: #f0f0f0;
+      --weekend-fill: #fafafa;
+
+      --sn-band: #cfe8ff; /* light blue */
+      --na-band: #dff3da; /* light green */
+      --cn-band: #ffe4c7; /* light peach */
+    }
+
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       margin: 18px;
-      background: #fff;
-      color: #111;
+      color: var(--text);
+      background: #f7f7f7;
     }
 
-    h2 {
-      margin: 0 0 10px 0;
+    .wrap{
+      background: var(--sheet-bg);
+      border: 1px solid var(--grid);
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      padding: 14px 14px 10px;
+      overflow: auto;
+    }
+
+    .titlebar{
+      display:flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 2px 2px 12px;
+    }
+
+    h1{
       font-size: 22px;
-      font-weight: 700;
+      margin: 0;
+      font-weight: 750;
+      letter-spacing: 0.2px;
     }
 
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      table-layout: fixed;
+    .subtitle{
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    table{
+      border-collapse: separate;
+      border-spacing: 0;
+      width: max-content; /* allow horizontal scroll like Excel */
+      min-width: 100%;
       font-size: 12px;
     }
 
-    th, td {
-      border: 1px solid #cfcfcf;
+    th, td{
+      border-right: 1px solid var(--grid-soft);
+      border-bottom: 1px solid var(--grid-soft);
       text-align: center;
       vertical-align: middle;
-    }
-
-    /* Make the grid denser (closer to Excel look) */
-    td {
-      height: 22px;
-      padding: 2px;
+      padding: 0;
+      height: 24px;
       background: #fff;
+      min-width: 34px; /* compact like Excel */
     }
 
-    /* Sticky header rows */
-    th {
-      background: #f6f6f6;
+    /* outer border */
+    table tr:first-child th{
+      border-top: 1px solid var(--grid);
+    }
+    table tr th:first-child,
+    table tr td:first-child{
+      border-left: 1px solid var(--grid);
+    }
+    table tr:last-child td{
+      border-bottom: 1px solid var(--grid);
+    }
+    table tr th{
+      border-bottom: 1px solid var(--grid);
+    }
+
+    /* sticky header (all header rows) */
+    thead th{
       position: sticky;
       top: 0;
-      z-index: 2;
+      z-index: 5;
+      background: var(--header);
     }
 
-    /* Two-row header styling */
-    th.day {
-      font-weight: 700;
-      font-size: 12px;
-      padding: 4px 0;
-    }
-
-    th.date {
-      font-weight: 600;
-      font-size: 12px;
-      padding: 4px 0;
-      border-top: 0; /* visually group the two header rows */
-    }
-
-    /* Sticky name column */
-    .name {
+    /* sticky name column */
+    .name-col{
+      position: sticky;
+      left: 0;
+      z-index: 6;
+      background: #fff;
       text-align: left;
-      font-weight: 700;
-      background: #fff;
-      position: sticky;
-      left: 0;
-      z-index: 3;
-      min-width: 180px;
-      padding: 6px 8px;
-      border-right: 2px solid #bdbdbd;
+      padding: 0 10px;
+      min-width: 220px;
+      font-weight: 650;
+      border-right: 2px solid var(--sep);
     }
 
-    /* Second header row first cell should still be sticky */
-    th.name-blank {
-      position: sticky;
-      left: 0;
-      z-index: 4;
-      background: #fff;
-      border-right: 2px solid #bdbdbd;
+    /* header name cells */
+    thead .name-col{
+      background: var(--header);
+      z-index: 10;
+      font-weight: 750;
+    }
+
+    /* week label row */
+    th.week-label{
+      font-weight: 750;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      color: #222;
+      height: 28px;
+      background: #ededed;
+      border-bottom: 1px solid var(--grid);
+    }
+
+    /* day letters row */
+    th.day{
+      font-weight: 750;
+      background: var(--header);
+      height: 22px;
+      color: #222;
+    }
+
+    /* date numbers row */
+    th.date{
+      font-weight: 650;
+      background: var(--header);
+      height: 22px;
+      color: #222;
+    }
+
+    /* Week separator column (grey vertical bar) */
+    .week-sep{
+      min-width: 14px;
+      width: 14px;
+      background: var(--sep-fill) !important;
+      border-right: 2px solid var(--sep) !important;
+      border-left: 0 !important;
+    }
+    thead .week-sep{
+      background: var(--sep-fill) !important;
     }
 
     /* Closed week cells */
-    .closed {
-      background: #efefef !important;
-      color: #999;
+    .closed{
+      background: var(--closed-fill) !important;
+      color: #9b9b9b;
     }
 
-    /* Optional: slightly nicer hover so it feels interactive later */
-    td:hover {
-      background: #fafafa;
+    /* Weekend shading (subtle) */
+    .weekend{
+      background: var(--weekend-fill);
+    }
+
+    /* Section band rows like Excel (CN / SN / NA) */
+    tr.section-row td{
+      height: 22px;
+      font-weight: 750;
+      text-align: left;
+      padding: 0 10px;
+      border-top: 2px solid var(--grid);
+      border-bottom: 2px solid var(--grid);
+    }
+    tr.section-row td span{
+      color: #1b1b1b;
+      font-size: 12px;
+    }
+    td.section-cn { background: var(--cn-band) !important; }
+    td.section-sn { background: var(--sn-band) !important; }
+    td.section-na { background: var(--na-band) !important; }
+
+    /* Make data cells feel less harsh */
+    td.cell{
+      font-size: 12px;
+      color: #111;
+    }
+    td.cell:hover{
+      background: #f6fbff;
+    }
+
+    /* Keep separators crisp */
+    .no-right-border{
+      border-right: 0 !important;
     }
   </style>
 </head>
 
 <body>
-  <h2>Calpe Ward Requests</h2>
-  <table id="rota"></table>
+  <div class="wrap">
+    <div class="titlebar">
+      <h1>Calpe Ward Requests</h1>
+      <div class="subtitle" id="periodLabel"></div>
+    </div>
+
+    <table id="rota"></table>
+  </div>
 
   <script>
-    // Supabase client
     const supabaseClient = window.supabase.createClient(
       "https://tbclufdtyefexwwitfsz.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA"
     );
 
-    async function loadRota() {
-      // Users
+    // Helpers
+    const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const isoDate = (d) => d.toISOString().slice(0,10);
+
+    function startOfWeekSunday(dateObj){
+      // JS: Sunday = 0
+      const d = new Date(dateObj);
+      const day = d.getDay(); // 0..6
+      d.setHours(0,0,0,0);
+      d.setDate(d.getDate() - day);
+      return d;
+    }
+
+    function addDays(d, n){
+      const x = new Date(d);
+      x.setDate(x.getDate()+n);
+      return x;
+    }
+
+    function groupDatesIntoWeeks(dates){
+      // dates: [{date: '2025-12-21', rota_weeks:{open:true}} ...] sorted
+      const map = new Map();
+      for(const item of dates){
+        const d = new Date(item.date);
+        const ws = startOfWeekSunday(d);
+        const key = isoDate(ws);
+        if(!map.has(key)){
+          map.set(key, {
+            weekStart: ws,
+            days: [],
+            open: (item.rota_weeks && item.rota_weeks.open) ?? true
+          });
+        }
+        map.get(key).days.push(item);
+      }
+
+      // Ensure each week has 7 positions in order (Sun..Sat)
+      const weeks = [];
+      for(const [key, w] of map.entries()){
+        // create a lookup for that week by date string
+        const dayLookup = new Map(w.days.map(x => [x.date, x]));
+        const ordered = [];
+        for(let i=0;i<7;i++){
+          const dd = addDays(w.weekStart, i);
+          const ds = isoDate(dd);
+          const row = dayLookup.get(ds) || { date: ds, rota_weeks: { open: w.open } };
+          ordered.push(row);
+        }
+        weeks.push({
+          weekStart: w.weekStart,
+          weekEnd: addDays(w.weekStart, 6),
+          open: w.open,
+          days: ordered
+        });
+      }
+
+      // sort by weekStart
+      weeks.sort((a,b) => a.weekStart - b.weekStart);
+      return weeks;
+    }
+
+    function roleLabel(roleName, roleId){
+      // fallback if roles not joined
+      if(roleName) return roleName;
+      if(roleId === 2) return "charge_nurse";
+      if(roleId === 3) return "staff_nurse";
+      if(roleId === 4) return "nursing_assistant";
+      if(roleId === 1) return "admin";
+      return "staff";
+    }
+
+    function groupUsers(users){
+      // Groups in the order you probably want to see them
+      const buckets = {
+        charge_nurse: [],
+        staff_nurse: [],
+        nursing_assistant: [],
+        admin: [],
+        staff: []
+      };
+
+      for(const u of users){
+        const label = roleLabel(u.roles?.name, u.role_id);
+        if(buckets[label]) buckets[label].push(u);
+        else buckets.staff.push(u);
+      }
+
+      // You can tweak ordering here if desired
+      return [
+        { key: "charge_nurse", title: "Charge Nurse Requests", className: "section-cn", items: buckets.charge_nurse },
+        { key: "staff_nurse", title: "Staff Nurse Requests", className: "section-sn", items: buckets.staff_nurse },
+        { key: "nursing_assistant", title: "Nursing Assistant Requests", className: "section-na", items: buckets.nursing_assistant },
+        // admins last (or omit if you don’t want them displayed)
+        { key: "admin", title: "Administrators", className: "section-cn", items: buckets.admin },
+        { key: "staff", title: "Other", className: "section-sn", items: buckets.staff }
+      ].filter(g => g.items.length > 0);
+    }
+
+    async function loadRota(){
+      // Users: try joining roles if FK exists
       const { data: users, error: userError } = await supabaseClient
         .from("users")
-        .select("id, name")
+        .select("id, name, role_id, roles(name)")
         .order("name");
 
-      if (userError) {
-        console.error("User load error:", userError);
+      if(userError){
+        console.error(userError);
         alert("Failed to load users");
         return;
       }
 
-      // Dates + open status via rota_weeks relation
       const { data: dates, error: dateError } = await supabaseClient
         .from("rota_dates")
         .select(`
@@ -133,58 +343,154 @@
         `)
         .order("date");
 
-      if (dateError) {
-        console.error("Date load error:", dateError);
+      if(dateError){
+        console.error(dateError);
         alert("Failed to load dates");
         return;
       }
 
-      renderTable(users, dates);
+      const weeks = groupDatesIntoWeeks(dates);
+      render(users, weeks);
+
+      // Period label (nice touch)
+      if(weeks.length){
+        const first = weeks[0].weekStart;
+        const last = weeks[weeks.length-1].weekEnd;
+        document.getElementById("periodLabel").textContent = `${fmt(first)} – ${fmt(last)} (Sun–Sat weeks)`;
+      }
     }
 
-    function renderTable(users, dates) {
+    function render(users, weeks){
       const table = document.getElementById("rota");
       table.innerHTML = "";
 
-      // Header row 1: Day letters (S M T W T F S)
-      const dayRow = document.createElement("tr");
-      dayRow.innerHTML =
-        '<th class="name">Name</th>' +
-        dates.map(d => {
-          const dt = new Date(d.date);
-          const dayLetter = dt
-            .toLocaleDateString("en-GB", { weekday: "short" })
-            .charAt(0);
-          const closedClass = (d.rota_weeks && d.rota_weeks.open) ? "" : "closed";
-          return `<th class="day ${closedClass}">${dayLetter}</th>`;
-        }).join("");
-      table.appendChild(dayRow);
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+      table.appendChild(thead);
+      table.appendChild(tbody);
 
-      // Header row 2: Date numbers (21 22 23 ...)
-      const dateRow = document.createElement("tr");
-      dateRow.innerHTML =
-        '<th class="name-blank"></th>' +
-        dates.map(d => {
-          const dt = new Date(d.date);
-          const num = dt.getDate();
-          const closedClass = (d.rota_weeks && d.rota_weeks.open) ? "" : "closed";
-          return `<th class="date ${closedClass}">${num}</th>`;
-        }).join("");
-      table.appendChild(dateRow);
+      // ----- HEADER ROW 1: WEEK LABELS (colspan 7 + 1 separator) -----
+      const r1 = document.createElement("tr");
+      const hName = document.createElement("th");
+      hName.className = "name-col";
+      hName.textContent = "Name";
+      r1.appendChild(hName);
 
-      // User rows
-      users.forEach(user => {
-        const row = document.createElement("tr");
+      weeks.forEach((w, idx) => {
+        const th = document.createElement("th");
+        th.className = "week-label " + (w.open ? "" : "closed");
+        th.colSpan = 7;
+        th.textContent = `${fmt(w.weekStart)} – ${fmt(w.weekEnd)}`;
+        r1.appendChild(th);
 
-        row.innerHTML =
-          `<td class="name">${user.name}</td>` +
-          dates.map(d => {
-            const closedClass = (d.rota_weeks && d.rota_weeks.open) ? "" : "closed";
-            return `<td class="${closedClass}"></td>`;
-          }).join("");
-
-        table.appendChild(row);
+        // separator column after week except last (to mimic Excel grey bar)
+        if(idx !== weeks.length - 1){
+          const sep = document.createElement("th");
+          sep.className = "week-sep";
+          sep.textContent = "";
+          r1.appendChild(sep);
+        }
       });
+
+      thead.appendChild(r1);
+
+      // ----- HEADER ROW 2: DAY LETTERS -----
+      const r2 = document.createElement("tr");
+      const blank2 = document.createElement("th");
+      blank2.className = "name-col";
+      blank2.textContent = "";
+      r2.appendChild(blank2);
+
+      const dayLetters = ["S","M","T","W","T","F","S"];
+
+      weeks.forEach((w, idx) => {
+        for(let i=0;i<7;i++){
+          const th = document.createElement("th");
+          th.className = "day " + (w.open ? "" : "closed");
+          th.textContent = dayLetters[i];
+          r2.appendChild(th);
+        }
+        if(idx !== weeks.length - 1){
+          const sep = document.createElement("th");
+          sep.className = "week-sep";
+          r2.appendChild(sep);
+        }
+      });
+
+      thead.appendChild(r2);
+
+      // ----- HEADER ROW 3: DATE NUMBERS -----
+      const r3 = document.createElement("tr");
+      const blank3 = document.createElement("th");
+      blank3.className = "name-col";
+      blank3.textContent = "";
+      r3.appendChild(blank3);
+
+      weeks.forEach((w, idx) => {
+        for(let i=0;i<7;i++){
+          const d = new Date(w.days[i].date);
+          const th = document.createElement("th");
+          const isWeekend = (i === 0 || i === 6);
+          th.className = "date " + (w.open ? "" : "closed") + (isWeekend ? " weekend" : "");
+          th.textContent = d.getDate();
+          r3.appendChild(th);
+        }
+        if(idx !== weeks.length - 1){
+          const sep = document.createElement("th");
+          sep.className = "week-sep";
+          r3.appendChild(sep);
+        }
+      });
+
+      thead.appendChild(r3);
+
+      // ----- BODY: USERS grouped by role -----
+      const groups = groupUsers(users);
+
+      for(const g of groups){
+        // Section header row like Excel bands
+        const sectionTr = document.createElement("tr");
+        sectionTr.className = "section-row";
+
+        const sectionTd = document.createElement("td");
+        sectionTd.className = `name-col ${g.className}`;
+        sectionTd.colSpan = 1 + (weeks.length * 7) + (weeks.length - 1); // name + days + separators
+        sectionTd.innerHTML = `<span>${g.title}</span>`;
+        sectionTr.appendChild(sectionTd);
+        tbody.appendChild(sectionTr);
+
+        // User rows
+        for(const u of g.items){
+          const tr = document.createElement("tr");
+
+          const nameTd = document.createElement("td");
+          nameTd.className = "name-col";
+          nameTd.textContent = u.name;
+          tr.appendChild(nameTd);
+
+          weeks.forEach((w, idx) => {
+            for(let i=0;i<7;i++){
+              const isWeekend = (i === 0 || i === 6);
+              const td = document.createElement("td");
+              td.className = "cell"
+                + (w.open ? "" : " closed")
+                + (isWeekend ? " weekend" : "");
+              td.dataset.userId = u.id;
+              td.dataset.date = w.days[i].date;
+              td.textContent = ""; // later: request value
+              tr.appendChild(td);
+            }
+
+            if(idx !== weeks.length - 1){
+              const sep = document.createElement("td");
+              sep.className = "week-sep";
+              tr.appendChild(sep);
+            }
+          });
+
+          tbody.appendChild(tr);
+        }
+      }
     }
 
     loadRota();

@@ -495,6 +495,9 @@
     let activeCell = null;       // { td, userId, date }
     const pendingEdits = {};     // in-memory only for now
 
+    let requestsCache = new Map(); 
+// key: `${user_id}_${date}` -> { id, user_id, date, value, important_rank }
+
     /* =========================================================
        4) DOM REFERENCES
        ========================================================= */
@@ -657,49 +660,95 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
     closeShiftModal();
   });
 });
-    /* =========================================================
-       7) DATA LOADING (users + dates)
-       ========================================================= */
-    async function loadRota() {
-      const { data: users, error: userError } = await supabaseClient
-        .from("users")
-        .select("id, name, role_id, is_admin, roles(name)")
-        .order("name");
+/* =========================================================
+   7) DATA LOADING (users + dates + requests)
+   ========================================================= */
+async function loadRota() {
+  // -----------------------------
+  // 7A) Load users
+  // -----------------------------
+  const { data: users, error: userError } = await supabaseClient
+    .from("users")
+    .select("id, name, role_id, is_admin, roles(name)")
+    .order("name");
 
-      if (userError) {
-        console.error("Users load error:", userError);
-        alert("Failed to load users.");
-        return;
-      }
+  if (userError) {
+    console.error("Users load error:", userError);
+    alert("Failed to load users.");
+    return;
+  }
 
-      const savedId = localStorage.getItem(STORAGE_KEY);
-      if (savedId) {
-        const found = users.find(u => u.id === savedId);
-        if (found) currentUser = found;
-      }
+  // -----------------------------
+  // 7B) Restore login (localStorage)
+  // -----------------------------
+  const savedId = localStorage.getItem(STORAGE_KEY);
+  if (savedId) {
+    const found = users.find(u => u.id === savedId);
+    if (found) currentUser = found;
+  }
 
-      const { data: dates, error: dateError } = await supabaseClient
-        .from("rota_dates")
-        .select("date, rota_weeks(open)")
-        .order("date");
+  // -----------------------------
+  // 7C) Load rota dates
+  // -----------------------------
+  const { data: dates, error: dateError } = await supabaseClient
+    .from("rota_dates")
+    .select("date, rota_weeks(open)")
+    .order("date");
 
-      if (dateError) {
-        console.error("Dates load error:", dateError);
-        alert("Failed to load dates.");
-        return;
-      }
+  if (dateError) {
+    console.error("Dates load error:", dateError);
+    alert("Failed to load dates.");
+    return;
+  }
 
-      const weeks = groupDatesIntoWeeks(dates);
-      render(users, weeks);
+  // -----------------------------
+  // 7D) Load requests for visible date range
+  // -----------------------------
+  // Clear cache first so refresh doesn't stack old data
+  if (typeof requestsCache !== "undefined" && requestsCache?.clear) {
+    requestsCache.clear();
+  }
 
-      if (weeks.length) {
-        document.getElementById("periodLabel").textContent =
-          `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
-      }
+  const dateMin = dates[0]?.date;
+  const dateMax = dates[dates.length - 1]?.date;
 
-      applyUnlockState();
-      updateBadges();
+  if (dateMin && dateMax) {
+    const { data: reqs, error: reqErr } = await supabaseClient
+      .from("requests")
+      .select("id, user_id, date, value, important_rank")
+      .gte("date", dateMin)
+      .lte("date", dateMax);
+
+    if (reqErr) {
+      console.error("Requests load error:", reqErr);
+      alert("Failed to load requests.");
+      return;
     }
+
+    // Store in cache: key = userId_date
+    if (typeof requestsCache !== "undefined" && requestsCache?.set) {
+      for (const r of reqs || []) {
+        requestsCache.set(`${r.user_id}_${r.date}`, r);
+      }
+    }
+  }
+
+  // -----------------------------
+  // 7E) Render table (weeks + users)
+  // -----------------------------
+  const weeks = groupDatesIntoWeeks(dates);
+  render(users, weeks);
+
+  // Period label
+  if (weeks.length) {
+    document.getElementById("periodLabel").textContent =
+      `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
+  }
+
+  // Apply locks + badges
+  applyUnlockState();
+  updateBadges();
+}
 
     /* =========================================================
        8) RENDER (table header + grouped rows)
@@ -873,5 +922,6 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
   </script>
 </body>
 </html>
+
 
 

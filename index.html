@@ -38,14 +38,21 @@
       background: #f7f7f7;
     }
 
-    .wrap{
-      background: var(--sheet-bg);
-      border: 1px solid var(--grid);
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      padding: 14px 14px 10px;
-      overflow: auto;
-    }
+.wrap{
+  background: var(--sheet-bg);
+  border: 1px solid var(--grid);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  padding: 10px;
+  overflow: hidden;
+}
+
+    #rota{
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 
     .titlebar{
       display:flex;
@@ -120,18 +127,20 @@
       background: var(--header);
     }
 
-    .name-col{
-      position: sticky;
-      left: 0;
-      z-index: 6;
-      background: #fff;
-      text-align: left;
-      padding: 0 10px;
-      min-width: 220px;
-      font-weight: 650;
-      border-right: 2px solid var(--sep);
-      cursor: pointer;
-    }
+ .name-col{
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: #fff;
+  text-align: left;
+  padding: 0 8px;
+  font-weight: 650;
+  border-right: 2px solid var(--sep);
+
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+}
 
     thead .name-col{
       background: var(--header);
@@ -139,6 +148,15 @@
       font-weight: 750;
       cursor: default;
     }
+    
+    @media (max-width: 480px){
+  .name-col{
+    width: 110px;
+    min-width: 110px;
+    max-width: 110px;
+    font-size: 12px;
+  }
+}
 
   .week-comment-btn{
   flex: 0 0 auto;          /* stop flex stretching */
@@ -1492,6 +1510,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

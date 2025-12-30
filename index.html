@@ -678,7 +678,7 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
       const alreadyExists = requestsCache.has(key);
 
       if (!alreadyExists && currentCount >= MAX_REQUESTS_PER_WEEK) {
-        alert("You can only request 5 days per week.");
+        alert("You can only enter 5 requests per week.");
         closeShiftModal();
         return;
       }
@@ -1048,6 +1048,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

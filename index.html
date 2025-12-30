@@ -21,9 +21,11 @@
       --closed-fill: #f0f0f0;
       --weekend-fill: #fafafa;
 
-      --sn-band: #cfe8ff; /* light blue */
-      --na-band: #dff3da; /* light green */
-      --cn-band: #ffe4c7; /* light peach */
+  /* Brighter section bands (more Excel-like) */
+  --cn-band: #ffd18a; /* bright warm yellow/orange */
+  --sn-band: #9fd0ff; /* bright blue */
+  --na-band: #a8e6a1; /* bright green */
+
     }
 
     body{
@@ -310,15 +312,12 @@
       }
 
       // You can tweak ordering here if desired
-      return [
-        { key: "charge_nurse", title: "Charge Nurse Requests", className: "section-cn", items: buckets.charge_nurse },
-        { key: "staff_nurse", title: "Staff Nurse Requests", className: "section-sn", items: buckets.staff_nurse },
-        { key: "nursing_assistant", title: "Nursing Assistant Requests", className: "section-na", items: buckets.nursing_assistant },
-        // admins last (or omit if you don’t want them displayed)
-        { key: "admin", title: "Administrators", className: "section-cn", items: buckets.admin },
-        { key: "staff", title: "Other", className: "section-sn", items: buckets.staff }
-      ].filter(g => g.items.length > 0);
-    }
+   return [
+  { key: "charge_nurse", title: "Charge Nurses", className: "section-cn", items: buckets.charge_nurse },
+  { key: "staff_nurse", title: "Staff Nurses", className: "section-sn", items: buckets.staff_nurse },
+  { key: "nursing_assistant", title: "Nursing Assistants", className: "section-na", items: buckets.nursing_assistant }
+].filter(g => g.items.length > 0);
+
 
     async function loadRota(){
       // Users: try joining roles if FK exists
@@ -497,3 +496,4 @@
   </script>
 </body>
 </html>
+

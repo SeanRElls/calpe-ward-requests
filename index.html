@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Calpe Ward Off Duty Requests</title>
+
+  <!-- Supabase client -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 20px;
+      background: #fff;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+
+    th {
+      background: #f3f3f3;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .name {
+      text-align: left;
+      font-weight: 600;
+      background: #fff;
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      min-width: 180px;
+    }
+
+    .closed {
+      background: #e6e6e6;
+      color: #999;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Calpe Ward Requests</h2>
+
+<table id="rota"></table>
+
+<script>
+  // 🔐 Supabase connection (yes, this is correct)
+  const supabase = supabase.createClient(
+    'https://tbclufdtyefexwwitfsz.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA'
+  );
+
+  async function loadRota() {
+    // Get users
+    const { data: users, error: userError } = await supabase
+      .from('users')
+      .select('id, name')
+      .order('name');
+
+    if (userError) {
+      console.error(userError);
+      alert('Failed to load users');
+      return;
+    }
+
+    // Get dates + week open status
+    const { data: dates, error: dateError } = await supabase
+      .from('rota_dates')
+      .select(`
+        date,
+        rota_weeks (
+          open
+        )
+      `)
+      .order('date');
+
+    if (dateError) {
+      console.error(dateError);
+      alert('Failed to load dates');
+      return;
+    }
+
+    renderTable(users, dates);
+  }
+
+  function renderTable(users, dates) {
+    const table = document.getElementById('rota');
+    table.innerHTML = '';
+
+    // Header row
+    const headerRow = document.createElement('tr');
+    headerRow.innerHTML =
+      '<th class="name">Name</th>' +
+      dates.map(d => {
+        const label = new Date(d.date).toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: 'numeric'
+        });
+        return `<th class="${d.rota_weeks.open ? '' : 'closed'}">${label}</th>`;
+      }).join('');
+    table.appendChild(headerRow);
+
+    // User rows
+    users.forEach(user => {
+      const row = document.createElement('tr');
+
+      row.innerHTML =
+        `<td class="name">${user.name}</td>` +
+        dates.map(d =>
+          `<td class="${d.rota_weeks.open ? '' : 'closed'}"></td>`
+        ).join('');
+
+      table.appendChild(row);
+    });
+  }
+
+  loadRota();
+</script>
+
+</body>
+</html>

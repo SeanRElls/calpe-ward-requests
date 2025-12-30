@@ -1067,14 +1067,16 @@ function render(users, weeks){
 
   weeks.forEach((w, idx) => {
     const th = document.createElement("th");
-    th.className = "week-label " + (w.open ? "" : "closed");
+    th.className = "week-head " + (w.open ? "" : "closed");
+
     th.colSpan = 7;
     th.innerHTML = `
   <span class="week-label">${fmt(w.weekStart)} – ${fmt(w.weekEnd)}</span>
   <button
     class="week-comment-btn"
     type="button"
-    data-week-id="${w.days[0].rota_weeks.id ?? w.week_id}"
+    data-week-id="${w.week_id || w.days?.[0]?.rota_weeks?.id || ""}"
+
     title="Week comment"
   >💬</button>
 `;
@@ -1269,6 +1271,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

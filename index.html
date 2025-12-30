@@ -389,14 +389,17 @@
       <h2 id="shiftTitle">Select shift</h2>
       <p id="shiftDesc">Choose a request for this day.</p>
 
-      <!-- Priority toggle (Step 2) -->
-      <div class="row" style="margin:10px 0 6px;">
-        <button id="prioNormal" type="button">Normal</button>
-        <button id="prioStrong" type="button">Strong</button>
-      </div>
-      <p class="subtitle" id="prioHint" style="margin:0 0 6px;">
-        Normal request
-      </p>
+    <!-- OFF priority (only shown for O) -->
+<div id="offPriorityRow" class="row" style="margin:10px 0 6px; display:none;">
+  <button id="prio1" type="button">1st OFF</button>
+  <button id="prio2" type="button">2nd OFF</button>
+  <button id="prioNone" type="button">No priority</button>
+</div>
+
+<p class="subtitle" id="prioHint" style="margin:0 0 6px; display:none;">
+  Choose priority for OFF (max 2 per week)
+</p>
+
 
       <div class="shift-grid">
         <button class="shift-btn" data-shift="LD" type="button">LD</button>
@@ -555,6 +558,32 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
 
+    // OFF priority state
+let activePriorityRank = null;
+
+// OFF priority DOM refs
+const offPriorityRow = document.getElementById("offPriorityRow");
+const prio1Btn = document.getElementById("prio1");
+const prio2Btn = document.getElementById("prio2");
+const prioNoneBtn = document.getElementById("prioNone");
+const prioHint = document.getElementById("prioHint");
+
+    function setOffPriority(rank){
+  activePriorityRank = rank;
+
+  [prio1Btn, prio2Btn, prioNoneBtn].forEach(b =>
+    b.classList.remove("primary")
+  );
+
+  if (rank === 1) prio1Btn.classList.add("primary");
+  else if (rank === 2) prio2Btn.classList.add("primary");
+  else prioNoneBtn.classList.add("primary");
+}
+
+prio1Btn.addEventListener("click", () => setOffPriority(1));
+prio2Btn.addEventListener("click", () => setOffPriority(2));
+prioNoneBtn.addEventListener("click", () => setOffPriority(null));
+
     /* =========================================================
        5) PIN MODAL (open/close)
        ========================================================= */
@@ -650,41 +679,62 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
       loginBadge.textContent = `Logged in: ${currentUser.name}`;
       adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
     }
+/* =========================================================
+   PATCH 2) SHIFT PICKER LOGIC (with OFF priority)
+   ========================================================= */
 
-    /* =========================================================
-       PATCH 2) SHIFT PICKER LOGIC
-       ========================================================= */
-    function openShiftModal(){
-      if(!activeCell) return;
-      shiftModal.style.display = "flex";
-      shiftModal.setAttribute("aria-hidden", "false");
-    }
+function openShiftModal(){
+  if (!activeCell) return;
 
-    function closeShiftModal(){
-      shiftModal.style.display = "none";
-      shiftModal.setAttribute("aria-hidden", "true");
-      activeCell = null;
-    }
+  const key = `${activeCell.userId}_${activeCell.date}`;
+  const existing = requestsCache.get(key);
 
-    shiftCancelBtn.addEventListener("click", closeShiftModal);
-    shiftModal.addEventListener("click", (e) => { if(e.target === shiftModal) closeShiftModal(); });
+  // Preload OFF priority if editing an OFF
+  if (existing?.value === "O") {
+    offPriorityRow.style.display = "flex";
+    prioHint.style.display = "block";
+    setOffPriority(existing.important_rank ?? null);
+  } else {
+    offPriorityRow.style.display = "none";
+    prioHint.style.display = "none";
+    activePriorityRank = null;
+  }
+
+  shiftModal.style.display = "flex";
+  shiftModal.setAttribute("aria-hidden", "false");
+}
+
+function closeShiftModal(){
+  shiftModal.style.display = "none";
+  shiftModal.setAttribute("aria-hidden", "true");
+  activeCell = null;
+
+  // Reset OFF priority state
+  activePriorityRank = null;
+  offPriorityRow.style.display = "none";
+  prioHint.style.display = "none";
+}
+
+shiftCancelBtn.addEventListener("click", closeShiftModal);
+shiftModal.addEventListener("click", (e) => {
+  if (e.target === shiftModal) closeShiftModal();
+});
 
 document.querySelectorAll(".shift-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
     if (!activeCell) return;
 
-    // capture BEFORE closeShiftModal() nukes activeCell
     const td = activeCell.td;
     const userId = activeCell.userId;
     const date = activeCell.date;
-
     const shift = btn.dataset.shift;
-    
+    const key = `${userId}_${date}`;
+
+    /* -----------------------------
+       STEP 1: Max 5 per week guard
+       ----------------------------- */
     if (shift !== "CLEAR") {
       const currentCount = countUserRequestsThisWeek(userId, date);
-      const key = `${userId}_${date}`;
-
-      // If this cell is empty, it would be a NEW request
       const alreadyExists = requestsCache.has(key);
 
       if (!alreadyExists && currentCount >= MAX_REQUESTS_PER_WEEK) {
@@ -694,10 +744,24 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
       }
     }
 
-    
-    const key = `${userId}_${date}`;
+    /* -----------------------------
+       STEP 2: OFF priority handling
+       ----------------------------- */
+    if (shift === "O") {
+      offPriorityRow.style.display = "flex";
+      prioHint.style.display = "block";
 
-    // Update UI immediately
+      const existing = requestsCache.get(key);
+      setOffPriority(existing?.important_rank ?? null);
+    } else {
+      offPriorityRow.style.display = "none";
+      prioHint.style.display = "none";
+      activePriorityRank = null;
+    }
+
+    /* -----------------------------
+       Optimistic UI update
+       ----------------------------- */
     if (shift === "CLEAR") {
       td.textContent = "";
       delete pendingEdits[key];
@@ -706,10 +770,11 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
       pendingEdits[key] = { userId, date, shift };
     }
 
-    // Close modal fast (mobile-friendly)
     closeShiftModal();
 
-    // Auto-save to Supabase
+    /* -----------------------------
+       Auto-save to Supabase
+       ----------------------------- */
     try {
       if (shift === "CLEAR") {
         await deleteRequestCell(userId, date);
@@ -717,37 +782,48 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
         delete pendingEdits[key];
         toast(`Cleared + saved (${key})`);
       } else {
-        const saved = await upsertRequestCell(userId, date, shift);
+        const rankToSave = (shift === "O") ? activePriorityRank : null;
+
+        const saved = await upsertRequestCell(
+          userId,
+          date,
+          shift,
+          rankToSave
+        );
+
         requestsCache.set(key, saved);
         delete pendingEdits[key];
         toast(`Saved (${key}) = ${shift}`);
       }
-} catch (err) {
-  console.error("Auto-save failed:", err);
+    } catch (err) {
+      console.error("Auto-save failed:", err);
 
-  const msg =
-    err?.message ||
-    err?.error?.message ||
-    err?.details ||
-    JSON.stringify(err);
+      const msg =
+        err?.message ||
+        err?.error?.message ||
+        err?.details ||
+        JSON.stringify(err);
 
-  // Always revert UI back to last saved state on any error
-  const existing = requestsCache.get(key);
-  td.textContent = existing?.value || "";
-  delete pendingEdits[key];
+      // Revert UI to last saved state
+      const existing = requestsCache.get(key);
+      td.textContent = existing?.value || "";
+      delete pendingEdits[key];
 
-  // Friendly message for max-5
-  if ((msg || "").toLowerCase().includes("max 5 requests per week")) {
-    alert("Max 5 requests per week. Clear one day to pick another.");
-    return;
-  }
+      if ((msg || "").toLowerCase().includes("max 5")) {
+        alert("Max 5 requests per week. Clear one day to pick another.");
+        return;
+      }
 
-  alert("Save failed. Check console.");
-}
+      if ((msg || "").toLowerCase().includes("priority") ||
+          (msg || "").toLowerCase().includes("max 2")) {
+        alert("You can only have 2 priority OFF requests per week.");
+        return;
+      }
 
+      alert("Save failed. Check console.");
+    }
   });
 });
-
 
     /* =========================================================
    PATCH 2B) AUTO-SAVE (write to Supabase after each selection)
@@ -1076,6 +1152,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

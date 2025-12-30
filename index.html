@@ -813,14 +813,15 @@ const pe = pendingEdits[key];
 const existing = requestsCache.get(key);
 
 const row = pe ? { value: pe.shift, important_rank: pe.important_rank } : existing;
-
 if (row?.value === "O") {
   if (row.important_rank === 1) td.textContent = "O¹";
   else if (row.important_rank === 2) td.textContent = "O²";
+  else if (row.important_rank === 3) td.textContent = "O³";
   else td.textContent = "O";
 } else {
   td.textContent = row?.value || "";
 }
+
 
 
   delete pendingEdits[key];
@@ -1099,13 +1100,14 @@ function render(users, weeks){
 if (pendingEdits[key]) {
   const pe = pendingEdits[key];
 
-  if (pe.shift === "O") {
-    if (pe.important_rank === 1) td.textContent = "O¹";
-    else if (pe.important_rank === 2) td.textContent = "O²";
-    else td.textContent = "O";
-  } else {
-    td.textContent = pe.shift || "";
-  }
+if (pe.shift === "O") {
+  if (pe.important_rank === 1) td.textContent = "O¹";
+  else if (pe.important_rank === 2) td.textContent = "O²";
+  else if (pe.important_rank === 3) td.textContent = "O³";
+  else td.textContent = "O";
+} else {
+  td.textContent = pe.shift || "";
+}
 
 } else {
   const r = requestsCache.get(key);
@@ -1186,6 +1188,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

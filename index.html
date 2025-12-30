@@ -140,19 +140,30 @@
       cursor: default;
     }
 
-    .week-comment-btn {
+  .week-comment-btn{
+  flex: 0 0 auto;          /* stop flex stretching */
+  min-width: 0 !important; /* override global min-width:110px */
+  width: 22px;
+  height: 22px;
+  padding: 0;
   margin-left: 6px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   border: 1px solid #ccc;
   border-radius: 999px;
-  padding: 2px 8px;
   background: #fff;
   cursor: pointer;
   font-size: 12px;
+  line-height: 1;
 }
-.week-comment-btn.has-comment {
-  border-color: #111;
-  font-weight: 700;
+.week-comment-btn.has-comment{
+  border-color:#111;
+  font-weight:700;
 }
+    
 .week-label { font-weight: 600; }
 
     
@@ -1273,6 +1284,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

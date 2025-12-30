@@ -626,24 +626,37 @@
     shiftCancelBtn.addEventListener("click", closeShiftModal);
     shiftModal.addEventListener("click", (e) => { if(e.target === shiftModal) closeShiftModal(); });
 
-    document.querySelectorAll(".shift-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        if(!activeCell) return;
+document.querySelectorAll(".shift-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (!activeCell) return;
 
-        const shift = btn.dataset.shift;
+    const shift = btn.dataset.shift;
+    const key = `${activeCell.userId}_${activeCell.date}`;
 
-        // update UI immediately
-        activeCell.td.textContent = shift;
+    if (shift === "CLEAR") {
+      // ✅ Clear the cell visually
+      activeCell.td.textContent = "";
 
-        // store in memory
-        const key = `${activeCell.userId}_${activeCell.date}`;
-        pendingEdits[key] = { userId: activeCell.userId, date: activeCell.date, shift };
+      // ✅ Remove any pending edit
+      delete pendingEdits[key];
 
-        console.log("Saved in pendingEdits:", pendingEdits[key]);
-        closeShiftModal();
-      });
-    });
+      console.log("Cleared cell:", key);
+    } else {
+      // ✅ Normal shift entry
+      activeCell.td.textContent = shift;
 
+      pendingEdits[key] = {
+        userId: activeCell.userId,
+        date: activeCell.date,
+        shift
+      };
+
+      console.log("Saved:", pendingEdits[key]);
+    }
+
+    closeShiftModal();
+  });
+});
     /* =========================================================
        7) DATA LOADING (users + dates)
        ========================================================= */
@@ -860,4 +873,5 @@
   </script>
 </body>
 </html>
+
 

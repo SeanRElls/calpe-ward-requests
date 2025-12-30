@@ -4,145 +4,190 @@
   <meta charset="UTF-8" />
   <title>Calpe Ward Off Duty Requests</title>
 
-  <!-- Supabase JS client (ONLY loaded once) -->
+  <!-- Supabase JS client (ONLY once) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      margin: 20px;
+      margin: 18px;
       background: #fff;
+      color: #111;
     }
 
     h2 {
-      margin-bottom: 10px;
+      margin: 0 0 10px 0;
+      font-size: 22px;
+      font-weight: 700;
     }
 
     table {
       border-collapse: collapse;
       width: 100%;
       table-layout: fixed;
-      font-size: 13px;
+      font-size: 12px;
     }
 
     th, td {
-      border: 1px solid #ccc;
-      padding: 6px;
+      border: 1px solid #cfcfcf;
       text-align: center;
+      vertical-align: middle;
     }
 
+    /* Make the grid denser (closer to Excel look) */
+    td {
+      height: 22px;
+      padding: 2px;
+      background: #fff;
+    }
+
+    /* Sticky header rows */
     th {
-      background: #f3f3f3;
-      font-weight: 600;
+      background: #f6f6f6;
       position: sticky;
       top: 0;
       z-index: 2;
     }
 
+    /* Two-row header styling */
+    th.day {
+      font-weight: 700;
+      font-size: 12px;
+      padding: 4px 0;
+    }
+
+    th.date {
+      font-weight: 600;
+      font-size: 12px;
+      padding: 4px 0;
+      border-top: 0; /* visually group the two header rows */
+    }
+
+    /* Sticky name column */
     .name {
       text-align: left;
-      font-weight: 600;
+      font-weight: 700;
       background: #fff;
       position: sticky;
       left: 0;
       z-index: 3;
       min-width: 180px;
+      padding: 6px 8px;
+      border-right: 2px solid #bdbdbd;
     }
 
+    /* Second header row first cell should still be sticky */
+    th.name-blank {
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      background: #fff;
+      border-right: 2px solid #bdbdbd;
+    }
+
+    /* Closed week cells */
     .closed {
-      background: #e6e6e6;
+      background: #efefef !important;
       color: #999;
+    }
+
+    /* Optional: slightly nicer hover so it feels interactive later */
+    td:hover {
+      background: #fafafa;
     }
   </style>
 </head>
 
 <body>
+  <h2>Calpe Ward Requests</h2>
+  <table id="rota"></table>
 
-<h2>Calpe Ward Requests</h2>
+  <script>
+    // Supabase client
+    const supabaseClient = window.supabase.createClient(
+      "https://tbclufdtyefexwwitfsz.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA"
+    );
 
-<table id="rota"></table>
+    async function loadRota() {
+      // Users
+      const { data: users, error: userError } = await supabaseClient
+        .from("users")
+        .select("id, name")
+        .order("name");
 
-<script>
-  // ✅ Create Supabase client ONCE
-  const supabaseClient = window.supabase.createClient(
-    "https://tbclufdtyefexwwitfsz.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA"
-  );
+      if (userError) {
+        console.error("User load error:", userError);
+        alert("Failed to load users");
+        return;
+      }
 
-  console.log("Supabase client created:", supabaseClient);
+      // Dates + open status via rota_weeks relation
+      const { data: dates, error: dateError } = await supabaseClient
+        .from("rota_dates")
+        .select(`
+          date,
+          rota_weeks (
+            open
+          )
+        `)
+        .order("date");
 
-  async function loadRota() {
-    console.log("Loading rota…");
+      if (dateError) {
+        console.error("Date load error:", dateError);
+        alert("Failed to load dates");
+        return;
+      }
 
-    // Load users
-    const { data: users, error: userError } = await supabaseClient
-      .from("users")
-      .select("id, name")
-      .order("name");
-
-    if (userError) {
-      console.error("User load error:", userError);
-      alert("Failed to load users");
-      return;
+      renderTable(users, dates);
     }
 
-    // Load dates + week open status
-    const { data: dates, error: dateError } = await supabaseClient
-      .from("rota_dates")
-      .select(`
-        date,
-        rota_weeks (
-          open
-        )
-      `)
-      .order("date");
+    function renderTable(users, dates) {
+      const table = document.getElementById("rota");
+      table.innerHTML = "";
 
-    if (dateError) {
-      console.error("Date load error:", dateError);
-      alert("Failed to load dates");
-      return;
+      // Header row 1: Day letters (S M T W T F S)
+      const dayRow = document.createElement("tr");
+      dayRow.innerHTML =
+        '<th class="name">Name</th>' +
+        dates.map(d => {
+          const dt = new Date(d.date);
+          const dayLetter = dt
+            .toLocaleDateString("en-GB", { weekday: "short" })
+            .charAt(0);
+          const closedClass = (d.rota_weeks && d.rota_weeks.open) ? "" : "closed";
+          return `<th class="day ${closedClass}">${dayLetter}</th>`;
+        }).join("");
+      table.appendChild(dayRow);
+
+      // Header row 2: Date numbers (21 22 23 ...)
+      const dateRow = document.createElement("tr");
+      dateRow.innerHTML =
+        '<th class="name-blank"></th>' +
+        dates.map(d => {
+          const dt = new Date(d.date);
+          const num = dt.getDate();
+          const closedClass = (d.rota_weeks && d.rota_weeks.open) ? "" : "closed";
+          return `<th class="date ${closedClass}">${num}</th>`;
+        }).join("");
+      table.appendChild(dateRow);
+
+      // User rows
+      users.forEach(user => {
+        const row = document.createElement("tr");
+
+        row.innerHTML =
+          `<td class="name">${user.name}</td>` +
+          dates.map(d => {
+            const closedClass = (d.rota_weeks && d.rota_weeks.open) ? "" : "closed";
+            return `<td class="${closedClass}"></td>`;
+          }).join("");
+
+        table.appendChild(row);
+      });
     }
 
-    console.log("Users:", users);
-    console.log("Dates:", dates);
-
-    renderTable(users, dates);
-  }
-
-  function renderTable(users, dates) {
-    const table = document.getElementById("rota");
-    table.innerHTML = "";
-
-    // Header row
-    const headerRow = document.createElement("tr");
-    headerRow.innerHTML =
-      '<th class="name">Name</th>' +
-      dates.map(d => {
-        const label = new Date(d.date).toLocaleDateString("en-GB", {
-          weekday: "short",
-          day: "numeric"
-        });
-        return `<th class="${d.rota_weeks.open ? "" : "closed"}">${label}</th>`;
-      }).join("");
-
-    table.appendChild(headerRow);
-
-    // User rows
-    users.forEach(user => {
-      const row = document.createElement("tr");
-
-      row.innerHTML =
-        `<td class="name">${user.name}</td>` +
-        dates.map(d =>
-          `<td class="${d.rota_weeks.open ? "" : "closed"}"></td>`
-        ).join("");
-
-      table.appendChild(row);
-    });
-  }
-
-  loadRota();
-</script>
-
+    loadRota();
+  </script>
 </body>
 </html>

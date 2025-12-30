@@ -753,7 +753,7 @@ if (periodSelect) {
   periodSelect.addEventListener("change", async () => {
     activePeriodId = Number(periodSelect.value) || periodSelect.value;
 
-    const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
+    
     setPeriodLabel(selected);
 
     await loadRota();
@@ -765,9 +765,6 @@ if (periodSelect) {
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
 
-    // period
-    const periodSelect = document.getElementById("periodSelect");
-const periodNavLabel = document.getElementById("periodNavLabel");
 
     
 // Week comment modal refs
@@ -1237,7 +1234,7 @@ if (dateError) {
   alert("Failed to load dates for this period.");
   return;
 }
-}
+
 
   // -----------------------------
   // 7E) Render table (weeks + users)
@@ -1483,6 +1480,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

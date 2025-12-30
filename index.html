@@ -526,6 +526,13 @@ function countUserRequestsThisWeek(userId, dateStr){
   return count;
 }
 
+    function nextOffPriority(currentRank){
+  if (currentRank === 1) return 2;
+  if (currentRank === 2) return null;
+  return 1;
+}
+
+
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
    ========================================================= */
@@ -727,7 +734,18 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
     const td = activeCell.td;
     const userId = activeCell.userId;
     const date = activeCell.date;
-    const shift = btn.dataset.shift;
+const shift = btn.dataset.shift;
+const key = `${userId}_${date}`;
+const existing = requestsCache.get(key);
+
+// Special handling for OFF: cycle priority
+let rankToSave = null;
+
+if (shift === "O") {
+  const currentRank = existing?.important_rank ?? null;
+  rankToSave = nextOffPriority(currentRank);
+}
+
     const key = `${userId}_${date}`;
 
     /* -----------------------------
@@ -762,13 +780,19 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
     /* -----------------------------
        Optimistic UI update
        ----------------------------- */
-    if (shift === "CLEAR") {
-      td.textContent = "";
-      delete pendingEdits[key];
-    } else {
-      td.textContent = shift;
-      pendingEdits[key] = { userId, date, shift };
-    }
+ if (shift === "CLEAR") {
+  td.textContent = "";
+  delete pendingEdits[key];
+} else if (shift === "O") {
+  if (rankToSave === 1) td.textContent = "O¹";
+  else if (rankToSave === 2) td.textContent = "O²";
+  else td.textContent = "O";
+
+  pendingEdits[key] = { userId, date, shift, important_rank: rankToSave };
+} else {
+  td.textContent = shift;
+  pendingEdits[key] = { userId, date, shift, important_rank: null };
+}
 
     closeShiftModal();
 
@@ -784,12 +808,12 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
       } else {
         const rankToSave = (shift === "O") ? activePriorityRank : null;
 
-        const saved = await upsertRequestCell(
-          userId,
-          date,
-          shift,
-          rankToSave
-        );
+  const saved = await upsertRequestCell(
+  userId,
+  date,
+  shift,
+  shift === "O" ? rankToSave : null
+);
 
         requestsCache.set(key, saved);
         delete pendingEdits[key];
@@ -1083,7 +1107,13 @@ function render(users, weeks){
             td.textContent = pendingEdits[key].shift || "";
           } else {
             const r = requestsCache.get(key);
-            td.textContent = r?.value || "";
+          if (r?.value === "O") {
+  if (r.important_rank === 1) td.textContent = "O¹";
+  else if (r.important_rank === 2) td.textContent = "O²";
+  else td.textContent = "O";
+} else {
+  td.textContent = r?.value || "";
+}
           }
 
           tr.appendChild(td);
@@ -1152,6 +1182,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

@@ -412,6 +412,7 @@
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
     const STORAGE_KEY = "calpeward.loggedInUserId";
+    const MAX_REQUESTS_PER_WEEK = 5;
 
     /* =========================================================
        2) HELPERS (dates, formatting)
@@ -492,6 +493,25 @@
         { title: "Nursing Assistants", className: "section-na", items: buckets.nursing_assistant }
       ].filter(g => g.items.length > 0);
     }
+function getWeekStart(dateStr){
+  const d = new Date(dateStr);
+  const day = d.getDay(); // 0 = Sunday
+  d.setDate(d.getDate() - day);
+  d.setHours(0,0,0,0);
+  return isoDate(d);
+}
+
+function countUserRequestsThisWeek(userId, dateStr){
+  const weekStart = getWeekStart(dateStr);
+  let count = 0;
+
+  for (const r of requestsCache.values()){
+    if (r.user_id !== userId) continue;
+    if (getWeekStart(r.date) === weekStart) count++;
+  }
+
+  return count;
+}
 
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
@@ -649,6 +669,22 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
     const date = activeCell.date;
 
     const shift = btn.dataset.shift;
+    
+    if (shift !== "CLEAR") {
+      const currentCount = countUserRequestsThisWeek(userId, date);
+      const key = `${userId}_${date}`;
+
+      // If this cell is empty, it would be a NEW request
+      const alreadyExists = requestsCache.has(key);
+
+      if (!alreadyExists && currentCount >= MAX_REQUESTS_PER_WEEK) {
+        alert("You can only request 5 days per week.");
+        closeShiftModal();
+        return;
+      }
+    }
+
+    
     const key = `${userId}_${date}`;
 
     // Update UI immediately
@@ -1012,6 +1048,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

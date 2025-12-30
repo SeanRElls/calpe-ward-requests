@@ -632,36 +632,88 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
     shiftModal.addEventListener("click", (e) => { if(e.target === shiftModal) closeShiftModal(); });
 
 document.querySelectorAll(".shift-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", async () => {
     if (!activeCell) return;
 
     const shift = btn.dataset.shift;
     const key = `${activeCell.userId}_${activeCell.date}`;
 
+    // Update UI immediately
     if (shift === "CLEAR") {
-      // ✅ Clear the cell visually
       activeCell.td.textContent = "";
-
-      // ✅ Remove any pending edit
       delete pendingEdits[key];
-
-      console.log("Cleared cell:", key);
     } else {
-      // ✅ Normal shift entry
       activeCell.td.textContent = shift;
-
-      pendingEdits[key] = {
-        userId: activeCell.userId,
-        date: activeCell.date,
-        shift
-      };
-
-      console.log("Saved:", pendingEdits[key]);
+      pendingEdits[key] = { userId: activeCell.userId, date: activeCell.date, shift };
     }
 
+    // Close modal fast (mobile-friendly)
     closeShiftModal();
+
+    // Auto-save to Supabase
+    try {
+      if (shift === "CLEAR") {
+        await deleteRequestCell(activeCell.userId, activeCell.date);
+        requestsCache.delete(key);
+        toast(`Cleared + saved (${key})`);
+      } else {
+        const saved = await upsertRequestCell(activeCell.userId, activeCell.date, shift);
+        requestsCache.set(key, saved);
+        toast(`Saved (${key}) = ${shift}`);
+      }
+
+      // Remove pending edit because it's now saved
+      delete pendingEdits[key];
+
+    } catch (err) {
+      console.error("Auto-save failed:", err);
+      alert("Save failed. Check console.");
+      // Keep pendingEdits so you can retry later if needed
+    }
   });
 });
+
+
+    /* =========================================================
+   PATCH 2B) AUTO-SAVE (write to Supabase after each selection)
+   ========================================================= */
+
+function toast(msg){
+  // tiny, non-annoying feedback. If you hate it, delete it.
+  console.log(msg);
+}
+
+// Upsert a single cell to Supabase
+async function upsertRequestCell(userId, date, value){
+  // If you have a UNIQUE constraint on (user_id, date), this is perfect.
+  const payload = {
+    user_id: userId,
+    date: date,
+    value: value === "" ? null : value,  // blank -> null
+    important_rank: null
+  };
+
+  const { data, error } = await supabaseClient
+    .from("requests")
+    .upsert(payload, { onConflict: "user_id,date" })
+    .select("id, user_id, date, value, important_rank")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Delete a cell completely (optional, but nice for CLEAR)
+async function deleteRequestCell(userId, date){
+  const { error } = await supabaseClient
+    .from("requests")
+    .delete()
+    .eq("user_id", userId)
+    .eq("date", date);
+
+  if (error) throw error;
+}
+
     
 /* =========================================================
    7) DATA LOADING (users + dates + requests)
@@ -949,6 +1001,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

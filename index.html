@@ -754,130 +754,154 @@ async function loadRota() {
 }
 
     /* =========================================================
-       8) RENDER (table header + grouped rows)
-       ========================================================= */
-    function render(users, weeks){
-      const table = document.getElementById("rota");
-      table.innerHTML = "";
+   8) RENDER (table header + grouped rows)
+   ========================================================= */
+function render(users, weeks){
+  const table = document.getElementById("rota");
+  table.innerHTML = "";
 
-      const thead = document.createElement("thead");
-      const tbody = document.createElement("tbody");
-      table.appendChild(thead);
-      table.appendChild(tbody);
+  const thead = document.createElement("thead");
+  const tbody = document.createElement("tbody");
+  table.appendChild(thead);
+  table.appendChild(tbody);
 
-      const r1 = document.createElement("tr");
-      const hName = document.createElement("th");
-      hName.className = "name-col";
-      hName.textContent = "Name";
-      r1.appendChild(hName);
+  // ----- Header row 1: week labels
+  const r1 = document.createElement("tr");
+  const hName = document.createElement("th");
+  hName.className = "name-col";
+  hName.textContent = "Name";
+  r1.appendChild(hName);
 
-      weeks.forEach((w, idx) => {
-        const th = document.createElement("th");
-        th.className = "week-label " + (w.open ? "" : "closed");
-        th.colSpan = 7;
-        th.textContent = `${fmt(w.weekStart)} – ${fmt(w.weekEnd)}`;
-        r1.appendChild(th);
+  weeks.forEach((w, idx) => {
+    const th = document.createElement("th");
+    th.className = "week-label " + (w.open ? "" : "closed");
+    th.colSpan = 7;
+    th.textContent = `${fmt(w.weekStart)} – ${fmt(w.weekEnd)}`;
+    r1.appendChild(th);
 
-        if(idx !== weeks.length - 1){
-          const sep = document.createElement("th");
-          sep.className = "week-sep";
-          r1.appendChild(sep);
-        }
-      });
-      thead.appendChild(r1);
-
-      const r2 = document.createElement("tr");
-      const blank2 = document.createElement("th");
-      blank2.className = "name-col";
-      blank2.textContent = "";
-      r2.appendChild(blank2);
-
-      const dayLetters = ["S","M","T","W","T","F","S"];
-      weeks.forEach((w, idx) => {
-        for(let i=0;i<7;i++){
-          const th = document.createElement("th");
-          th.className = "day " + (w.open ? "" : "closed");
-          th.textContent = dayLetters[i];
-          r2.appendChild(th);
-        }
-        if(idx !== weeks.length - 1){
-          const sep = document.createElement("th");
-          sep.className = "week-sep";
-          r2.appendChild(sep);
-        }
-      });
-      thead.appendChild(r2);
-
-      const r3 = document.createElement("tr");
-      const blank3 = document.createElement("th");
-      blank3.className = "name-col";
-      blank3.textContent = "";
-      r3.appendChild(blank3);
-
-      weeks.forEach((w, idx) => {
-        for(let i=0;i<7;i++){
-          const d = new Date(w.days[i].date);
-          const isWeekend = (i === 0 || i === 6);
-          const th = document.createElement("th");
-          th.className = "date " + (w.open ? "" : "closed") + (isWeekend ? " weekend" : "");
-          th.textContent = d.getDate();
-          r3.appendChild(th);
-        }
-        if(idx !== weeks.length - 1){
-          const sep = document.createElement("th");
-          sep.className = "week-sep";
-          r3.appendChild(sep);
-        }
-      });
-      thead.appendChild(r3);
-
-      const groups = groupUsers(users);
-
-      for(const g of groups){
-        const sectionTr = document.createElement("tr");
-        sectionTr.className = "section-row";
-
-        const sectionTd = document.createElement("td");
-        sectionTd.className = `name-col ${g.className}`;
-        sectionTd.colSpan = 1 + (weeks.length * 7) + (weeks.length - 1);
-        sectionTd.innerHTML = `<span>${g.title}</span>`;
-        sectionTr.appendChild(sectionTd);
-        tbody.appendChild(sectionTr);
-
-        for(const u of g.items){
-          const tr = document.createElement("tr");
-          tr.dataset.userId = u.id;
-
-          const nameTd = document.createElement("td");
-          nameTd.className = "name-col";
-          nameTd.textContent = u.name;
-          nameTd.addEventListener("click", () => openPinModal(u));
-          tr.appendChild(nameTd);
-
-          weeks.forEach((w, idx) => {
-            for(let i=0;i<7;i++){
-              const isWeekend = (i === 0 || i === 6);
-              const td = document.createElement("td");
-              td.className = "cell" + (w.open ? "" : " closed") + (isWeekend ? " weekend" : "");
-              td.dataset.userId = u.id;
-              td.dataset.date = w.days[i].date;
-              td.textContent = "";
-              tr.appendChild(td);
-            }
-            if(idx !== weeks.length - 1){
-              const sep = document.createElement("td");
-              sep.className = "week-sep";
-              tr.appendChild(sep);
-            }
-          });
-
-          tbody.appendChild(tr);
-        }
-      }
-
-      applyUnlockState();
-      updateBadges();
+    if(idx !== weeks.length - 1){
+      const sep = document.createElement("th");
+      sep.className = "week-sep";
+      r1.appendChild(sep);
     }
+  });
+  thead.appendChild(r1);
+
+  // ----- Header row 2: day letters
+  const r2 = document.createElement("tr");
+  const blank2 = document.createElement("th");
+  blank2.className = "name-col";
+  blank2.textContent = "";
+  r2.appendChild(blank2);
+
+  const dayLetters = ["S","M","T","W","T","F","S"];
+  weeks.forEach((w, idx) => {
+    for(let i=0;i<7;i++){
+      const th = document.createElement("th");
+      th.className = "day " + (w.open ? "" : "closed");
+      th.textContent = dayLetters[i];
+      r2.appendChild(th);
+    }
+    if(idx !== weeks.length - 1){
+      const sep = document.createElement("th");
+      sep.className = "week-sep";
+      r2.appendChild(sep);
+    }
+  });
+  thead.appendChild(r2);
+
+  // ----- Header row 3: date numbers
+  const r3 = document.createElement("tr");
+  const blank3 = document.createElement("th");
+  blank3.className = "name-col";
+  blank3.textContent = "";
+  r3.appendChild(blank3);
+
+  weeks.forEach((w, idx) => {
+    for(let i=0;i<7;i++){
+      const d = new Date(w.days[i].date);
+      const isWeekend = (i === 0 || i === 6);
+      const th = document.createElement("th");
+      th.className = "date " + (w.open ? "" : "closed") + (isWeekend ? " weekend" : "");
+      th.textContent = d.getDate();
+      r3.appendChild(th);
+    }
+    if(idx !== weeks.length - 1){
+      const sep = document.createElement("th");
+      sep.className = "week-sep";
+      r3.appendChild(sep);
+    }
+  });
+  thead.appendChild(r3);
+
+  // ----- Body grouped by role
+  const groups = groupUsers(users);
+
+  for(const g of groups){
+    // section header row
+    const sectionTr = document.createElement("tr");
+    sectionTr.className = "section-row";
+
+    const sectionTd = document.createElement("td");
+    sectionTd.className = `name-col ${g.className}`;
+    sectionTd.colSpan = 1 + (weeks.length * 7) + (weeks.length - 1);
+    sectionTd.innerHTML = `<span>${g.title}</span>`;
+    sectionTr.appendChild(sectionTd);
+    tbody.appendChild(sectionTr);
+
+    // user rows
+    for(const u of g.items){
+      const tr = document.createElement("tr");
+      tr.dataset.userId = u.id;
+
+      // name cell (PIN login)
+      const nameTd = document.createElement("td");
+      nameTd.className = "name-col";
+      nameTd.textContent = u.name;
+      nameTd.addEventListener("click", () => openPinModal(u));
+      tr.appendChild(nameTd);
+
+      // date cells
+      weeks.forEach((w, idx) => {
+        for(let i=0;i<7;i++){
+          const isWeekend = (i === 0 || i === 6);
+          const dateStr = w.days[i].date;
+
+          const td = document.createElement("td");
+          td.className = "cell" + (w.open ? "" : " closed") + (isWeekend ? " weekend" : "");
+          td.dataset.userId = u.id;
+          td.dataset.date = dateStr;
+
+          // ✅ Fill from cache / pending edits
+          const key = `${u.id}_${dateStr}`;
+
+          // Pending edits override everything visually
+          if (pendingEdits[key]) {
+            td.textContent = pendingEdits[key].shift || "";
+          } else {
+            const r = requestsCache.get(key);
+            td.textContent = r?.value || "";
+          }
+
+          tr.appendChild(td);
+        }
+
+        if(idx !== weeks.length - 1){
+          const sep = document.createElement("td");
+          sep.className = "week-sep";
+          tr.appendChild(sep);
+        }
+      });
+
+      tbody.appendChild(tr);
+    }
+  }
+
+  // Keep your existing logic
+  applyUnlockState();
+  updateBadges();
+}
+
 
     /* =========================================================
        9) UNLOCK LOGIC (who can edit which row)
@@ -925,6 +949,7 @@ async function loadRota() {
   </script>
 </body>
 </html>
+
 
 
 

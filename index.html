@@ -458,11 +458,48 @@
       pinConfirmBtn.disabled = true;
       pinErr.style.display = "none";
 
-      try{
-        // ✅ Correct way: invoke Supabase Edge Function with proper headers
-        const { data, error } = await supabaseClient.functions.invoke("verify-pin", {
-          body: { user_id: selectedUser.id, pin }
-        });
+    try {
+  // ✅ Verify PIN via Postgres RPC (NO Edge Function)
+  const { data: ok, error } = await supabaseClient.rpc("verify_user_pin", {
+    p_user_id: selectedUser.id,
+    p_pin: pin
+  });
+
+  if (error) {
+    console.error(error);
+    pinErr.textContent = "Server error.";
+    pinErr.style.display = "block";
+    pinConfirmBtn.disabled = false;
+    return;
+  }
+
+  if (ok !== true) {
+    pinErr.textContent = "Wrong PIN.";
+    pinErr.style.display = "block";
+    pinConfirmBtn.disabled = false;
+    return;
+  }
+
+  // ✅ PIN correct
+  currentUser = selectedUser;
+  sessionToken = "rpc"; // placeholder, not used yet
+
+  closePinModal();
+  applyUnlockState();
+
+  const badge = document.getElementById("loginBadge");
+  badge.textContent = `Logged in: ${currentUser.name}`;
+
+  const adminBadge = document.getElementById("adminBadge");
+  adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
+
+} catch (err) {
+  console.error(err);
+  pinErr.textContent = "Login error.";
+  pinErr.style.display = "block";
+  pinConfirmBtn.disabled = false;
+}
+
 
         if (error) {
           console.error(error);
@@ -661,3 +698,4 @@
   </script>
 </body>
 </html>
+

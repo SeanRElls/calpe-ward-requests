@@ -635,12 +635,12 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
     if (!activeCell) return;
 
-    const shift = btn.dataset.shift;
-
-    // ✅ capture everything BEFORE closeShiftModal() nukes activeCell
+    // capture BEFORE closeShiftModal() nukes activeCell
+    const td = activeCell.td;
     const userId = activeCell.userId;
     const date = activeCell.date;
-    const td = activeCell.td;
+
+    const shift = btn.dataset.shift;
     const key = `${userId}_${date}`;
 
     // Update UI immediately
@@ -660,24 +660,21 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
       if (shift === "CLEAR") {
         await deleteRequestCell(userId, date);
         requestsCache.delete(key);
+        delete pendingEdits[key];
         toast(`Cleared + saved (${key})`);
       } else {
         const saved = await upsertRequestCell(userId, date, shift);
         requestsCache.set(key, saved);
+        delete pendingEdits[key];
         toast(`Saved (${key}) = ${shift}`);
       }
-
-      // Remove pending edit because it's now saved
-      delete pendingEdits[key];
-
     } catch (err) {
       console.error("Auto-save failed:", err);
       alert("Save failed. Check console.");
-      // Keep pendingEdits so you can retry later if needed
+      // keep pendingEdits so you can retry later if needed
     }
   });
 });
-
 
 
     /* =========================================================
@@ -1007,6 +1004,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

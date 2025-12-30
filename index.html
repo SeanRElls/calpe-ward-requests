@@ -11,6 +11,7 @@
   <!-- =========================
        STYLES
        ========================= -->
+
   <style>
     :root{
       --grid: #d9d9d9;
@@ -308,6 +309,40 @@
       .btns{ flex: 1 1 100%; min-width: 0; }
       button{ min-width: 0; }
     }
+/* ===== SHIFT PICKER ===== */
+.shift-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.shift-btn{
+  padding: 14px 0;
+  font-size: 14px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  background: #f7f7f7;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.shift-btn:hover{
+  background: #e9f2ff;
+}
+
+.shift-btn.off{
+  background: #ffecec;
+  border-color: #ffb3b3;
+}
+
+@media (max-width: 480px){
+  .shift-grid{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+  
   </style>
 </head>
 
@@ -348,6 +383,29 @@
   </div>
 
   <script>
+<!-- =========================
+     SHIFT PICKER MODAL
+     ========================= -->
+<div class="modal-backdrop" id="shiftModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shiftTitle">
+    <h2 id="shiftTitle">Select shift</h2>
+    <p id="shiftDesc">Choose a request for this day.</p>
+
+    <div class="shift-grid">
+      <button class="shift-btn" data-shift="LD">LD</button>
+      <button class="shift-btn" data-shift="8-8">8–8</button>
+      <button class="shift-btn" data-shift="N">N</button>
+      <button class="shift-btn" data-shift="W">W</button>
+      <button class="shift-btn off" data-shift="O">O</button>
+    </div>
+
+    <div class="btns">
+      <button id="shiftCancel" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+    
     /* =========================================================
        1) CONFIG
        ========================================================= */
@@ -440,7 +498,14 @@ let selectedUser = null;     // user you clicked before PIN entry
 // === NEW: request + editing state ===
 let requestsCache = [];     // loaded rota_requests (later)
 let activeCell = null;      // { td, userId, date }
+    
+/* =========================================================
+   PATCH 2) SHIFT PICKER STATE
+   ========================================================= */
+let activeCell = null;
 
+// in-memory edits only (no DB yet)
+const pendingEdits = {};
     /* =========================================================
        4) DOM REFERENCES
        ========================================================= */
@@ -555,6 +620,54 @@ let activeCell = null;      // { td, userId, date }
       adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
     }
 /* =========================================================
+   PATCH 2) SHIFT PICKER LOGIC
+   ========================================================= */
+const shiftModal = document.getElementById("shiftModal");
+const shiftCancelBtn = document.getElementById("shiftCancel");
+
+function openShiftModal(){
+  if(!activeCell) return;
+  shiftModal.style.display = "flex";
+  shiftModal.setAttribute("aria-hidden", "false");
+}
+
+function closeShiftModal(){
+  shiftModal.style.display = "none";
+  shiftModal.setAttribute("aria-hidden", "true");
+  activeCell = null;
+}
+
+shiftCancelBtn.addEventListener("click", closeShiftModal);
+shiftModal.addEventListener("click", e => {
+  if(e.target === shiftModal) closeShiftModal();
+});
+
+// handle shift button clicks
+document.querySelectorAll(".shift-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if(!activeCell) return;
+
+    const shift = btn.dataset.shift;
+
+    // update UI immediately
+    activeCell.td.textContent = shift;
+
+    // store in memory
+    const key = `${activeCell.userId}_${activeCell.date}`;
+    pendingEdits[key] = {
+      userId: activeCell.userId,
+      date: activeCell.date,
+      shift
+    };
+
+    console.log("Pending edits:", pendingEdits);
+
+    closeShiftModal();
+  });
+});
+
+    
+    /* =========================================================
    7) DATA LOADING (users + dates)
    ========================================================= */
 async function loadRota() {
@@ -769,7 +882,9 @@ async function loadRota() {
         date: td.dataset.date
       };
 
-      console.log("Cell selected:", activeCell);
+console.log("Cell selected:", activeCell);
+openShiftModal();
+
       // next step: open shift picker
     });
   }
@@ -784,4 +899,5 @@ async function loadRota() {
   </script>
 </body>
 </html>
+
 

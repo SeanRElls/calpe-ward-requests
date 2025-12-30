@@ -363,6 +363,16 @@
       background: #ffecec;
       border-color: #ffb3b3;
     }
+    
+#periodSelect{
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 12px;
+  min-width: 220px;
+  flex: 0 0 auto;
+}
 
     .week-head { z-index: 9; }
 .week-comment-btn { position: relative; z-index: 10; }
@@ -371,6 +381,7 @@
     @media (max-width: 480px){
       .shift-grid{
         grid-template-columns: repeat(2, 1fr);
+        
       }
     }
   </style>
@@ -384,6 +395,8 @@
         <div class="subtitle" id="periodLabel"></div>
       </div>
       <div class="rightbits">
+        <select id="periodSelect"></select>
+<div class="badge" id="periodNavLabel">Loading periods…</div>
         <div class="badge" id="loginBadge">Not logged in</div>
         <div class="badge admin" id="adminBadge" style="display:none;">ADMIN</div>
       </div>
@@ -642,6 +655,52 @@ async function upsertWeekComment(weekId, userId, comment){
   return data;
 }
 
+    async function fetchRotaPeriods(){
+  // Staff: show active + non-hidden
+  // Admin: show all
+  let q = supabaseClient
+    .from("rota_periods")
+    .select("id, start_date, end_date, is_hidden, is_active")
+    .order("start_date", { ascending: true });
+
+  if (!currentUser?.is_admin) {
+    q = q.or("is_hidden.eq.false,is_active.eq.true");
+  }
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+function setPeriodLabel(p){
+  if (!p) {
+    periodNavLabel.textContent = "No period";
+    return;
+  }
+  const s = new Date(p.start_date);
+  const e = new Date(p.end_date);
+  periodNavLabel.textContent = `${fmt(s)} – ${fmt(e)}`;
+}
+
+function populatePeriodDropdown(periods){
+  periodSelect.innerHTML = "";
+
+  for (const p of periods){
+    const opt = document.createElement("option");
+    opt.value = p.id;
+
+    const s = new Date(p.start_date);
+    const e = new Date(p.end_date);
+
+    // Admin sees hidden marker
+    const hiddenTag = (currentUser?.is_admin && p.is_hidden) ? " (hidden)" : "";
+    const activeTag = p.is_active ? " ★" : "";
+
+    opt.textContent = `${fmt(s)} – ${fmt(e)}${activeTag}${hiddenTag}`;
+    periodSelect.appendChild(opt);
+  }
+}
+
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
    ========================================================= */
@@ -655,6 +714,14 @@ let selectedUser = null;     // user you clicked before PIN entry
 let activeCell = null;           // { td, userId, date }
 const pendingEdits = {};         // key -> { userId, date, shift }
 const requestsCache = new Map(); // key -> { id, user_id, date, value, important_rank }
+ let periodsCache = [];
+let activePeriodId = null;
+    
+// ===== 5-week window navigation =====
+const WINDOW_WEEKS = 5;
+let allWeeks = [];
+let weekWindowStart = 0; // index into allWeeks
+
     
 
 // key: `${user_id}_${date}` -> { id, user_id, date, value, important_rank }
@@ -675,6 +742,11 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
     // Shift modal refs
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
+
+    // period
+    const periodSelect = document.getElementById("periodSelect");
+const periodNavLabel = document.getElementById("periodNavLabel");
+
     
 // Week comment modal refs
 const weekCommentModal = document.getElementById("weekCommentModal");
@@ -1094,51 +1166,51 @@ usersById = new Map(users.map(u => [u.id, u.name]));
     if (found) currentUser = found;
   }
 
-  // -----------------------------
-  // 7C) Load rota dates
-  // -----------------------------
+// -----------------------------
+// 7C) Load rota periods (dropdown + active)
+// -----------------------------
+let periods;
+try {
+  periods = await fetchRotaPeriods();
+} catch (e) {
+  console.error("Period load error:", e);
+  alert("Failed to load rota periods.");
+  return;
+}
+
+if (!periods.length) {
+  alert("No rota periods available.");
+  return;
+}
+
+periodsCache = periods;
+
+// choose active by default, else latest
+const active = periods.find(p => p.is_active);
+activePeriodId = active ? active.id : periods[periods.length - 1].id;
+
+// populate dropdown + label
+populatePeriodDropdown(periods);
+periodSelect.value = String(activePeriodId);
+
+const selected = periods.find(p => p.id === activePeriodId);
+setPeriodLabel(selected);
+
+// -----------------------------
+// 7D) Load rota dates FOR SELECTED PERIOD
+// -----------------------------
 const { data: dates, error: dateError } = await supabaseClient
   .from("rota_dates")
-  .select("date, rota_weeks(id,open)")
+  .select("date, rota_weeks(id, open, period_id)")
+  .eq("rota_weeks.period_id", activePeriodId)
   .order("date");
 
-  if (dateError) {
-    console.error("Dates load error:", dateError);
-    alert("Failed to load dates.");
-    return;
-  }
-
-  // -----------------------------
-  // 7D) Load requests for visible date range
-  // -----------------------------
-  // Clear cache first so refresh doesn't stack old data
-  if (typeof requestsCache !== "undefined" && requestsCache?.clear) {
-    requestsCache.clear();
-  }
-
-  const dateMin = dates[0]?.date;
-  const dateMax = dates[dates.length - 1]?.date;
-
-  if (dateMin && dateMax) {
-    const { data: reqs, error: reqErr } = await supabaseClient
-      .from("requests")
-      .select("id, user_id, date, value, important_rank")
-      .gte("date", dateMin)
-      .lte("date", dateMax);
-
-    if (reqErr) {
-      console.error("Requests load error:", reqErr);
-      alert("Failed to load requests.");
-      return;
-    }
-
-    // Store in cache: key = userId_date
-    if (typeof requestsCache !== "undefined" && requestsCache?.set) {
-      for (const r of reqs || []) {
-        requestsCache.set(`${r.user_id}_${r.date}`, r);
-      }
-    }
-  }
+if (dateError) {
+  console.error("Dates load error:", dateError);
+  alert("Failed to load dates for this period.");
+  return;
+}
+}
 
   // -----------------------------
   // 7E) Render table (weeks + users)
@@ -1384,6 +1456,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

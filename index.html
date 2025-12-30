@@ -1,764 +1,317 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Calpe Ward Off Duty Requests</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Calpe Ward Requests</title>
 
-  <!-- Supabase JS (v2) -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <!-- =========================
-       STYLES
-       ========================= -->
-  <style>
-    :root{
-      --grid: #d9d9d9;
-      --grid-soft: #ececec;
-      --text: #111;
-      --muted: #6b6b6b;
-      --header: #f4f4f4;
-      --sheet-bg: #ffffff;
-      --sep: #c0c0c0;
-      --sep-fill: #e3e3e3;
+<style>
+/* =========================================================
+   0) VARIABLES + BASE
+   ========================================================= */
+:root{
+  --grid:#d9d9d9; --grid-soft:#ececec;
+  --text:#111; --muted:#6b6b6b;
+  --header:#f4f4f4; --sheet:#fff;
+  --sep:#c0c0c0; --sep-fill:#e3e3e3;
+  --cn:#ffd18a; --sn:#9fd0ff; --na:#a8e6a1;
+}
 
-      --closed-fill: #f0f0f0;
-      --weekend-fill: #fafafa;
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  margin:16px; background:#f7f7f7; color:var(--text);
+}
 
-      --cn-band: #ffd18a;
-      --sn-band: #9fd0ff;
-      --na-band: #a8e6a1;
-    }
+.wrap{
+  background:var(--sheet);
+  border:1px solid var(--grid);
+  border-radius:10px;
+  padding:14px;
+  overflow:auto;
+}
 
-    body{
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      margin: 18px;
-      color: var(--text);
-      background: #f7f7f7;
-    }
+/* =========================================================
+   1) HEADER
+   ========================================================= */
+.titlebar{
+  display:flex; justify-content:space-between; gap:12px;
+  margin-bottom:12px; flex-wrap:wrap;
+}
+h1{ margin:0; font-size:22px; }
+.subtitle{ font-size:13px; color:var(--muted); }
 
-    .wrap{
-      background: var(--sheet-bg);
-      border: 1px solid var(--grid);
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      padding: 14px 14px 10px;
-      overflow: auto;
-    }
+.badge{
+  font-size:12px; padding:4px 8px; border-radius:999px;
+  background:#eee;
+}
+.badge.admin{ background:#111; color:#fff; }
 
-    .titlebar{
-      display:flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      margin: 2px 2px 12px;
-    }
+/* =========================================================
+   2) TABLE
+   ========================================================= */
+table{
+  border-collapse:separate; border-spacing:0;
+  width:max-content; min-width:100%; font-size:12px;
+}
 
-    h1{
-      font-size: 22px;
-      margin: 0;
-      font-weight: 750;
-      letter-spacing: 0.2px;
-    }
+th,td{
+  border-right:1px solid var(--grid-soft);
+  border-bottom:1px solid var(--grid-soft);
+  height:28px; min-width:36px;
+  text-align:center;
+}
 
-    .subtitle{
-      font-size: 13px;
-      color: var(--muted);
-    }
+thead th{
+  position:sticky; top:0; z-index:5;
+  background:var(--header);
+}
 
-    .rightbits{
-      display:flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
+.name-col{
+  position:sticky; left:0; z-index:6;
+  background:#fff;
+  min-width:220px;
+  padding:0 10px;
+  font-weight:600;
+  border-right:2px solid var(--sep);
+  cursor:pointer;
+}
 
-    .badge{
-      font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background:#eee;
-      color:#222;
-      white-space: nowrap;
-    }
+.week-label{ font-weight:700; background:#ededed; }
+.week-sep{
+  width:14px; background:var(--sep-fill);
+  border-right:2px solid var(--sep);
+}
 
-    .badge.admin{
-      background:#222;
-      color:#fff;
-    }
+.section-row td{
+  font-weight:700; text-align:left;
+  padding-left:10px;
+}
+.section-cn{ background:var(--cn)!important; }
+.section-sn{ background:var(--sn)!important; }
+.section-na{ background:var(--na)!important; }
 
-    table{
-      border-collapse: separate;
-      border-spacing: 0;
-      width: max-content;
-      min-width: 100%;
-      font-size: 12px;
-    }
+td.cell{
+  cursor:pointer;
+}
+td.cell.locked{
+  opacity:.5; cursor:not-allowed;
+}
 
-    th, td{
-      border-right: 1px solid var(--grid-soft);
-      border-bottom: 1px solid var(--grid-soft);
-      text-align: center;
-      vertical-align: middle;
-      padding: 0;
-      height: 24px;
-      background: #fff;
-      min-width: 34px;
-    }
+/* =========================================================
+   3) MODALS
+   ========================================================= */
+.modal-backdrop{
+  position:fixed; inset:0;
+  display:none; justify-content:center; align-items:center;
+  background:rgba(0,0,0,.35); z-index:1000;
+}
+.modal{
+  background:#fff; border-radius:14px;
+  padding:16px; width:min(360px,100%);
+}
+.modal h2{ margin-top:0; }
 
-    table tr:first-child th{ border-top: 1px solid var(--grid); }
-    table tr th:first-child, table tr td:first-child{ border-left: 1px solid var(--grid); }
-    table tr:last-child td{ border-bottom: 1px solid var(--grid); }
-    table tr th{ border-bottom: 1px solid var(--grid); }
+select,button,input{
+  font-size:16px;
+  padding:10px;
+}
 
-    thead th{
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: var(--header);
-    }
-
-    .name-col{
-      position: sticky;
-      left: 0;
-      z-index: 6;
-      background: #fff;
-      text-align: left;
-      padding: 0 10px;
-      min-width: 220px;
-      font-weight: 650;
-      border-right: 2px solid var(--sep);
-      cursor: pointer;
-    }
-
-    thead .name-col{
-      background: var(--header);
-      z-index: 10;
-      font-weight: 750;
-      cursor: default;
-    }
-
-    th.week-label{
-      font-weight: 800;
-      font-size: 12px;
-      letter-spacing: 0.2px;
-      color: #222;
-      height: 28px;
-      background: #ededed;
-    }
-
-    th.day{
-      font-weight: 800;
-      height: 22px;
-      color: #222;
-    }
-
-    th.date{
-      font-weight: 700;
-      height: 22px;
-      color: #222;
-    }
-
-    .week-sep{
-      min-width: 14px;
-      width: 14px;
-      background: var(--sep-fill) !important;
-      border-right: 2px solid var(--sep) !important;
-      border-left: 0 !important;
-    }
-
-    .closed{
-      background: var(--closed-fill) !important;
-      color: #9b9b9b;
-    }
-
-    .weekend{
-      background: var(--weekend-fill);
-    }
-
-    tr.section-row td{
-      height: 22px;
-      font-weight: 850;
-      text-align: left;
-      padding: 0 10px;
-      border-top: 2px solid #9a9a9a;
-      border-bottom: 2px solid #9a9a9a;
-    }
-
-    tr.section-row td span{
-      color: #1b1b1b;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-    }
-
-    td.section-cn { background: var(--cn-band) !important; }
-    td.section-sn { background: var(--sn-band) !important; }
-    td.section-na { background: var(--na-band) !important; }
-
-    td.cell{
-      font-size: 12px;
-      color: #111;
-    }
-
-    td.cell:hover{
-      background: #f6fbff;
-    }
-
-    /* Locked vs unlocked rows */
-    tr.locked td.cell{ opacity: 0.55; }
-    tr.locked td.cell:hover{ background: #fff; }
-    tr.unlocked td.cell{ opacity: 1; }
-    tr.unlocked td.cell.editable{ outline: 2px solid rgba(0,0,0,0.08); cursor: text; }
-
-    /* ===== PIN MODAL (mobile-safe) ===== */
-    .modal-backdrop{
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 14px;
-    }
-
-    .modal{
-      width: min(520px, 100%);
-      background: #fff;
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      padding: 14px;
-    }
-
-    .modal h2{
-      margin: 0 0 8px 0;
-      font-size: 16px;
-    }
-
-    .modal p{
-      margin: 0 0 12px 0;
-      font-size: 13px;
-      color: #444;
-      line-height: 1.35;
-    }
-
-    .row{
-      display:flex;
-      gap: 10px;
-      align-items: stretch;
-      flex-wrap: wrap;
-    }
-
-    input.pin{
-      flex: 1 1 220px;
-      font-size: 18px;
-      padding: 12px 12px;
-      border-radius: 12px;
-      border: 1px solid #ccc;
-      letter-spacing: 10px;
-      text-align: center;
-      min-width: 220px;
-    }
-
-    .btns{
-      display:flex;
-      gap: 10px;
-      flex: 1 1 200px;
-      justify-content: flex-end;
-      min-width: 200px;
-    }
-
-    button{
-      font-size: 14px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid #ccc;
-      background: #f7f7f7;
-      cursor: pointer;
-      flex: 1;
-      min-width: 110px;
-    }
-
-    button.primary{
-      background:#111;
-      border-color:#111;
-      color:#fff;
-    }
-
-    button:disabled{
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .err{
-      margin-top: 10px;
-      font-size: 12px;
-      color: #b00020;
-      display:none;
-    }
-
-    @media (max-width: 480px){
-      body{ margin: 12px; }
-      .wrap{ padding: 12px; }
-      .titlebar{ flex-direction: column; align-items: flex-start; }
-      .rightbits{ justify-content: flex-start; }
-      input.pin{ flex: 1 1 100%; min-width: 0; }
-      .btns{ flex: 1 1 100%; min-width: 0; }
-      button{ min-width: 0; }
-    }
-  </style>
+/* ========================================================= */
+</style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="titlebar">
-      <div>
-        <h1>Calpe Ward Requests</h1>
-        <div class="subtitle" id="periodLabel"></div>
-      </div>
-      <div class="rightbits">
-        <div class="badge" id="loginBadge">Not logged in</div>
-        <div class="badge admin" id="adminBadge" style="display:none;">ADMIN</div>
-      </div>
+<div class="wrap">
+  <div class="titlebar">
+    <div>
+      <h1>Calpe Ward Requests</h1>
+      <div class="subtitle" id="periodLabel"></div>
     </div>
-
-    <table id="rota"></table>
-  </div>
-
-  <!-- =========================
-       PIN MODAL (login)
-       ========================= -->
-  <div class="modal-backdrop" id="pinModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
-      <h2 id="pinTitle">Enter PIN</h2>
-      <p id="pinDesc">Enter your 4-digit PIN to unlock editing.</p>
-
-      <div class="row">
-        <input class="pin" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••" />
-        <div class="btns">
-          <button id="pinCancel" type="button">Cancel</button>
-          <button class="primary" id="pinConfirm" type="button">Unlock</button>
-        </div>
-      </div>
-
-      <div class="err" id="pinErr">Wrong PIN.</div>
+    <div>
+      <span class="badge" id="loginBadge">Not logged in</span>
+      <span class="badge admin" id="adminBadge" style="display:none;">ADMIN</span>
     </div>
   </div>
 
-  <script>
-    /* =========================================================
-       1) CONFIG
-       ========================================================= */
-    const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    const STORAGE_KEY = "calpeward.loggedInUserId";
+  <table id="rota"></table>
+</div>
 
+<!-- =========================================================
+     PIN MODAL
+     ========================================================= -->
+<div class="modal-backdrop" id="pinModal">
+  <div class="modal">
+    <h2 id="pinTitle">Enter PIN</h2>
+    <input id="pinInput" maxlength="4" inputmode="numeric" />
+    <div style="margin-top:10px; display:flex; gap:10px;">
+      <button id="pinCancel">Cancel</button>
+      <button id="pinConfirm">Unlock</button>
+    </div>
+    <div id="pinErr" style="color:#b00020; display:none;">Wrong PIN</div>
+  </div>
+</div>
 
-    /* =========================================================
-       2) HELPERS (dates, formatting)
-       ========================================================= */
-    const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-    const isoDate = (d) => d.toISOString().slice(0,10);
+<!-- =========================================================
+     SHIFT PICKER
+     ========================================================= -->
+<div class="modal-backdrop" id="shiftModal">
+  <div class="modal">
+    <h2>Select shift</h2>
+    <select id="shiftSelect">
+      <option value="">Clear</option>
+      <option>LD</option>
+      <option>8-8</option>
+      <option>N</option>
+      <option>W</option>
+      <option>O</option>
+    </select>
+    <div style="margin-top:10px; display:flex; gap:10px;">
+      <button id="shiftCancel">Cancel</button>
+      <button id="shiftSave">Save</button>
+    </div>
+    <div id="shiftErr" style="color:#b00020; display:none;"></div>
+  </div>
+</div>
 
-    function startOfWeekSunday(dateObj){
-      const d = new Date(dateObj);
-      const day = d.getDay();
-      d.setHours(0,0,0,0);
-      d.setDate(d.getDate() - day);
-      return d;
-    }
-    function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
-
-    function groupDatesIntoWeeks(dates){
-      // dates: [{ date: 'YYYY-MM-DD', rota_weeks: { open: boolean } }, ...]
-      const map = new Map();
-      for(const item of dates){
-        const d = new Date(item.date);
-        const ws = startOfWeekSunday(d);
-        const key = isoDate(ws);
-
-        if(!map.has(key)){
-          map.set(key, { weekStart: ws, days: [], open: (item.rota_weeks && item.rota_weeks.open) ?? true });
-        }
-        map.get(key).days.push(item);
-      }
-
-      const weeks = [];
-      for(const w of map.values()){
-        const dayLookup = new Map(w.days.map(x => [x.date, x]));
-        const ordered = [];
-
-        for(let i=0;i<7;i++){
-          const dd = addDays(w.weekStart, i);
-          const ds = isoDate(dd);
-          const row = dayLookup.get(ds) || { date: ds, rota_weeks: { open: w.open } };
-          ordered.push(row);
-        }
-
-        weeks.push({
-          weekStart: w.weekStart,
-          weekEnd: addDays(w.weekStart, 6),
-          open: w.open,
-          days: ordered
-        });
-      }
-
-      weeks.sort((a,b) => a.weekStart - b.weekStart);
-      return weeks;
-    }
-
-    function groupUsers(users){
-      // buckets by role
-      const buckets = { charge_nurse: [], staff_nurse: [], nursing_assistant: [] };
-
-      for(const u of users){
-        const label =
-          u.roles?.name ||
-          (u.role_id === 1 ? "charge_nurse" :
-           u.role_id === 2 ? "staff_nurse" :
-           u.role_id === 3 ? "nursing_assistant" : "staff_nurse");
-
-        (buckets[label] || buckets.staff_nurse).push(u);
-      }
-
-      return [
-        { title: "Charge Nurses",      className: "section-cn", items: buckets.charge_nurse },
-        { title: "Staff Nurses",       className: "section-sn", items: buckets.staff_nurse },
-        { title: "Nursing Assistants", className: "section-na", items: buckets.nursing_assistant }
-      ].filter(g => g.items.length > 0);
-    }
-
-    /* =========================================================
-       3) STATE (who is logged in / what is unlocked)
-       ========================================================= */
-    let currentUser = null;   // user object when logged in (by PIN)
-    let selectedUser = null;  // user you clicked before PIN entry
-
-    /* =========================================================
-       4) DOM REFERENCES
-       ========================================================= */
-    const modal = document.getElementById("pinModal");
-    const pinInput = document.getElementById("pinInput");
-    const pinErr = document.getElementById("pinErr");
-    const pinTitle = document.getElementById("pinTitle");
-    const pinDesc = document.getElementById("pinDesc");
-    const pinConfirmBtn = document.getElementById("pinConfirm");
-    const pinCancelBtn = document.getElementById("pinCancel");
-    const loginBadge = document.getElementById("loginBadge");
-    const adminBadge = document.getElementById("adminBadge");
-
-    /* =========================================================
-       5) PIN MODAL (open/close)
-       ========================================================= */
-    function openPinModal(user){
-      selectedUser = user;
-
-      pinTitle.textContent = `PIN for ${user.name}`;
-      pinDesc.textContent = "Enter your 4-digit PIN to unlock editing.";
-      pinErr.style.display = "none";
-      pinInput.value = "";
-
-      modal.style.display = "flex";
-      modal.setAttribute("aria-hidden", "false");
-
-      setTimeout(() => pinInput.focus(), 50);
-    }
-
-    function closePinModal(){
-      modal.style.display = "none";
-      modal.setAttribute("aria-hidden", "true");
-      selectedUser = null;
-      pinConfirmBtn.disabled = false;
-    }
-
-    pinCancelBtn.addEventListener("click", closePinModal);
-    modal.addEventListener("click", (e) => { if(e.target === modal) closePinModal(); });
-
-    // Press Enter to submit PIN
-    pinInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        pinConfirmBtn.click();
-      }
-    });
-
-    /* =========================================================
-       6) AUTH (verify PIN via RPC)
-       ========================================================= */
-    pinConfirmBtn.addEventListener("click", async () => {
-      const pin = pinInput.value.trim();
-      if(!selectedUser) return;
-
-      if(!/^\d{4}$/.test(pin)){
-        pinErr.textContent = "PIN must be 4 digits.";
-        pinErr.style.display = "block";
-        return;
-      }
-
-      pinConfirmBtn.disabled = true;
-      pinErr.style.display = "none";
-
-      try{
-        // ✅ Verify PIN via Postgres RPC
-        // Function signature expected: verify_user_pin(p_user_id uuid, p_pin text) returns boolean
-        const { data: ok, error } = await supabaseClient.rpc("verify_user_pin", {
-          p_user_id: selectedUser.id,
-          p_pin: pin
-        });
-
-        if(error){
-          console.error("RPC error:", error);
-          pinErr.textContent = "Server error (RPC).";
-          pinErr.style.display = "block";
-          pinConfirmBtn.disabled = false;
-          return;
-        }
-
-        if(ok !== true){
-          pinErr.textContent = "Wrong PIN.";
-          pinErr.style.display = "block";
-          pinConfirmBtn.disabled = false;
-          return;
-        }
-
-        // ✅ PIN correct: unlock this user (or admin unlocks all)
-        currentUser = selectedUser;
-        localStorage.setItem(STORAGE_KEY, currentUser.id);
-
-
-        closePinModal();
-        applyUnlockState();
-        updateBadges();
-
-      }catch(err){
-        console.error("Login exception:", err);
-        pinErr.textContent = "Login error. Try again.";
-        pinErr.style.display = "block";
-        pinConfirmBtn.disabled = false;
-      }
-    });
-
-    function updateBadges(){
-      if(!currentUser){
-        loginBadge.textContent = "Not logged in";
-        adminBadge.style.display = "none";
-        return;
-      }
-      loginBadge.textContent = `Logged in: ${currentUser.name}`;
-      adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
-    }
+<script>
 /* =========================================================
-   7) DATA LOADING (users + dates)
+   4) CONFIG
    ========================================================= */
-async function loadRota() {
-  // 1) Load users
-  const { data: users, error: userError } = await supabaseClient
-    .from("users")
-    .select("id, name, role_id, is_admin, roles(name)")
-    .order("name");
+const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const STORAGE_KEY = "calpeward.user";
 
-  if (userError) {
-    console.error("Users load error:", userError);
-    alert("Failed to load users.");
-    return;
-  }
+/* =========================================================
+   5) STATE
+   ========================================================= */
+let users=[], weeks=[];
+let currentUser=null;
+let activeCell=null;
 
-  // ✅ Restore login from localStorage (must happen after users load)
-  const savedId = localStorage.getItem(STORAGE_KEY);
-  if (savedId) {
-    const found = users.find(u => u.id === savedId);
-    if (found) currentUser = found;
-  }
+/* =========================================================
+   6) AUTH
+   ========================================================= */
+const pinModal=document.getElementById("pinModal");
+const pinInput=document.getElementById("pinInput");
+const pinErr=document.getElementById("pinErr");
 
-  // 2) Load dates
-  const { data: dates, error: dateError } = await supabaseClient
-    .from("rota_dates")
-    .select("date, rota_weeks(open)")
-    .order("date");
+function openPin(user){
+  window.selectedUser=user;
+  pinModal.style.display="flex";
+}
+document.getElementById("pinConfirm").onclick=async()=>{
+  const { data } = await supabase.rpc("verify_user_pin",{
+    p_user_id:window.selectedUser.id,
+    p_pin:pinInput.value
+  });
+  if(data){
+    currentUser=window.selectedUser;
+    localStorage.setItem(STORAGE_KEY,currentUser.id);
+    pinModal.style.display="none";
+    updateBadges();
+    applyLocks();
+  }else pinErr.style.display="block";
+};
+document.getElementById("pinCancel").onclick=()=>pinModal.style.display="none";
 
-  if (dateError) {
-    console.error("Dates load error:", dateError);
-    alert("Failed to load dates.");
-    return;
-  }
+/* =========================================================
+   7) DATA LOAD
+   ========================================================= */
+async function load(){
+  const u = await supabase.from("users").select("*").order("name");
+  users=u.data;
 
-  // 3) Render
-  const weeks = groupDatesIntoWeeks(dates);
-  render(users, weeks);
+  const saved=localStorage.getItem(STORAGE_KEY);
+  if(saved) currentUser=users.find(x=>x.id===saved);
 
-  // 4) Update period label
-  if (weeks.length) {
-    document.getElementById("periodLabel").textContent =
-      `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
-  }
-
-  // 5) Re-apply lock state + badges (important after restoring currentUser)
-  applyUnlockState();
+  const d = await supabase.from("rota_dates").select("date,rota_weeks(open)").order("date");
+  weeks = groupDates(d.data);
+  render();
   updateBadges();
 }
+load();
 
+/* =========================================================
+   8) RENDER
+   ========================================================= */
+function render(){
+  const t=document.getElementById("rota");
+  t.innerHTML="";
+  const tb=document.createElement("tbody");
 
-    /* =========================================================
-       8) RENDER (table header + grouped rows)
-       ========================================================= */
-    function render(users, weeks){
-      const table = document.getElementById("rota");
-      table.innerHTML = "";
+  users.forEach(u=>{
+    const tr=document.createElement("tr");
+    tr.dataset.uid=u.id;
 
-      const thead = document.createElement("thead");
-      const tbody = document.createElement("tbody");
-      table.appendChild(thead);
-      table.appendChild(tbody);
+    const name=document.createElement("td");
+    name.className="name-col";
+    name.textContent=u.name;
+    name.onclick=()=>openPin(u);
+    tr.appendChild(name);
 
-      // ----- Header row 1: week labels
-      const r1 = document.createElement("tr");
-      const hName = document.createElement("th");
-      hName.className = "name-col";
-      hName.textContent = "Name";
-      r1.appendChild(hName);
-
-      weeks.forEach((w, idx) => {
-        const th = document.createElement("th");
-        th.className = "week-label " + (w.open ? "" : "closed");
-        th.colSpan = 7;
-        th.textContent = `${fmt(w.weekStart)} – ${fmt(w.weekEnd)}`;
-        r1.appendChild(th);
-
-        if(idx !== weeks.length - 1){
-          const sep = document.createElement("th");
-          sep.className = "week-sep";
-          r1.appendChild(sep);
-        }
+    weeks.forEach(w=>{
+      w.days.forEach(d=>{
+        const td=document.createElement("td");
+        td.className="cell";
+        td.onclick=()=>openShift(td,u,d.date);
+        tr.appendChild(td);
       });
-      thead.appendChild(r1);
+      tr.appendChild(document.createElement("td")).className="week-sep";
+    });
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  applyLocks();
+}
 
-      // ----- Header row 2: day letters
-      const r2 = document.createElement("tr");
-      const blank2 = document.createElement("th");
-      blank2.className = "name-col";
-      blank2.textContent = "";
-      r2.appendChild(blank2);
+/* =========================================================
+   9) SHIFT EDITING + RULES
+   ========================================================= */
+const shiftModal=document.getElementById("shiftModal");
+const shiftSelect=document.getElementById("shiftSelect");
+const shiftErr=document.getElementById("shiftErr");
 
-      const dayLetters = ["S","M","T","W","T","F","S"];
-      weeks.forEach((w, idx) => {
-        for(let i=0;i<7;i++){
-          const th = document.createElement("th");
-          th.className = "day " + (w.open ? "" : "closed");
-          th.textContent = dayLetters[i];
-          r2.appendChild(th);
-        }
-        if(idx !== weeks.length - 1){
-          const sep = document.createElement("th");
-          sep.className = "week-sep";
-          r2.appendChild(sep);
-        }
-      });
-      thead.appendChild(r2);
+function openShift(td,user,date){
+  if(!currentUser || (currentUser.id!==user.id && !currentUser.is_admin)) return;
+  activeCell={td,user,date};
+  shiftErr.style.display="none";
+  shiftModal.style.display="flex";
+}
 
-      // ----- Header row 3: date numbers
-      const r3 = document.createElement("tr");
-      const blank3 = document.createElement("th");
-      blank3.className = "name-col";
-      blank3.textContent = "";
-      r3.appendChild(blank3);
+document.getElementById("shiftSave").onclick=async()=>{
+  const val=shiftSelect.value;
+  // rules placeholder – enforced server-side next
+  await supabase.from("rota_requests").upsert({
+    user_id:activeCell.user.id,
+    date:activeCell.date,
+    value:val
+  });
+  activeCell.td.textContent=val;
+  shiftModal.style.display="none";
+};
+document.getElementById("shiftCancel").onclick=()=>shiftModal.style.display="none";
 
-      weeks.forEach((w, idx) => {
-        for(let i=0;i<7;i++){
-          const d = new Date(w.days[i].date);
-          const isWeekend = (i === 0 || i === 6);
-          const th = document.createElement("th");
-          th.className = "date " + (w.open ? "" : "closed") + (isWeekend ? " weekend" : "");
-          th.textContent = d.getDate();
-          r3.appendChild(th);
-        }
-        if(idx !== weeks.length - 1){
-          const sep = document.createElement("th");
-          sep.className = "week-sep";
-          r3.appendChild(sep);
-        }
-      });
-      thead.appendChild(r3);
+/* =========================================================
+   10) LOCKING
+   ========================================================= */
+function applyLocks(){
+  document.querySelectorAll("td.cell").forEach(td=>{
+    td.classList.toggle("locked",!currentUser);
+  });
+}
+function updateBadges(){
+  const lb=document.getElementById("loginBadge");
+  const ab=document.getElementById("adminBadge");
+  if(currentUser){
+    lb.textContent=`Logged in: ${currentUser.name}`;
+    ab.style.display=currentUser.is_admin?"inline-block":"none";
+  }
+}
 
-      // ----- Body grouped by role
-      const groups = groupUsers(users);
-
-      for(const g of groups){
-        // section header row
-        const sectionTr = document.createElement("tr");
-        sectionTr.className = "section-row";
-
-        const sectionTd = document.createElement("td");
-        sectionTd.className = `name-col ${g.className}`;
-        sectionTd.colSpan = 1 + (weeks.length * 7) + (weeks.length - 1);
-        sectionTd.innerHTML = `<span>${g.title}</span>`;
-        sectionTr.appendChild(sectionTd);
-        tbody.appendChild(sectionTr);
-
-        // user rows
-        for(const u of g.items){
-          const tr = document.createElement("tr");
-          tr.dataset.userId = u.id;
-
-          const nameTd = document.createElement("td");
-          nameTd.className = "name-col";
-          nameTd.textContent = u.name;
-          nameTd.addEventListener("click", () => openPinModal(u));
-          tr.appendChild(nameTd);
-
-          weeks.forEach((w, idx) => {
-            for(let i=0;i<7;i++){
-              const isWeekend = (i === 0 || i === 6);
-              const td = document.createElement("td");
-              td.className = "cell" + (w.open ? "" : " closed") + (isWeekend ? " weekend" : "");
-              td.dataset.userId = u.id;
-              td.dataset.date = w.days[i].date;
-              td.textContent = ""; // later: fill from requests table
-              tr.appendChild(td);
-            }
-            if(idx !== weeks.length - 1){
-              const sep = document.createElement("td");
-              sep.className = "week-sep";
-              tr.appendChild(sep);
-            }
-          });
-
-          tbody.appendChild(tr);
-        }
-      }
-
-      applyUnlockState();
-      updateBadges();
-    }
-
-    /* =========================================================
-       9) UNLOCK LOGIC (who can edit which row)
-       ========================================================= */
-    function applyUnlockState(){
-      const rows = document.querySelectorAll("#rota tbody tr");
-
-      rows.forEach(r => {
-        if(r.classList.contains("section-row")) return;
-
-        const userId = r.dataset.userId;
-        const isUnlocked =
-          currentUser && (currentUser.is_admin || currentUser.id === userId);
-
-        r.classList.toggle("unlocked", !!isUnlocked);
-        r.classList.toggle("locked", !isUnlocked);
-
-        r.querySelectorAll("td.cell").forEach(td => {
-          td.classList.toggle("editable", !!isUnlocked);
-        });
-      });
-    }
-
-    /* =========================================================
-       10) BOOT
-       ========================================================= */
-    loadRota();
-  </script>
+/* ========================================================= */
+</script>
 </body>
 </html>

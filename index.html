@@ -344,7 +344,10 @@
       gap: 10px;
       margin: 12px 0 16px;
     }
-
+  #adminBtn{
+  flex: 0 0 auto;
+  min-width: 0;
+}
     .shift-btn{
       padding: 14px 0;
       font-size: 14px;
@@ -746,6 +749,7 @@ let weekWindowStart = 0; // index into allWeeks
     const pinCancelBtn = document.getElementById("pinCancel");
     const loginBadge = document.getElementById("loginBadge");
     const adminBadge = document.getElementById("adminBadge");
+    const adminBtn = document.getElementById("adminBtn");
 const periodSelect = document.getElementById("periodSelect");
 const periodNavLabel = document.getElementById("periodNavLabel");
 
@@ -961,16 +965,21 @@ weekCommentSave.addEventListener("click", async () => {
         pinConfirmBtn.disabled = false;
       }
     });
-
 function updateBadges(){
-      if(!currentUser){
-        loginBadge.textContent = "Not logged in";
-        adminBadge.style.display = "none";
-        return;
-      }
-      loginBadge.textContent = `Logged in: ${currentUser.name}`;
-      adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
-    }
+  if(!currentUser){
+    loginBadge.textContent = "Not logged in";
+    adminBadge.style.display = "none";
+    if (adminBtn) adminBtn.style.display = "none";
+    return;
+  }
+
+  loginBadge.textContent = `Logged in: ${currentUser.name}`;
+
+  const isAdmin = !!currentUser.is_admin;
+  adminBadge.style.display = isAdmin ? "inline-block" : "none";
+  if (adminBtn) adminBtn.style.display = isAdmin ? "inline-flex" : "none";
+}
+
 /* =========================================================
    PATCH 2) SHIFT PICKER LOGIC (with OFF priority)
    ========================================================= */
@@ -1483,6 +1492,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

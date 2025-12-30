@@ -45,13 +45,22 @@
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
   padding: 10px;
   overflow: hidden;
+  
+}
+/* Scroll container for the whole rota */
+.rota-scroll{
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; /* iOS smooth scroll */
 }
 
-    #rota{
-  display: block;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+/* iOS sometimes needs this to actually allow horizontal panning */
+.rota-scroll{
+  touch-action: pan-x;
 }
+
+
 
 
     .titlebar{
@@ -127,7 +136,7 @@
       background: var(--header);
     }
 
- .name-col{
+.name-col{
   position: sticky;
   left: 0;
   z-index: 6;
@@ -137,9 +146,14 @@
   font-weight: 650;
   border-right: 2px solid var(--sep);
 
-  width: 140px;
-  min-width: 140px;
-  max-width: 140px;
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
     thead .name-col{
@@ -149,15 +163,14 @@
       cursor: default;
     }
     
-    @media (max-width: 480px){
+   @media (max-width: 480px){
   .name-col{
-    width: 110px;
-    min-width: 110px;
-    max-width: 110px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
     font-size: 12px;
   }
 }
-
   .week-comment-btn{
   flex: 0 0 auto;          /* stop flex stretching */
   min-width: 0 !important; /* override global min-width:110px */
@@ -426,7 +439,9 @@
       </div>
     </div>
 
-    <table id="rota"></table>
+   <div id="rotaScroll" class="rota-scroll">
+  <table id="rota"></table>
+</div>
   </div>
 
   <!-- =========================
@@ -1510,6 +1525,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

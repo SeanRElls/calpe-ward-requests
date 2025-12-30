@@ -431,11 +431,15 @@
       ].filter(g => g.items.length > 0);
     }
 
-    /* =========================================================
-       3) STATE (who is logged in / what is unlocked)
-       ========================================================= */
-    let currentUser = null;   // user object when logged in (by PIN)
-    let selectedUser = null;  // user you clicked before PIN entry
+ /* =========================================================
+   3) STATE (who is logged in / what is unlocked)
+   ========================================================= */
+let currentUser = null;      // user object when logged in (by PIN)
+let selectedUser = null;     // user you clicked before PIN entry
+
+// === NEW: request + editing state ===
+let requestsCache = [];     // loaded rota_requests (later)
+let activeCell = null;      // { td, userId, date }
 
     /* =========================================================
        4) DOM REFERENCES
@@ -749,9 +753,27 @@ async function loadRota() {
         r.classList.toggle("unlocked", !!isUnlocked);
         r.classList.toggle("locked", !isUnlocked);
 
-        r.querySelectorAll("td.cell").forEach(td => {
-          td.classList.toggle("editable", !!isUnlocked);
-        });
+     r.querySelectorAll("td.cell").forEach(td => {
+  td.classList.toggle("editable", !!isUnlocked);
+
+  // === NEW: attach click handler once ===
+  if (!td.dataset.bound) {
+    td.dataset.bound = "1";
+
+    td.addEventListener("click", () => {
+      if (!td.classList.contains("editable")) return;
+
+      activeCell = {
+        td,
+        userId: td.dataset.userId,
+        date: td.dataset.date
+      };
+
+      console.log("Cell selected:", activeCell);
+      // next step: open shift picker
+    });
+  }
+});
       });
     }
 
@@ -762,3 +784,4 @@ async function loadRota() {
   </script>
 </body>
 </html>
+

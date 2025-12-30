@@ -516,21 +516,52 @@ function countUserRequestsThisWeek(userId, dateStr){
 }
 
 function nextOffPrioritySmart(currentRank, taken){
-  // cycle intent: null -> 1 -> 2 -> null
-  let desired = (currentRank === null) ? 1 : (currentRank === 1 ? 2 : null);
+  // Cycle intent: null -> 1 -> 2 -> 3 -> null
+  let desired =
+    (currentRank == null) ? 1 :
+    (currentRank === 1) ? 2 :
+    (currentRank === 2) ? 3 :
+    null;
 
-  // If desired is 1 but already taken elsewhere, use 2 if available
-  if (desired === 1 && taken.has(1)) desired = taken.has(2) ? null : 2;
-
-  // If desired is 2 but already taken elsewhere, fall back to null
-  if (desired === 2 && taken.has(2)) desired = null;
+  // If desired is taken elsewhere, pick the next available in order 1,2,3.
+  if (desired != null && taken.has(desired)) {
+    if (!taken.has(1)) desired = 1;
+    else if (!taken.has(2)) desired = 2;
+    else if (!taken.has(3)) desired = 3;
+    else desired = null; // all used, must be normal O
+  }
 
   return desired;
 }
     
 function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
-  const ws = getWeekStartSundayIso(dateStr); // you already have this or equivalent
+  const ws = getWeekStart(dateStr);
   const taken = new Set();
+
+  // include saved rows
+  for (const [k, r] of requestsCache.entries()){
+    if (k === excludeKey) continue;
+    if (r.user_id !== userId) continue;
+    if (getWeekStart(r.date) !== ws) continue;
+    if (r.value !== "O") continue;
+    if (r.important_rank === 1 || r.important_rank === 2 || r.important_rank === 3) {
+      taken.add(r.important_rank);
+    }
+  }
+
+  // include pending edits
+  for (const [k, pe] of Object.entries(pendingEdits)){
+    if (k === excludeKey) continue;
+    if (pe.userId !== userId) continue;
+    if (getWeekStart(pe.date) !== ws) continue;
+    if (pe.shift !== "O") continue;
+    if (pe.important_rank === 1 || pe.important_rank === 2 || pe.important_rank === 3) {
+      taken.add(pe.important_rank);
+    }
+  }
+
+  return taken;
+}
 
   // include saved rows
   for (const [k, r] of requestsCache.entries()){
@@ -757,8 +788,9 @@ if (shift === "O") {
   delete pendingEdits[key];
 } else if (shift === "O") {
   if (rankToSave === 1) td.textContent = "O¹";
-  else if (rankToSave === 2) td.textContent = "O²";
-  else td.textContent = "O";
+else if (rankToSave === 2) td.textContent = "O²";
+else if (rankToSave === 3) td.textContent = "O³";
+else td.textContent = "O";
 
   pendingEdits[key] = { userId, date, shift, important_rank: rankToSave };
 } else {
@@ -1175,6 +1207,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

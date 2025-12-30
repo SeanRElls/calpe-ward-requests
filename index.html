@@ -784,6 +784,8 @@ try {
 
   alert("Save failed. Check console.");
 }
+  });
+});
 
 
     /* =========================================================
@@ -803,6 +805,16 @@ async function upsertRequestCell(userId, date, value, importantRank){
     value: value === "" ? null : value,
     important_rank: importantRank ?? null
   };
+
+  const { data, error } = await supabaseClient
+    .from("requests")
+    .upsert(payload, { onConflict: "user_id,date" })
+    .select("id, user_id, date, value, important_rank")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
 
 
 // Delete a cell completely (optional, but nice for CLEAR)
@@ -1120,6 +1132,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

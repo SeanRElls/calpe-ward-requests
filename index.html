@@ -636,15 +636,20 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
     if (!activeCell) return;
 
     const shift = btn.dataset.shift;
-    const key = `${activeCell.userId}_${activeCell.date}`;
+
+    // ✅ capture everything BEFORE closeShiftModal() nukes activeCell
+    const userId = activeCell.userId;
+    const date = activeCell.date;
+    const td = activeCell.td;
+    const key = `${userId}_${date}`;
 
     // Update UI immediately
     if (shift === "CLEAR") {
-      activeCell.td.textContent = "";
+      td.textContent = "";
       delete pendingEdits[key];
     } else {
-      activeCell.td.textContent = shift;
-      pendingEdits[key] = { userId: activeCell.userId, date: activeCell.date, shift };
+      td.textContent = shift;
+      pendingEdits[key] = { userId, date, shift };
     }
 
     // Close modal fast (mobile-friendly)
@@ -653,11 +658,11 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
     // Auto-save to Supabase
     try {
       if (shift === "CLEAR") {
-        await deleteRequestCell(activeCell.userId, activeCell.date);
+        await deleteRequestCell(userId, date);
         requestsCache.delete(key);
         toast(`Cleared + saved (${key})`);
       } else {
-        const saved = await upsertRequestCell(activeCell.userId, activeCell.date, shift);
+        const saved = await upsertRequestCell(userId, date, shift);
         requestsCache.set(key, saved);
         toast(`Saved (${key}) = ${shift}`);
       }
@@ -672,6 +677,7 @@ document.querySelectorAll(".shift-btn").forEach(btn => {
     }
   });
 });
+
 
 
     /* =========================================================
@@ -1001,6 +1007,7 @@ function render(users, weeks){
   </script>
 </body>
 </html>
+
 
 
 

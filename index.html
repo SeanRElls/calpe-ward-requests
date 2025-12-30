@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Calpe Ward Off Duty Requests</title>
-
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
@@ -21,247 +20,172 @@
       --closed-fill: #f0f0f0;
       --weekend-fill: #fafafa;
 
-      /* Brighter Excel-like section bands */
-      --cn-band: #ffd18a; /* warm yellow/orange */
-      --sn-band: #9fd0ff; /* bright blue */
-      --na-band: #a8e6a1; /* bright green */
+      --cn-band: #ffd18a;
+      --sn-band: #9fd0ff;
+      --na-band: #a8e6a1;
     }
 
-    body{
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      margin: 18px;
-      color: var(--text);
-      background: #f7f7f7;
-    }
+    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; color: var(--text); background: #f7f7f7; }
+    .wrap{ background: var(--sheet-bg); border: 1px solid var(--grid); border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 14px 14px 10px; overflow: auto; }
+    .titlebar{ display:flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 2px 2px 12px; }
+    h1{ font-size: 22px; margin: 0; font-weight: 750; letter-spacing: 0.2px; }
+    .subtitle{ font-size: 13px; color: var(--muted); }
+    .rightbits{ display:flex; gap: 10px; align-items: center; }
+    .badge{ font-size: 12px; padding: 4px 8px; border-radius: 999px; background:#eee; color:#222; }
+    .badge.admin{ background:#222; color:#fff; }
 
-    .wrap{
-      background: var(--sheet-bg);
-      border: 1px solid var(--grid);
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      padding: 14px 14px 10px;
-      overflow: auto;
-    }
+    table{ border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 12px; }
+    th, td{ border-right: 1px solid var(--grid-soft); border-bottom: 1px solid var(--grid-soft); text-align: center; vertical-align: middle; padding: 0; height: 24px; background: #fff; min-width: 34px; }
 
-    .titlebar{
-      display:flex;
-      align-items: baseline;
-      gap: 12px;
-      margin: 2px 2px 12px;
-    }
-
-    h1{
-      font-size: 22px;
-      margin: 0;
-      font-weight: 750;
-      letter-spacing: 0.2px;
-    }
-
-    .subtitle{
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    table{
-      border-collapse: separate;
-      border-spacing: 0;
-      width: max-content;
-      min-width: 100%;
-      font-size: 12px;
-    }
-
-    th, td{
-      border-right: 1px solid var(--grid-soft);
-      border-bottom: 1px solid var(--grid-soft);
-      text-align: center;
-      vertical-align: middle;
-      padding: 0;
-      height: 24px;
-      background: #fff;
-      min-width: 34px;
-    }
-
-    /* outer border */
     table tr:first-child th{ border-top: 1px solid var(--grid); }
-    table tr th:first-child,
-    table tr td:first-child{ border-left: 1px solid var(--grid); }
+    table tr th:first-child, table tr td:first-child{ border-left: 1px solid var(--grid); }
     table tr:last-child td{ border-bottom: 1px solid var(--grid); }
     table tr th{ border-bottom: 1px solid var(--grid); }
 
-    /* sticky header */
-    thead th{
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: var(--header);
-    }
-
-    /* sticky name column */
+    thead th{ position: sticky; top: 0; z-index: 5; background: var(--header); }
     .name-col{
-      position: sticky;
-      left: 0;
-      z-index: 6;
-      background: #fff;
-      text-align: left;
-      padding: 0 10px;
-      min-width: 220px;
-      font-weight: 650;
+      position: sticky; left: 0; z-index: 6; background: #fff;
+      text-align: left; padding: 0 10px; min-width: 220px; font-weight: 650;
       border-right: 2px solid var(--sep);
+      cursor: pointer;
     }
-    thead .name-col{
-      background: var(--header);
-      z-index: 10;
-      font-weight: 750;
-    }
+    thead .name-col{ background: var(--header); z-index: 10; font-weight: 750; cursor: default; }
 
-    th.week-label{
-      font-weight: 800;
-      font-size: 12px;
-      letter-spacing: 0.2px;
-      color: #222;
-      height: 28px;
-      background: #ededed;
-      border-bottom: 1px solid var(--grid);
-    }
+    th.week-label{ font-weight: 800; font-size: 12px; letter-spacing: 0.2px; color: #222; height: 28px; background: #ededed; }
+    th.day{ font-weight: 800; height: 22px; color: #222; }
+    th.date{ font-weight: 700; height: 22px; color: #222; }
 
-    th.day{
-      font-weight: 800;
-      background: var(--header);
-      height: 22px;
-      color: #222;
-    }
+    .week-sep{ min-width: 14px; width: 14px; background: var(--sep-fill) !important; border-right: 2px solid var(--sep) !important; border-left: 0 !important; }
 
-    th.date{
-      font-weight: 700;
-      background: var(--header);
-      height: 22px;
-      color: #222;
-    }
-
-    /* Week separator column */
-    .week-sep{
-      min-width: 14px;
-      width: 14px;
-      background: var(--sep-fill) !important;
-      border-right: 2px solid var(--sep) !important;
-      border-left: 0 !important;
-    }
-    thead .week-sep{ background: var(--sep-fill) !important; }
-
-    /* Closed week cells */
-    .closed{
-      background: var(--closed-fill) !important;
-      color: #9b9b9b;
-    }
-
-    /* Weekend shading */
+    .closed{ background: var(--closed-fill) !important; color: #9b9b9b; }
     .weekend{ background: var(--weekend-fill); }
 
-    /* Section band rows */
-    tr.section-row td{
-      height: 22px;
-      font-weight: 850;
-      text-align: left;
-      padding: 0 10px;
-      border-top: 2px solid #9a9a9a;
-      border-bottom: 2px solid #9a9a9a;
-    }
-    tr.section-row td span{
-      color: #1b1b1b;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-    }
+    tr.section-row td{ height: 22px; font-weight: 850; text-align: left; padding: 0 10px; border-top: 2px solid #9a9a9a; border-bottom: 2px solid #9a9a9a; }
+    tr.section-row td span{ color: #1b1b1b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; }
     td.section-cn { background: var(--cn-band) !important; }
     td.section-sn { background: var(--sn-band) !important; }
     td.section-na { background: var(--na-band) !important; }
 
-    td.cell{
-      font-size: 12px;
-      color: #111;
-    }
+    td.cell{ font-size: 12px; color: #111; }
     td.cell:hover{ background: #f6fbff; }
+
+    /* Locked vs unlocked rows */
+    tr.locked td.cell{ opacity: 0.55; }
+    tr.locked td.cell:hover{ background: #fff; }
+    tr.unlocked td.cell{ opacity: 1; }
+    tr.unlocked td.cell.editable{ outline: 2px solid rgba(0,0,0,0.08); cursor: text; }
+
+    /* Modal */
+    .modal-backdrop{
+      position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
+      padding: 16px;
+    }
+    .modal{
+      width: 360px; max-width: 100%;
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      padding: 14px;
+    }
+    .modal h2{ margin: 0 0 8px 0; font-size: 16px; }
+    .modal p{ margin: 0 0 10px 0; font-size: 13px; color: #444; }
+    .row{ display:flex; gap: 8px; align-items: center; }
+    input.pin{
+      flex: 1; font-size: 16px; padding: 10px 10px;
+      border-radius: 10px; border: 1px solid #ccc;
+      letter-spacing: 6px; text-align: center;
+    }
+    button{
+      font-size: 13px; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid #ccc; background: #f7f7f7; cursor: pointer;
+    }
+    button.primary{ background:#111; border-color:#111; color:#fff; }
+    .err{ margin-top: 8px; font-size: 12px; color: #b00020; display:none; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="titlebar">
-      <h1>Calpe Ward Requests</h1>
-      <div class="subtitle" id="periodLabel"></div>
+      <div>
+        <h1>Calpe Ward Requests</h1>
+        <div class="subtitle" id="periodLabel"></div>
+      </div>
+      <div class="rightbits">
+        <div class="badge" id="loginBadge">Not logged in</div>
+        <div class="badge admin" id="adminBadge" style="display:none;">ADMIN</div>
+      </div>
     </div>
 
     <table id="rota"></table>
   </div>
 
+  <!-- PIN Modal -->
+  <div class="modal-backdrop" id="pinModal">
+    <div class="modal">
+      <h2 id="pinTitle">Enter PIN</h2>
+      <p id="pinDesc">Enter your 4-digit PIN to unlock your row.</p>
+      <div class="row">
+        <input class="pin" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••" />
+        <button id="pinCancel">Cancel</button>
+        <button class="primary" id="pinConfirm">Unlock</button>
+      </div>
+      <div class="err" id="pinErr">Wrong PIN.</div>
+    </div>
+  </div>
+
   <script>
-    const supabaseClient = window.supabase.createClient(
-      "https://tbclufdtyefexwwitfsz.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA"
-    );
+    // === CONFIG ===
+    const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
+
+    // IMPORTANT: replace this with your Edge Function endpoint once created
+    // Example: https://tbclufdtyefexwwitfsz.supabase.co/functions/v1/verify-pin
+    const VERIFY_PIN_URL = SUPABASE_URL + "/functions/v1/verify-pin";
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
     const isoDate = (d) => d.toISOString().slice(0,10);
 
     function startOfWeekSunday(dateObj){
       const d = new Date(dateObj);
-      const day = d.getDay(); // Sunday=0
+      const day = d.getDay();
       d.setHours(0,0,0,0);
       d.setDate(d.getDate() - day);
       return d;
     }
-
-    function addDays(d, n){
-      const x = new Date(d);
-      x.setDate(x.getDate() + n);
-      return x;
-    }
+    function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 
     function groupDatesIntoWeeks(dates){
       const map = new Map();
-
       for(const item of dates){
         const d = new Date(item.date);
         const ws = startOfWeekSunday(d);
         const key = isoDate(ws);
-
         if(!map.has(key)){
-          map.set(key, {
-            weekStart: ws,
-            days: [],
-            open: (item.rota_weeks && item.rota_weeks.open) ?? true
-          });
+          map.set(key, { weekStart: ws, days: [], open: (item.rota_weeks && item.rota_weeks.open) ?? true });
         }
         map.get(key).days.push(item);
       }
-
       const weeks = [];
       for(const w of map.values()){
         const dayLookup = new Map(w.days.map(x => [x.date, x]));
         const ordered = [];
-
         for(let i=0;i<7;i++){
           const dd = addDays(w.weekStart, i);
           const ds = isoDate(dd);
           const row = dayLookup.get(ds) || { date: ds, rota_weeks: { open: w.open } };
           ordered.push(row);
         }
-
-        weeks.push({
-          weekStart: w.weekStart,
-          weekEnd: addDays(w.weekStart, 6),
-          open: w.open,
-          days: ordered
-        });
+        weeks.push({ weekStart: w.weekStart, weekEnd: addDays(w.weekStart,6), open: w.open, days: ordered });
       }
-
       weeks.sort((a,b) => a.weekStart - b.weekStart);
       return weeks;
     }
 
     function groupUsers(users){
       const buckets = { charge_nurse: [], staff_nurse: [], nursing_assistant: [] };
-
       for(const u of users){
         const label = u.roles?.name || (
           u.role_id === 1 ? "charge_nurse" :
@@ -270,45 +194,104 @@
         );
         (buckets[label] || buckets.staff_nurse).push(u);
       }
-
       return [
-        { key: "charge_nurse", title: "Charge Nurses", className: "section-cn", items: buckets.charge_nurse },
-        { key: "staff_nurse", title: "Staff Nurses", className: "section-sn", items: buckets.staff_nurse },
-        { key: "nursing_assistant", title: "Nursing Assistants", className: "section-na", items: buckets.nursing_assistant }
+        { title: "Charge Nurses", className: "section-cn", items: buckets.charge_nurse },
+        { title: "Staff Nurses", className: "section-sn", items: buckets.staff_nurse },
+        { title: "Nursing Assistants", className: "section-na", items: buckets.nursing_assistant }
       ].filter(g => g.items.length > 0);
     }
 
+    // === STATE ===
+    let currentUser = null;      // { id, name, is_admin, role_id }
+    let sessionToken = null;     // UUID token returned by verify-pin
+    let selectedUser = null;     // user object clicked in table
+
+    // === MODAL ===
+    const modal = document.getElementById("pinModal");
+    const pinInput = document.getElementById("pinInput");
+    const pinErr = document.getElementById("pinErr");
+    const pinTitle = document.getElementById("pinTitle");
+    const pinDesc = document.getElementById("pinDesc");
+
+    function openPinModal(user){
+      selectedUser = user;
+      pinTitle.textContent = `PIN for ${user.name}`;
+      pinDesc.textContent = "Enter your 4-digit PIN to unlock editing.";
+      pinErr.style.display = "none";
+      pinInput.value = "";
+      modal.style.display = "flex";
+      setTimeout(() => pinInput.focus(), 50);
+    }
+    function closePinModal(){
+      modal.style.display = "none";
+      selectedUser = null;
+    }
+
+    document.getElementById("pinCancel").addEventListener("click", closePinModal);
+    modal.addEventListener("click", (e) => { if(e.target === modal) closePinModal(); });
+
+    document.getElementById("pinConfirm").addEventListener("click", async () => {
+      const pin = pinInput.value.trim();
+      if(!selectedUser) return;
+      if(!/^\d{4}$/.test(pin)){
+        pinErr.textContent = "PIN must be 4 digits.";
+        pinErr.style.display = "block";
+        return;
+      }
+
+      try{
+        const res = await fetch(VERIFY_PIN_URL, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ user_id: selectedUser.id, pin })
+        });
+
+        if(!res.ok){
+          pinErr.textContent = "Wrong PIN.";
+          pinErr.style.display = "block";
+          return;
+        }
+
+        const payload = await res.json();
+        sessionToken = payload.token;
+        currentUser = payload.user;
+
+        closePinModal();
+        applyUnlockState();
+
+        const badge = document.getElementById("loginBadge");
+        badge.textContent = `Logged in: ${currentUser.name}`;
+        const adminBadge = document.getElementById("adminBadge");
+        adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
+      }catch(err){
+        console.error(err);
+        pinErr.textContent = "Login error. Try again.";
+        pinErr.style.display = "block";
+      }
+    });
+
+    // === TABLE RENDERING ===
     async function loadRota(){
       const { data: users, error: userError } = await supabaseClient
         .from("users")
-        .select("id, name, role_id, can_edit, roles(name)")
+        .select("id, name, role_id, is_admin, roles(name)")
         .order("name");
 
-      if(userError){
-        console.error(userError);
-        alert("Failed to load users");
-        return;
-      }
+      if(userError){ console.error(userError); alert("Failed to load users"); return; }
 
       const { data: dates, error: dateError } = await supabaseClient
         .from("rota_dates")
         .select(`date, rota_weeks(open)`)
         .order("date");
 
-      if(dateError){
-        console.error(dateError);
-        alert("Failed to load dates");
-        return;
-      }
+      if(dateError){ console.error(dateError); alert("Failed to load dates"); return; }
 
       const weeks = groupDatesIntoWeeks(dates);
       render(users, weeks);
 
       if(weeks.length){
-        const first = weeks[0].weekStart;
-        const last = weeks[weeks.length-1].weekEnd;
         document.getElementById("periodLabel").textContent =
-          `${fmt(first)} – ${fmt(last)} (Sun–Sat weeks)`;
+          `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length-1].weekEnd)} (Sun–Sat weeks)`;
       }
     }
 
@@ -321,7 +304,7 @@
       table.appendChild(thead);
       table.appendChild(tbody);
 
-      // Row 1: week ranges
+      // header row 1: week labels
       const r1 = document.createElement("tr");
       const hName = document.createElement("th");
       hName.className = "name-col";
@@ -343,7 +326,7 @@
       });
       thead.appendChild(r1);
 
-      // Row 2: day letters
+      // header row 2: day letters
       const r2 = document.createElement("tr");
       const blank2 = document.createElement("th");
       blank2.className = "name-col";
@@ -366,7 +349,7 @@
       });
       thead.appendChild(r2);
 
-      // Row 3: date numbers
+      // header row 3: date numbers
       const r3 = document.createElement("tr");
       const blank3 = document.createElement("th");
       blank3.className = "name-col";
@@ -390,9 +373,8 @@
       });
       thead.appendChild(r3);
 
-      // Body: grouped users
+      // body
       const groups = groupUsers(users);
-
       for(const g of groups){
         const sectionTr = document.createElement("tr");
         sectionTr.className = "section-row";
@@ -406,10 +388,12 @@
 
         for(const u of g.items){
           const tr = document.createElement("tr");
+          tr.dataset.userId = u.id;
 
           const nameTd = document.createElement("td");
           nameTd.className = "name-col";
           nameTd.textContent = u.name;
+          nameTd.addEventListener("click", () => openPinModal(u));
           tr.appendChild(nameTd);
 
           weeks.forEach((w, idx) => {
@@ -432,6 +416,26 @@
           tbody.appendChild(tr);
         }
       }
+
+      applyUnlockState();
+    }
+
+    function applyUnlockState(){
+      const rows = document.querySelectorAll("#rota tbody tr");
+      rows.forEach(r => {
+        if(r.classList.contains("section-row")) return;
+
+        const userId = r.dataset.userId;
+        const isUnlocked = currentUser && (currentUser.is_admin || currentUser.id === userId);
+
+        r.classList.toggle("unlocked", !!isUnlocked);
+        r.classList.toggle("locked", !isUnlocked);
+
+        // mark editable cells
+        r.querySelectorAll("td.cell").forEach(td => {
+          td.classList.toggle("editable", !!isUnlocked);
+        });
+      });
     }
 
     loadRota();

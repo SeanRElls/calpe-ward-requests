@@ -758,16 +758,20 @@ try {
     err?.details ||
     JSON.stringify(err);
 
-  // Revert UI to last saved state (including OFF priority)
-  const existing = requestsCache.get(key);
+// Revert UI to last known good state (pendingEdits first, then saved)
+const pe = pendingEdits[key];
+const existing = requestsCache.get(key);
 
-  if (existing?.value === "O") {
-    if (existing.important_rank === 1) td.textContent = "O¹";
-    else if (existing.important_rank === 2) td.textContent = "O²";
-    else td.textContent = "O";
-  } else {
-    td.textContent = existing?.value || "";
-  }
+const row = pe ? { value: pe.shift, important_rank: pe.important_rank } : existing;
+
+if (row?.value === "O") {
+  if (row.important_rank === 1) td.textContent = "O¹";
+  else if (row.important_rank === 2) td.textContent = "O²";
+  else td.textContent = "O";
+} else {
+  td.textContent = row?.value || "";
+}
+
 
   delete pendingEdits[key];
 
@@ -1132,6 +1136,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

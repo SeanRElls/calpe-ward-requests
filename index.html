@@ -692,14 +692,19 @@ function populatePeriodDropdown(periods){
     const s = new Date(p.start_date);
     const e = new Date(p.end_date);
 
-    // Admin sees hidden marker
     const hiddenTag = (currentUser?.is_admin && p.is_hidden) ? " (hidden)" : "";
     const activeTag = p.is_active ? " ★" : "";
 
     opt.textContent = `${fmt(s)} – ${fmt(e)}${activeTag}${hiddenTag}`;
     periodSelect.appendChild(opt);
   }
+
+  // ✅ ensure dropdown always reflects activePeriodId
+  if (activePeriodId != null) {
+    periodSelect.value = String(activePeriodId);
+  }
 }
+
 
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
@@ -1204,13 +1209,18 @@ periodsCache = periods;
 
 // choose active by default, else latest
 const active = periods.find(p => p.is_active);
-activePeriodId = active ? active.id : periods[periods.length - 1].id;
+const latest = periods[periods.length - 1];
+
+// Only choose default if user hasn't picked one yet
+if (activePeriodId == null) {
+  activePeriodId = active ? active.id : latest.id;
+}
 
 // populate dropdown + label
 populatePeriodDropdown(periods);
 periodSelect.value = String(activePeriodId);
 
-const selected = periods.find(p => p.id === activePeriodId);
+const selected = periods.find(p => String(p.id) === String(activePeriodId));
 setPeriodLabel(selected);
 
 // -----------------------------
@@ -1221,7 +1231,7 @@ const { data: dates, error: dateError } = await supabaseClient
   .select("date, rota_weeks(id, open, period_id)")
   .eq("rota_weeks.period_id", activePeriodId)
   .order("date");
-
+  
 if (dateError) {
   console.error("Dates load error:", dateError);
   alert("Failed to load dates for this period.");
@@ -1473,6 +1483,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

@@ -567,7 +567,7 @@ function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
   for (const [k, r] of requestsCache.entries()){
     if (k === excludeKey) continue;
     if (r.user_id !== userId) continue;
-    if (getWeekStartSundayIso(r.date) !== ws) continue;
+ if (getWeekStart(r.date) !== ws) continue;
     if (r.value !== "O") continue;
     if (r.important_rank === 1 || r.important_rank === 2) taken.add(r.important_rank);
   }
@@ -576,7 +576,7 @@ function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
   for (const [k, pe] of Object.entries(pendingEdits)){
     if (k === excludeKey) continue;
     if (pe.userId !== userId) continue;
-    if (getWeekStartSundayIso(pe.date) !== ws) continue;
+if (getWeekStart(pe.date) !== ws) continue;
     if (pe.shift !== "O") continue;
     if (pe.important_rank === 1 || pe.important_rank === 2) taken.add(pe.important_rank);
   }
@@ -1207,6 +1207,7 @@ if (pendingEdits[key]) {
   </script>
 </body>
 </html>
+
 
 
 

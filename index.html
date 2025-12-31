@@ -446,6 +446,7 @@
       <div>
         <h1>Calpe Ward Requests</h1>
         <div class="subtitle" id="periodLabel"></div>
+        <div class="subtitle" id="closeLabel"></div>
       </div>
       <div class="rightbits">
         <select id="periodSelect"></select>
@@ -542,13 +543,41 @@
  <!-- TAB: PERIODS -->
 <div id="adminViewPeriods">
 
+
+  <div class="subtitle" id="adminClosesAtHelp" style="margin-top:8px;">
+    Set when requests will lock for this whole 5-week period.
+  </div>
+</div>
+  
   <!-- Period picker -->
   <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
     <div style="font-weight:800;">Rota period</div>
     <select id="adminPeriodSelect" style="padding:8px 10px; border-radius:999px; border:1px solid #ccc; font-size:12px; min-width:220px;"></select>
     <div class="subtitle" id="adminPeriodMeta"></div>
   </div>
+    
+<!-- Requests close time -->
+<div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
+  <div style="font-weight:800; margin-bottom:6px;">Requests closing time</div>
 
+  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+    <input
+      id="adminClosesAtInput"
+      type="datetime-local"
+      style="padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;"
+    />
+
+    <button id="adminClosesAtSaveBtn" type="button"
+      style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
+      Save close time
+    </button>
+
+    <button id="adminClosesAtClearBtn" type="button"
+      style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
+      Clear
+    </button>
+  </div>
+  
   <!-- Period controls -->
   <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -794,7 +823,7 @@ async function upsertWeekComment(weekId, userId, comment){
   // Admin: show all
   let q = supabaseClient
     .from("rota_periods")
-    .select("id, start_date, end_date, is_hidden, is_active")
+.select("id, start_date, end_date, is_hidden, is_active, closes_at")
     .order("start_date", { ascending: true });
 
   if (!currentUser?.is_admin) {
@@ -839,7 +868,17 @@ function populatePeriodDropdown(periods){
   }
 }
 
+function getPeriodCloseDate(period){
+  if (!period?.closes_at) return null;
+  return new Date(period.closes_at);
+}
 
+function isPeriodClosed(period){
+  const closeAt = getPeriodCloseDate(period);
+  if (!closeAt) return false; // no deadline = open forever
+  return new Date() >= closeAt;
+}
+    
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
    ========================================================= */
@@ -855,6 +894,7 @@ const pendingEdits = {};         // key -> { userId, date, shift }
 const requestsCache = new Map(); // key -> { id, user_id, date, value, important_rank }
  let periodsCache = [];
 let activePeriodId = null;
+    let activePeriodObj = null; // ← the actual period object
     
 // ===== 5-week window navigation =====
 const WINDOW_WEEKS = 5;
@@ -886,6 +926,13 @@ const adminPeriodMeta = document.getElementById("adminPeriodMeta");
 const adminSetActiveBtn = document.getElementById("adminSetActiveBtn");
 const adminToggleHiddenBtn = document.getElementById("adminToggleHiddenBtn");
 const adminWeeksList = document.getElementById("adminWeeksList");
+    const closeLabel = document.getElementById("closeLabel");
+    const adminClosesAtInput = document.getElementById("adminClosesAtInput");
+const adminClosesAtSaveBtn = document.getElementById("adminClosesAtSaveBtn");
+const adminClosesAtClearBtn = document.getElementById("adminClosesAtClearBtn");
+const adminClosesAtHelp = document.getElementById("adminClosesAtHelp");
+
+
 
 let adminSelectedPeriodId = null;
     
@@ -905,6 +952,58 @@ const weekCommentInput = document.getElementById("weekCommentInput");
 const weekCommentAdminList = document.getElementById("weekCommentAdminList");
 
 let activeWeekIdForComment = null;
+    function toDatetimeLocalValue(dateObj){
+  // returns "YYYY-MM-DDTHH:MM" in local time
+  const pad = (n) => String(n).padStart(2, "0");
+  const y = dateObj.getFullYear();
+  const m = pad(dateObj.getMonth() + 1);
+  const d = pad(dateObj.getDate());
+  const h = pad(dateObj.getHours());
+  const mi = pad(dateObj.getMinutes());
+  return `${y}-${m}-${d}T${h}:${mi}`;
+}
+
+function datetimeLocalToISOString(value){
+  // value is "YYYY-MM-DDTHH:MM" interpreted as LOCAL time
+  // Convert to a Date then ISO (UTC). Works cleanly with timestamptz in Supabase.
+  const dt = new Date(value);
+  return dt.toISOString();
+}
+
+function renderAdminCloseTime(periodId){
+  const p = periodsCache.find(x => String(x.id) === String(periodId));
+  if (!p) return;
+
+  if (adminClosesAtInput){
+    adminClosesAtInput.value = p.closes_at ? toDatetimeLocalValue(new Date(p.closes_at)) : "";
+  }
+
+  if (adminClosesAtHelp){
+    if (!p.closes_at){
+      adminClosesAtHelp.textContent = "No close time set (requests stay open).";
+    } else {
+      const d = new Date(p.closes_at);
+      adminClosesAtHelp.textContent =
+        `Currently closes at: ${d.toLocaleString("en-GB")}`;
+    }
+  }
+}
+
+    
+    function updateCloseLabel(period){
+  if (!closeLabel) return;
+
+  const closeAt = getPeriodCloseDate(period);
+  if (!closeAt){
+    closeLabel.textContent = "Requests: no closing time set.";
+    return;
+  }
+
+  const closed = isPeriodClosed(period);
+  closeLabel.innerHTML = closed
+    ? `<strong>Requests closed</strong> (closed at ${closeAt.toLocaleString("en-GB")}).`
+    : `Requests will close on <strong>${closeAt.toLocaleString("en-GB")}</strong>.`;
+}
 
 function openWeekCommentModal(){
   if (!activeWeekIdForComment) return;
@@ -1016,10 +1115,12 @@ if (periodSelect) {
   periodSelect.addEventListener("change", async () => {
     activePeriodId = periodSelect.value; // UUID string
 
-    const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
-    setPeriodLabel(selected);
-
-    await loadRota();
+ const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
+activePeriodObj = selected; // ✅ add this
+setPeriodLabel(selected);
+updateCloseLabel(selected);
+applyUnlockState(); // ✅ optional but nice so it locks instantly
+await loadRota();
   });
 }
 
@@ -1075,6 +1176,7 @@ if (adminPeriodSelect) {
   adminPeriodSelect.addEventListener("change", async () => {
     adminSelectedPeriodId = adminPeriodSelect.value;
     renderAdminPeriodMeta(adminSelectedPeriodId);
+    renderAdminCloseTime(adminSelectedPeriodId); 
     await loadAdminWeeks(adminSelectedPeriodId);
   });
 }
@@ -1086,6 +1188,7 @@ if (adminSetActiveBtn) {
       await setActivePeriod(adminSelectedPeriodId);
       await loadRota(); // refresh main view
       await loadAdminPeriodsForDropdown(); // refresh admin UI
+      renderAdminCloseTime(adminSelectedPeriodId)
     } catch (e) {
       console.error(e);
       alert("Set active failed. Check console.");
@@ -1146,6 +1249,7 @@ async function loadAdminPeriodsForDropdown(){
 
   renderAdminPeriodMeta(adminSelectedPeriodId);
   await loadAdminWeeks(adminSelectedPeriodId);
+  renderAdminCloseTime(adminSelectedPeriodId);
 }
 
 function renderAdminPeriodMeta(periodId){
@@ -1437,6 +1541,51 @@ if (adminGenerateBtn) {
   });
 }
 
+    async function setPeriodCloseTime(periodId, closesAtIsoOrNull){
+  const { error } = await supabaseClient
+    .from("rota_periods")
+    .update({ closes_at: closesAtIsoOrNull })
+    .eq("id", periodId);
+
+  if (error) throw error;
+}
+
+if (adminClosesAtSaveBtn) {
+  adminClosesAtSaveBtn.addEventListener("click", async () => {
+    if (!adminSelectedPeriodId) return alert("Pick a rota period first.");
+    if (!adminClosesAtInput?.value) return alert("Pick a date/time first.");
+
+    try {
+      const iso = datetimeLocalToISOString(adminClosesAtInput.value);
+      await setPeriodCloseTime(adminSelectedPeriodId, iso);
+
+      await loadRota(); // refresh main
+      await loadAdminPeriodsForDropdown(); // refresh admin cache + UI
+      alert("Close time saved.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save close time. Check console.");
+    }
+  });
+}
+
+if (adminClosesAtClearBtn) {
+  adminClosesAtClearBtn.addEventListener("click", async () => {
+    if (!adminSelectedPeriodId) return alert("Pick a rota period first.");
+
+    try {
+      await setPeriodCloseTime(adminSelectedPeriodId, null);
+
+      await loadRota();
+      await loadAdminPeriodsForDropdown();
+      alert("Close time cleared.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to clear close time. Check console.");
+    }
+  });
+}
+
 
     /* =========================================================
        5) PIN MODAL (open/close)
@@ -1540,6 +1689,13 @@ function updateBadges(){
 
 function openShiftModal(){
   if (!activeCell) return;
+
+  if (isPeriodClosed(activePeriodObj)) {
+    alert("Requests are closed for this 5-week period.");
+    activeCell = null;
+    return;
+  }
+
   shiftModal.style.display = "flex";
   shiftModal.setAttribute("aria-hidden", "false");
 }
@@ -1784,7 +1940,10 @@ populatePeriodDropdown(periods);
 periodSelect.value = String(activePeriodId);
 
 const selected = periods.find(p => String(p.id) === String(activePeriodId));
+activePeriodObj = selected;   // ← THIS is 5A in action
 setPeriodLabel(selected);
+updateCloseLabel(selected);
+  
 // -----------------------------
 // 7D) Load rota dates FOR SELECTED PERIOD
 // -----------------------------
@@ -2032,13 +2191,14 @@ if (pe.shift === "O") {
    ========================================================= */
 function applyUnlockState(){
   const rows = document.querySelectorAll("#rota tbody tr");
+  const periodClosed = isPeriodClosed(activePeriodObj); // ✅ 5-week lock
 
   rows.forEach(r => {
     if (r.classList.contains("section-row")) return;
 
     const userId = r.dataset.userId;
 
-    // Row is unlocked if: logged in AND (admin OR it's your own row)
+    // you can log in, but editing depends on locks
     const isUnlocked =
       currentUser && (currentUser.is_admin || currentUser.id === userId);
 
@@ -2048,12 +2208,14 @@ function applyUnlockState(){
     r.querySelectorAll("td.cell").forEach(td => {
       const isClosedWeek = td.classList.contains("closed");
 
-      // Staff cannot edit closed weeks. Admin also cannot (change this if you want admin override).
-      const canEdit = !!isUnlocked && !isClosedWeek;
+      // ✅ FINAL rule:
+      // - must be your row (or admin, if you ever decide)
+      // - week must be open
+      // - period must not be closed
+      const canEdit = !!isUnlocked && !isClosedWeek && !periodClosed;
 
       td.classList.toggle("editable", canEdit);
 
-      // bind once
       if (!td.dataset.bound) {
         td.dataset.bound = "1";
         td.addEventListener("click", () => {
@@ -2065,14 +2227,12 @@ function applyUnlockState(){
             date: td.dataset.date
           };
 
-          console.log("Cell selected:", activeCell);
           openShiftModal();
         });
       }
     });
   });
 }
-
 
     /* =========================================================
        10) BOOT
@@ -2083,6 +2243,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

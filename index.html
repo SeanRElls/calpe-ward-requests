@@ -1215,86 +1215,6 @@ async function loadAdminWeeks(periodId){
   });
 }
 
-  // build dropdown
-  adminPeriodSelect.innerHTML = "";
-  for (const p of periods){
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    const s = fmt(new Date(p.start_date));
-    const e = fmt(new Date(p.end_date));
-    opt.textContent = `${s} – ${e}${p.is_active ? " ★" : ""}${p.is_hidden ? " (hidden)" : ""}`;
-    adminPeriodSelect.appendChild(opt);
-  }
-
-  // choose default selection
-  if (!adminSelectedPeriodId) {
-    const active = periods.find(p => p.is_active) || periods[periods.length - 1];
-    adminSelectedPeriodId = active?.id || periods[0]?.id;
-  }
-
-  adminPeriodSelect.value = String(adminSelectedPeriodId);
-  renderAdminPeriodMeta(adminSelectedPeriodId);
-  await loadAdminWeeks(adminSelectedPeriodId);
-}
-
-function renderAdminPeriodMeta(periodId){
-  const p = periodsCache.find(x => String(x.id) === String(periodId));
-  if (!p){
-    adminPeriodMeta.textContent = "";
-    return;
-  }
-  const bits = [];
-  if (p.is_active) bits.push("✅ Active");
-  if (p.is_hidden) bits.push("🙈 Hidden");
-  adminPeriodMeta.textContent = bits.join(" · ") || "—";
-}
-
-  
-  periodsCache = periods;
-
-  adminPeriodsList.innerHTML = periods.map(p => {
-    const s = fmt(new Date(p.start_date));
-    const e = fmt(new Date(p.end_date));
-    const active = p.is_active ? "✅ Active" : "";
-    const hidden = p.is_hidden ? "🙈 Hidden" : "";
-    return `
-      <div style="padding:10px; border-bottom:1px solid #eee;">
-        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-          <div>
-            <div style="font-weight:800;">${s} – ${e}</div>
-            <div style="font-size:11px; color:#666;">${active} ${hidden}</div>
-          </div>
-          <div style="display:flex; gap:8px;">
-            <button type="button" data-action="setActive" data-id="${p.id}" style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Set active</button>
-            <button type="button" data-action="toggleHidden" data-id="${p.id}" style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Toggle hidden</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  // delegation for buttons
-  adminPeriodsList.querySelectorAll("button[data-action]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const id = btn.dataset.id;
-      const action = btn.dataset.action;
-      if (!id) return;
-
-      try {
-        if (action === "setActive") {
-          await setActivePeriod(id);
-        } else if (action === "toggleHidden") {
-          await toggleHiddenPeriod(id);
-        }
-        await loadRota();        // refresh main UI
-        await loadAdminPeriods(); // refresh admin list
-      } catch (e) {
-        console.error(e);
-        alert("Admin action failed. Check console.");
-      }
-    });
-  });
-}
 
 /* =========================
    ADMIN PERIOD ACTIONS (v1)
@@ -1983,6 +1903,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

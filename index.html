@@ -1339,23 +1339,25 @@ async function toggleHiddenPeriod(periodId){
    ADMIN GENERATE PREVIEW (stub)
    ========================= */
 function computeNextPeriodRange(){
-  // periodsCache contains ALL periods for admin (fetchRotaPeriods returns all when admin)
   if (!periodsCache?.length) return null;
 
-  // Latest by end_date (safe even if ordering changes)
-  const latest = [...periodsCache].sort((a,b) => new Date(a.end_date) - new Date(b.end_date)).at(-1);
+  const latest = [...periodsCache]
+    .sort((a,b) => new Date(a.end_date) - new Date(b.end_date))
+    .at(-1);
+
   if (!latest?.end_date) return null;
 
   const lastEnd = new Date(latest.end_date);
 
-  // next day after last period ends
+  // Start from the day after the latest period ends
   let start = addDays(lastEnd, 1);
 
-  // Align to Sunday start (your system uses Sun–Sat weeks)
-  start = startOfWeekSunday(start);
+  // Move FORWARD to the next Sunday (never backwards)
+  while (start.getDay() !== 0) {
+    start = addDays(start, 1);
+  }
 
-  // 5 weeks = 35 days -> end = start + 34
-  const end = addDays(start, 34);
+  const end = addDays(start, 34); // 35 days total
 
   return { start, end, latest };
 }
@@ -1402,12 +1404,20 @@ if (adminGenerateBtn) {
       await loadAdminPeriodsForDropdown();
 
       alert(`Generated new period: ${fmt(new Date(newPeriod.start_date))} – ${fmt(new Date(newPeriod.end_date))}`);
-    } catch (e) {
-      console.error(e);
-      alert("Generate failed. Check console.");
-    } finally {
-      adminGenerateBtn.disabled = false;
-    }
+  } catch (e) {
+  console.error(e);
+
+  const msg =
+    e?.message ||
+    e?.details ||
+    e?.hint ||
+    (e?.error && (e.error.message || e.error.details)) ||
+    JSON.stringify(e, null, 2);
+
+  alert("Generate failed:\n\n" + msg);
+} finally {
+  adminGenerateBtn.disabled = false;
+}
   });
 }
 
@@ -2050,6 +2060,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

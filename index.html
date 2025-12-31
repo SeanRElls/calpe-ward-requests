@@ -1169,25 +1169,34 @@ async function loadAdminWeeks(periodId){
     return;
   }
 
-  adminWeeksList.innerHTML = weeks.map(w => {
-    const s = fmt(w.weekStart);
-    const e = fmt(w.weekEnd);
-    const state = w.open ? "Open" : "Closed";
-    return `
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #eee;">
-        <div>
-          <div style="font-weight:800;">${s} – ${e}</div>
-          <div style="font-size:11px; color:#666;">${state}</div>
-        </div>
-        <button type="button"
-                data-week-id="${w.weekId || ""}"
-                data-week-open="${w.open ? "1" : "0"}"
-                style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
-          Toggle open/close
-        </button>
+adminWeeksList.innerHTML = weeks.map(w => {
+  const s = fmt(w.weekStart);
+  const e = fmt(w.weekEnd);
+  const isOpen = !!w.open;
+
+  const pill = isOpen
+    ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#e9fff0; border:1px solid #9fe0b1; color:#0b6b2b;">OPEN</span>`
+    : `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#ffecec; border:1px solid #ffb3b3; color:#8a1f1f;">CLOSED</span>`;
+
+  const btnText = isOpen ? "Close week" : "Open week";
+
+  return `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #eee;">
+      <div>
+        <div style="font-weight:800;">${s} – ${e}</div>
+        <div style="margin-top:4px;">${pill}</div>
       </div>
-    `;
-  }).join("");
+
+      <button type="button"
+              data-week-id="${w.weekId || ""}"
+              data-week-open="${isOpen ? "1" : "0"}"
+              style="min-width:auto; padding:10px 12px; border-radius:999px; font-size:12px;">
+        ${btnText}
+      </button>
+    </div>
+  `;
+}).join("");
+
 
   // Bind toggles
   adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
@@ -1196,6 +1205,7 @@ async function loadAdminWeeks(periodId){
       if (!weekId) return alert("Missing weekId for this row.");
 
       const currentlyOpen = btn.dataset.weekOpen === "1";
+      
 
       try {
         const { error: e2 } = await supabaseClient
@@ -1903,6 +1913,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

@@ -573,17 +573,17 @@ if (!weekObj.weekId && item.rota_weeks?.id) {
         for(let i=0;i<7;i++){
           const dd = addDays(w.weekStart, i);
           const ds = isoDate(dd);
-          const row = dayLookup.get(ds) || { date: ds, rota_weeks: { open: w.open } };
+const row = dayLookup.get(ds) || { date: ds, rota_weeks: { open: w.open, id: w.weekId } };
           ordered.push(row);
         }
 
-        weeks.push({
-          weekStart: w.weekStart,
-          weekEnd: addDays(w.weekStart, 6),
-          open: w.open,
-          days: ordered
-        });
-      }
+ weeks.push({
+  weekStart: w.weekStart,
+  weekEnd: addDays(w.weekStart, 6),
+  open: w.open,
+  weekId: w.weekId,      // ✅ THIS was missing
+  days: ordered
+});
 
       weeks.sort((a,b) => a.weekStart - b.weekStart);
       return weeks;
@@ -794,24 +794,20 @@ let weekWindowStart = 0; // index into allWeeks
     const adminBtn = document.getElementById("adminBtn");
 const periodSelect = document.getElementById("periodSelect");
 const periodNavLabel = document.getElementById("periodNavLabel");
-
-    /* =========================================================
+    
+/* =========================================================
    6) PERIOD DROPDOWN HANDLER
    ========================================================= */
 if (periodSelect) {
   periodSelect.addEventListener("change", async () => {
-    activePeriodId = Number(periodSelect.value) || periodSelect.value;
-
-    
-  if (periodSelect) {
-  periodSelect.addEventListener("change", async () => {
-    activePeriodId = periodSelect.value; // keep as string (UUID)
+    activePeriodId = periodSelect.value; // UUID string
 
     const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
     setPeriodLabel(selected);
 
     await loadRota();
   });
+}
 }
     // Shift modal refs
     const shiftModal = document.getElementById("shiftModal");
@@ -1538,6 +1534,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

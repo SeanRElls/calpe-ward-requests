@@ -1330,22 +1330,15 @@ if (start && end) {
 const weeks = groupDatesIntoWeeks(dates);
 render(users, weeks);
 
-  // -----------------------------
-  // 7E) Render table (weeks + users)
-  // -----------------------------
-  const weeks = groupDatesIntoWeeks(dates);
-  render(users, weeks);
-
-  // Period label
-  if (weeks.length) {
-    document.getElementById("periodLabel").textContent =
-      `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
-  }
-
-  // Apply locks + badges
-  applyUnlockState();
-  updateBadges();
+// Period label
+if (weeks.length) {
+  document.getElementById("periodLabel").textContent =
+    `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
 }
+
+// Apply locks + badges
+applyUnlockState();
+updateBadges();
 
     /* =========================================================
    8) RENDER (table header + grouped rows)
@@ -1575,6 +1568,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

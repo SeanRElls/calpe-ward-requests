@@ -547,9 +547,21 @@
         const ws = startOfWeekSunday(d);
         const key = isoDate(ws);
 
-        if(!map.has(key)){
-          map.set(key, { weekStart: ws, days: [], open: (item.rota_weeks && item.rota_weeks.open) ?? true });
-        }
+       if (!map.has(key)) {
+  map.set(key, {
+    weekStart: ws,
+    days: [],
+    open: (item.rota_weeks && item.rota_weeks.open) ?? true,
+    weekId: item.rota_weeks?.id || null
+  });
+}
+
+const weekObj = map.get(key);
+
+// If we didn’t have an id when we created the week, but this row has one, store it
+if (!weekObj.weekId && item.rota_weeks?.id) {
+  weekObj.weekId = item.rota_weeks.id;
+}
         map.get(key).days.push(item);
       }
 
@@ -791,13 +803,16 @@ if (periodSelect) {
     activePeriodId = Number(periodSelect.value) || periodSelect.value;
 
     
+  if (periodSelect) {
+  periodSelect.addEventListener("change", async () => {
+    activePeriodId = periodSelect.value; // keep as string (UUID)
+
+    const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
     setPeriodLabel(selected);
 
     await loadRota();
   });
 }
-
-    
     // Shift modal refs
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
@@ -1267,8 +1282,8 @@ setPeriodLabel(selected);
 // -----------------------------
 const { data: dates, error: dateError } = await supabaseClient
   .from("rota_dates")
-  .select("date, rota_weeks(id, open, period_id)")
-  .eq("rota_weeks.period_id", activePeriodId)
+  .select("date, week_id, period_id, rota_weeks(id, open)")
+  .eq("period_id", activePeriodId)
   .order("date");
   
 if (dateError) {
@@ -1324,7 +1339,7 @@ function render(users, weeks){
   <button
     class="week-comment-btn"
     type="button"
-   data-week-id="${w.days[0]?.rota_weeks?.id || ""}"
+  data-week-id="${w.weekId || ""}"
 
 
     title="Week comment"
@@ -1523,6 +1538,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

@@ -105,6 +105,12 @@
       color:#fff;
     }
 
+    .week-toggle-btn{
+  min-width: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+}
     table{
       border-collapse: separate;
       border-spacing: 0;
@@ -1187,10 +1193,10 @@ adminWeeksList.innerHTML = weeks.map(w => {
         <div style="margin-top:4px;">${pill}</div>
       </div>
 
-      <button type="button"
-              data-week-id="${w.weekId || ""}"
-              data-week-open="${isOpen ? "1" : "0"}"
-              style="min-width:auto; padding:10px 12px; border-radius:999px; font-size:12px;">
+<button type="button"
+        class="week-toggle-btn"
+        data-week-id="${w.weekId || ""}"
+        data-week-open="${isOpen ? "1" : "0"}">
         ${btnText}
       </button>
     </div>
@@ -1913,6 +1919,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

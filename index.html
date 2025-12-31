@@ -61,6 +61,61 @@
 }
 
 
+/* ===== nice status pill for closeLabel ===== */
+#closeLabel{
+  margin-top: 6px;
+}
+
+.close-pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  border: 1px solid #d7dbe0;
+  color: #222;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.close-pill .dot{
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #2e7d32; /* green */
+  flex: 0 0 auto;
+}
+
+.close-pill.is-soon{
+  background: #fff4e5;
+  border-color: #ffd59a;
+}
+.close-pill.is-soon .dot{ background:#d97706; } /* amber */
+
+.close-pill.is-closed{
+  background: #f3f3f3;
+  border-color: #d0d0d0;
+  color: #666;
+}
+.close-pill.is-closed .dot{ background:#888; }
+
+.close-pill strong{
+  font-weight: 750;
+}
+
+.close-pill .mini{
+  opacity: 0.85;
+}
+
+.close-pill .timeleft{
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.06);
+}
 
 
     .titlebar{
@@ -543,41 +598,37 @@
  <!-- TAB: PERIODS -->
 <div id="adminViewPeriods">
 
-
-  <div class="subtitle" id="adminClosesAtHelp" style="margin-top:8px;">
-    Set when requests will lock for this whole 5-week period.
-  </div>
-</div>
-  
   <!-- Period picker -->
   <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
     <div style="font-weight:800;">Rota period</div>
     <select id="adminPeriodSelect" style="padding:8px 10px; border-radius:999px; border:1px solid #ccc; font-size:12px; min-width:220px;"></select>
     <div class="subtitle" id="adminPeriodMeta"></div>
   </div>
-    
-<!-- Requests close time -->
-<div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
-  <div style="font-weight:800; margin-bottom:6px;">Requests closing time</div>
 
-  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-    <input
-      id="adminClosesAtInput"
-      type="datetime-local"
-      style="padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;"
-    />
+  <!-- Requests close time -->
+  <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
+    <div style="font-weight:800; margin-bottom:6px;">Requests closing time</div>
 
-    <button id="adminClosesAtSaveBtn" type="button"
-      style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
-      Save close time
-    </button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <input id="adminClosesAtInput" type="datetime-local"
+        style="padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;" />
 
-    <button id="adminClosesAtClearBtn" type="button"
-      style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
-      Clear
-    </button>
+      <button id="adminClosesAtSaveBtn" type="button"
+        style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
+        Save close time
+      </button>
+
+      <button id="adminClosesAtClearBtn" type="button"
+        style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
+        Clear
+      </button>
+    </div>
+
+    <div class="subtitle" id="adminClosesAtHelp" style="margin-top:8px;">
+      Set when requests will lock for this whole 5-week period.
+    </div>
   </div>
-  
+
   <!-- Period controls -->
   <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -593,7 +644,6 @@
   </div>
 
 </div>
-
 
     <!-- TAB: GENERATE -->
     <div id="adminViewGenerate" style="display:none;">
@@ -990,20 +1040,78 @@ function renderAdminCloseTime(periodId){
 }
 
     
-    function updateCloseLabel(period){
+  let closeCountdownTimer = null;
+
+function formatTimeLeft(ms){
+  if (ms <= 0) return "0m";
+
+  const totalMins = Math.floor(ms / 60000);
+  const days = Math.floor(totalMins / (60 * 24));
+  const hours = Math.floor((totalMins % (60 * 24)) / 60);
+  const mins = totalMins % 60;
+
+  const parts = [];
+  if (days) parts.push(`${days}d`);
+  if (days || hours) parts.push(`${hours}h`);
+  parts.push(`${mins}m`);
+
+  return parts.join(" ");
+}
+
+function updateCloseLabel(period){
   if (!closeLabel) return;
 
+  if (closeCountdownTimer){
+    clearInterval(closeCountdownTimer);
+    closeCountdownTimer = null;
+  }
+
   const closeAt = getPeriodCloseDate(period);
-  if (!closeAt){
-    closeLabel.textContent = "Requests: no closing time set.";
+
+if (!closeAt){
+  closeLabel.innerHTML = `
+    <span class="close-pill">
+      <span class="dot"></span>
+      <span class="msg">Requests are open</span>
+    </span>
+  `;
+  return;
+}
+
+const render = () => {
+  const now = new Date();
+  const msLeft = closeAt - now;
+
+  if (msLeft <= 0){
+    closeLabel.innerHTML = `
+      <span class="close-pill is-closed">
+        <span class="dot"></span>
+        <span class="msg">Requests closed</span>
+        <span class="mini">Closed at ${closeAt.toLocaleString("en-GB")}</span>
+      </span>
+    `;
+    clearInterval(closeCountdownTimer);
+    closeCountdownTimer = null;
     return;
   }
 
-  const closed = isPeriodClosed(period);
-  closeLabel.innerHTML = closed
-    ? `<strong>Requests closed</strong> (closed at ${closeAt.toLocaleString("en-GB")}).`
-    : `Requests will close on <strong>${closeAt.toLocaleString("en-GB")}</strong>.`;
+  const soon = msLeft <= 24 * 60 * 60 * 1000;
+
+  closeLabel.innerHTML = `
+    <span class="close-pill ${soon ? "is-soon" : ""}">
+      <span class="dot"></span>
+      <span class="msg">Requests close${soon ? " soon" : ""}</span>
+      <span class="mini">${closeAt.toLocaleString("en-GB")}</span>
+      <span class="timeleft">${formatTimeLeft(msLeft)} left</span>
+    </span>
+  `;
+};
+
+
+  render();
+  closeCountdownTimer = setInterval(render, 30000);
 }
+
 
 function openWeekCommentModal(){
   if (!activeWeekIdForComment) return;
@@ -1664,6 +1772,7 @@ if (adminClosesAtClearBtn) {
         closePinModal();
         applyUnlockState();
         updateBadges();
+        updateCloseLabel(activePeriodObj);
 
       }catch(err){
         console.error("Login exception:", err);
@@ -2243,6 +2352,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

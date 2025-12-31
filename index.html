@@ -1274,19 +1274,143 @@ async function toggleHiddenPeriod(periodId){
 
   if (error) throw error;
 }
+// create 5 week period 
+    async function generateNextFiveWeekPeriod(){
+  const r = computeNextPeriodRange();
+  if (!r) throw new Error("No existing periods. Cannot generate next period.");
+
+  const startStr = isoDate(r.start);
+  const endStr   = isoDate(r.end);
+
+  // 1) Create rota_periods row
+  const { data: newPeriod, error: pErr } = await supabaseClient
+    .from("rota_periods")
+    .insert({
+      start_date: startStr,
+      end_date: endStr,
+      is_hidden: false,
+      is_active: false
+    })
+    .select("id, start_date, end_date, is_hidden, is_active")
+    .single();
+
+  if (pErr) throw pErr;
+
+  const periodId = newPeriod.id;
+
+  // 2) Create 5 rota_weeks rows (default open=true)
+  const weeksPayload = Array.from({ length: 5 }, () => ({ open: true }));
+
+  const { data: createdWeeks, error: wErr } = await supabaseClient
+    .from("rota_weeks")
+    .insert(weeksPayload)
+    .select("id, open");
+
+  if (wErr) throw wErr;
+  if (!createdWeeks || createdWeeks.length !== 5) {
+    throw new Error("Failed to create 5 rota_weeks rows.");
+  }
+
+  // 3) Create 35 rota_dates rows, each linked to the correct week
+  const datesPayload = [];
+  for (let wi = 0; wi < 5; wi++){
+    const weekId = createdWeeks[wi].id;
+
+    for (let di = 0; di < 7; di++){
+      const d = addDays(r.start, wi * 7 + di);
+      datesPayload.push({
+        date: isoDate(d),
+        period_id: periodId,
+        week_id: weekId
+      });
+    }
+  }
+
+  const { error: dErr } = await supabaseClient
+    .from("rota_dates")
+    .insert(datesPayload);
+
+  if (dErr) throw dErr;
+
+  return newPeriod;
+}
 
 /* =========================
    ADMIN GENERATE PREVIEW (stub)
    ========================= */
-function refreshGeneratePreview(){
-  adminGeneratePreview.textContent = "Will generate the next 5-week period after the latest period. (We’ll wire the exact logic next.)";
+function computeNextPeriodRange(){
+  // periodsCache contains ALL periods for admin (fetchRotaPeriods returns all when admin)
+  if (!periodsCache?.length) return null;
+
+  // Latest by end_date (safe even if ordering changes)
+  const latest = [...periodsCache].sort((a,b) => new Date(a.end_date) - new Date(b.end_date)).at(-1);
+  if (!latest?.end_date) return null;
+
+  const lastEnd = new Date(latest.end_date);
+
+  // next day after last period ends
+  let start = addDays(lastEnd, 1);
+
+  // Align to Sunday start (your system uses Sun–Sat weeks)
+  start = startOfWeekSunday(start);
+
+  // 5 weeks = 35 days -> end = start + 34
+  const end = addDays(start, 34);
+
+  return { start, end, latest };
 }
 
+function refreshGeneratePreview(){
+  const r = computeNextPeriodRange();
+  if (!r){
+    adminGeneratePreview.textContent = "Cannot preview. No periods loaded.";
+    return;
+  }
+
+  adminGeneratePreview.textContent =
+    `Next period: ${fmt(r.start)} – ${fmt(r.end)} (5 weeks, Sun–Sat).`;
+}
+
+
 if (adminGenerateBtn) {
-  adminGenerateBtn.addEventListener("click", () => {
-    alert("Generate logic coming next (with confirmation prompt).");
+  adminGenerateBtn.addEventListener("click", async () => {
+    try {
+      const r = computeNextPeriodRange();
+      if (!r) return alert("Cannot generate: no periods loaded.");
+
+      const ok = confirm(`Generate new 5-week period:\n${fmt(r.start)} – ${fmt(r.end)} ?`);
+      if (!ok) return;
+
+      adminGenerateBtn.disabled = true;
+      adminGeneratePreview.textContent = "Generating…";
+
+      const newPeriod = await generateNextFiveWeekPeriod();
+
+      // Refresh caches + UI
+      await loadRota(); // pulls periods + shows new one in dropdown
+      await loadAdminPeriodsForDropdown(); // refresh admin dropdown + weeks list
+      refreshGeneratePreview();
+
+      // Optional: auto-select the new period in admin + main UI
+      adminSelectedPeriodId = newPeriod.id;
+      activePeriodId = newPeriod.id;
+
+      // Set active automatically so staff see it immediately (comment this out if you don't want that)
+      await setActivePeriod(newPeriod.id);
+
+      await loadRota();
+      await loadAdminPeriodsForDropdown();
+
+      alert(`Generated new period: ${fmt(new Date(newPeriod.start_date))} – ${fmt(new Date(newPeriod.end_date))}`);
+    } catch (e) {
+      console.error(e);
+      alert("Generate failed. Check console.");
+    } finally {
+      adminGenerateBtn.disabled = false;
+    }
   });
 }
+
 
     /* =========================================================
        5) PIN MODAL (open/close)
@@ -1926,6 +2050,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

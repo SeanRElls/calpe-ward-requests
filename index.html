@@ -513,6 +513,45 @@
   </div>
 </div>
 
+  <!-- =========================
+     ADMIN PANEL (v1)
+     ========================= -->
+<div class="modal-backdrop" id="adminModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <h2 id="adminTitle">Admin Console</h2>
+    <p class="subtitle">Manage rota periods and generate new weeks.</p>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px;">
+      <button id="adminTabPeriods" type="button" class="primary" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Rota periods</button>
+      <button id="adminTabGenerate" type="button" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Generate</button>
+    </div>
+
+    <!-- TAB: PERIODS -->
+    <div id="adminViewPeriods">
+      <div id="adminPeriodsList"
+           style="border:1px solid #ddd; border-radius:10px; padding:10px; max-height:280px; overflow:auto;">
+        Loading periods…
+      </div>
+    </div>
+
+    <!-- TAB: GENERATE -->
+    <div id="adminViewGenerate" style="display:none;">
+      <div style="border:1px solid #ddd; border-radius:10px; padding:10px;">
+        <div style="font-weight:700; margin-bottom:6px;">Generate next 5-week period</div>
+        <div class="subtitle" id="adminGeneratePreview">Preview will appear here.</div>
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button id="adminGenerateBtn" class="primary" type="button">Generate</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="btns" style="margin-top:12px;">
+      <button id="adminClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
 
   <script>
     /* =========================================================
@@ -848,11 +887,13 @@ weekCommentModal.addEventListener("click", (e) => {
   if (e.target === weekCommentModal) closeWeekCommentModal();
 });
 
-    adminBadge.addEventListener("click", () => {
-  if (!currentUser?.is_admin) return;
+if (adminBadge) {
+  adminBadge.addEventListener("click", () => {
+    if (!currentUser?.is_admin) return;
+    openAdminConsole();
+  });
+}
 
-  openAdminConsole(); // we’ll build this next
-});
     
 // Click handler for 💬 buttons (event delegation)
 document.addEventListener("click", async (e) => {
@@ -942,12 +983,157 @@ if (periodSelect) {
   });
 }
 
-    /* =========================
-   ADMIN CONSOLE (stub)
+/* =========================
+   ADMIN PANEL (v1)
    ========================= */
+const adminModal = document.getElementById("adminModal");
+const adminCloseBtn = document.getElementById("adminClose");
+const adminTabPeriods = document.getElementById("adminTabPeriods");
+const adminTabGenerate = document.getElementById("adminTabGenerate");
+const adminViewPeriods = document.getElementById("adminViewPeriods");
+const adminViewGenerate = document.getElementById("adminViewGenerate");
+const adminPeriodsList = document.getElementById("adminPeriodsList");
+const adminGeneratePreview = document.getElementById("adminGeneratePreview");
+const adminGenerateBtn = document.getElementById("adminGenerateBtn");
+
 function openAdminConsole(){
-  alert("Admin console coming next.");
+  if (!currentUser?.is_admin) return;
+  adminModal.style.display = "flex";
+  adminModal.setAttribute("aria-hidden","false");
+  showAdminTab("periods");
+  loadAdminPeriods(); // refresh list every time you open
+  refreshGeneratePreview();
 }
+
+function closeAdminConsole(){
+  adminModal.style.display = "none";
+  adminModal.setAttribute("aria-hidden","true");
+}
+
+if (adminCloseBtn) adminCloseBtn.addEventListener("click", closeAdminConsole);
+if (adminModal) adminModal.addEventListener("click", (e) => {
+  if (e.target === adminModal) closeAdminConsole();
+});
+
+function showAdminTab(which){
+  const isPeriods = (which === "periods");
+  adminViewPeriods.style.display = isPeriods ? "block" : "none";
+  adminViewGenerate.style.display = isPeriods ? "none" : "block";
+
+  adminTabPeriods.classList.toggle("primary", isPeriods);
+  adminTabGenerate.classList.toggle("primary", !isPeriods);
+}
+
+if (adminTabPeriods) adminTabPeriods.addEventListener("click", () => showAdminTab("periods"));
+if (adminTabGenerate) adminTabGenerate.addEventListener("click", () => showAdminTab("generate"));
+
+async function loadAdminPeriods(){
+  adminPeriodsList.textContent = "Loading periods…";
+
+  let periods;
+  try {
+    periods = await fetchRotaPeriods();
+  } catch (e) {
+    console.error(e);
+    adminPeriodsList.textContent = "Failed to load periods (check console).";
+    return;
+  }
+
+  periodsCache = periods;
+
+  adminPeriodsList.innerHTML = periods.map(p => {
+    const s = fmt(new Date(p.start_date));
+    const e = fmt(new Date(p.end_date));
+    const active = p.is_active ? "✅ Active" : "";
+    const hidden = p.is_hidden ? "🙈 Hidden" : "";
+    return `
+      <div style="padding:10px; border-bottom:1px solid #eee;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+          <div>
+            <div style="font-weight:800;">${s} – ${e}</div>
+            <div style="font-size:11px; color:#666;">${active} ${hidden}</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" data-action="setActive" data-id="${p.id}" style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Set active</button>
+            <button type="button" data-action="toggleHidden" data-id="${p.id}" style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Toggle hidden</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // delegation for buttons
+  adminPeriodsList.querySelectorAll("button[data-action]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      if (!id) return;
+
+      try {
+        if (action === "setActive") {
+          await setActivePeriod(id);
+        } else if (action === "toggleHidden") {
+          await toggleHiddenPeriod(id);
+        }
+        await loadRota();        // refresh main UI
+        await loadAdminPeriods(); // refresh admin list
+      } catch (e) {
+        console.error(e);
+        alert("Admin action failed. Check console.");
+      }
+    });
+  });
+}
+
+/* =========================
+   ADMIN PERIOD ACTIONS (v1)
+   ========================= */
+async function setActivePeriod(periodId){
+  // 1) set all inactive
+  const { error: e1 } = await supabaseClient
+    .from("rota_periods")
+    .update({ is_active: false })
+    .neq("id", periodId);
+
+  if (e1) throw e1;
+
+  // 2) set chosen active
+  const { error: e2 } = await supabaseClient
+    .from("rota_periods")
+    .update({ is_active: true })
+    .eq("id", periodId);
+
+  if (e2) throw e2;
+
+  activePeriodId = periodId; // keep UI aligned
+}
+
+async function toggleHiddenPeriod(periodId){
+  const p = periodsCache.find(x => String(x.id) === String(periodId));
+  if (!p) return;
+
+  const { error } = await supabaseClient
+    .from("rota_periods")
+    
+    .update({ is_hidden: !p.is_hidden })
+    .eq("id", periodId);
+
+  if (error) throw error;
+}
+
+/* =========================
+   ADMIN GENERATE PREVIEW (stub)
+   ========================= */
+function refreshGeneratePreview(){
+  adminGeneratePreview.textContent = "Will generate the next 5-week period after the latest period. (We’ll wire the exact logic next.)";
+}
+
+if (adminGenerateBtn) {
+  adminGenerateBtn.addEventListener("click", () => {
+    alert("Generate logic coming next (with confirmation prompt).");
+  });
+}
+
     /* =========================================================
        5) PIN MODAL (open/close)
        ========================================================= */
@@ -1586,6 +1772,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

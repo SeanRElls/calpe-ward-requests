@@ -2028,44 +2028,51 @@ if (pe.shift === "O") {
 
 
     /* =========================================================
-       9) UNLOCK LOGIC (who can edit which row)
-       ========================================================= */
-    function applyUnlockState(){
-      const rows = document.querySelectorAll("#rota tbody tr");
+   9) UNLOCK LOGIC (who can edit which row)
+   ========================================================= */
+function applyUnlockState(){
+  const rows = document.querySelectorAll("#rota tbody tr");
 
-      rows.forEach(r => {
-        if(r.classList.contains("section-row")) return;
+  rows.forEach(r => {
+    if (r.classList.contains("section-row")) return;
 
-        const userId = r.dataset.userId;
-        const isUnlocked =
-          currentUser && (currentUser.is_admin || currentUser.id === userId);
+    const userId = r.dataset.userId;
 
-        r.classList.toggle("unlocked", !!isUnlocked);
-        r.classList.toggle("locked", !isUnlocked);
+    // Row is unlocked if: logged in AND (admin OR it's your own row)
+    const isUnlocked =
+      currentUser && (currentUser.is_admin || currentUser.id === userId);
 
-        r.querySelectorAll("td.cell").forEach(td => {
-          td.classList.toggle("editable", !!isUnlocked);
+    r.classList.toggle("unlocked", !!isUnlocked);
+    r.classList.toggle("locked", !isUnlocked);
 
-          // bind once
-          if (!td.dataset.bound) {
-            td.dataset.bound = "1";
-            td.addEventListener("click", () => {
-              if (!td.classList.contains("editable")) return;
+    r.querySelectorAll("td.cell").forEach(td => {
+      const isClosedWeek = td.classList.contains("closed");
 
-              activeCell = {
-                td,
-                userId: td.dataset.userId,
-                date: td.dataset.date
-              };
+      // Staff cannot edit closed weeks. Admin also cannot (change this if you want admin override).
+      const canEdit = !!isUnlocked && !isClosedWeek;
 
-              console.log("Cell selected:", activeCell);
-              openShiftModal();
-            });
-          }
+      td.classList.toggle("editable", canEdit);
+
+      // bind once
+      if (!td.dataset.bound) {
+        td.dataset.bound = "1";
+        td.addEventListener("click", () => {
+          if (!td.classList.contains("editable")) return;
+
+          activeCell = {
+            td,
+            userId: td.dataset.userId,
+            date: td.dataset.date
+          };
+
+          console.log("Cell selected:", activeCell);
+          openShiftModal();
         });
-      });
-    
+      }
+    });
+  });
 }
+
 
     /* =========================================================
        10) BOOT
@@ -2076,6 +2083,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

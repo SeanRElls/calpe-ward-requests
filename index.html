@@ -1281,16 +1281,18 @@ async function toggleHiddenPeriod(periodId){
 
   const startStr = isoDate(r.start);
   const endStr   = isoDate(r.end);
+      const periodName = `${fmt(r.start)} – ${fmt(r.end)}`;
 
   // 1) Create rota_periods row
   const { data: newPeriod, error: pErr } = await supabaseClient
-    .from("rota_periods")
-    .insert({
-      start_date: startStr,
-      end_date: endStr,
-      is_hidden: false,
-      is_active: false
-    })
+  .from("rota_periods")
+  .insert({
+    name: periodName,          // ✅ REQUIRED COLUMN
+    start_date: startStr,
+    end_date: endStr,
+    is_hidden: false,
+    is_active: false
+  })
     .select("id, start_date, end_date, is_hidden, is_active")
     .single();
 
@@ -2060,6 +2062,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

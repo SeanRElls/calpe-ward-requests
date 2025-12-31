@@ -929,7 +929,10 @@ function isPeriodClosed(period){
   if (!closeAt) return false; // no deadline = open forever
   return new Date() >= closeAt;
 }
-    
+
+    function isAdminWeekToggleAllowed(){
+  return !!currentUser?.is_admin;
+}
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
    ========================================================= */
@@ -1395,43 +1398,55 @@ async function loadAdminWeeks(periodId){
     return;
   }
 
+    // --- PERIOD LOCK STATUS (deadline lock) ---
+  const p = periodsCache.find(x => String(x.id) === String(periodId));
+  const periodClosed = isPeriodClosed(p); // true if closes_at passed
+  
 adminWeeksList.innerHTML = weeks.map(w => {
-  const s = fmt(w.weekStart);
-  const e = fmt(w.weekEnd);
-  const isOpen = !!w.open;
+    const s = fmt(w.weekStart);
+    const e = fmt(w.weekEnd);
+    const isOpen = !!w.open;
 
-  const pill = isOpen
-    ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#e9fff0; border:1px solid #9fe0b1; color:#0b6b2b;">OPEN</span>`
-    : `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#ffecec; border:1px solid #ffb3b3; color:#8a1f1f;">CLOSED</span>`;
+    // If period is locked, show that instead of week open/closed
+    const pill = periodClosed
+      ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#f3f3f3; border:1px solid #d0d0d0; color:#666;">
+          PERIOD LOCKED
+        </span>`
+      : (isOpen
+          ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#e9fff0; border:1px solid #9fe0b1; color:#0b6b2b;">OPEN</span>`
+          : `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#ffecec; border:1px solid #ffb3b3; color:#8a1f1f;">CLOSED</span>`
+        );
 
-  const btnText = isOpen ? "Close week" : "Open week";
+    const btnText = isOpen ? "Close week" : "Open week";
+    const btnNote = periodClosed ? " (period locked)" : "";
 
-  return `
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #eee;">
-      <div>
-        <div style="font-weight:800;">${s} – ${e}</div>
-        <div style="margin-top:4px;">${pill}</div>
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #eee;">
+        <div>
+          <div style="font-weight:800;">${s} – ${e}</div>
+          <div style="margin-top:4px;">${pill}</div>
+        </div>
+
+        <button type="button"
+          class="week-toggle-btn"
+          data-week-id="${w.weekId || ""}"
+          data-week-open="${isOpen ? "1" : "0"}">
+          ${btnText}${btnNote}
+        </button>
       </div>
-
-<button type="button"
-        class="week-toggle-btn"
-        data-week-id="${w.weekId || ""}"
-        data-week-open="${isOpen ? "1" : "0"}">
-        ${btnText}
-      </button>
-    </div>
-  `;
-}).join("");
+    `;
+  }).join("");;
 
 
-  // Bind toggles
+  // Bind toggles (ADMIN MANAGEMENT should still work even if period is closed)
   adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
     btn.addEventListener("click", async () => {
+      if (!currentUser?.is_admin) return;
+
       const weekId = btn.dataset.weekId;
       if (!weekId) return alert("Missing weekId for this row.");
 
       const currentlyOpen = btn.dataset.weekOpen === "1";
-      
 
       try {
         const { error: e2 } = await supabaseClient
@@ -2353,6 +2368,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

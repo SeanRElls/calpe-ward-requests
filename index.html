@@ -577,11 +577,11 @@ const row = dayLookup.get(ds) || { date: ds, rota_weeks: { open: w.open, id: w.w
           ordered.push(row);
         }
 
- weeks.push({
+weeks.push({
   weekStart: w.weekStart,
   weekEnd: addDays(w.weekStart, 6),
   open: w.open,
-  weekId: w.weekId,      // ✅ THIS was missing
+  weekId: w.weekId,   // ✅ REQUIRED
   days: ordered
 });
 
@@ -795,20 +795,8 @@ let weekWindowStart = 0; // index into allWeeks
 const periodSelect = document.getElementById("periodSelect");
 const periodNavLabel = document.getElementById("periodNavLabel");
     
-/* =========================================================
-   6) PERIOD DROPDOWN HANDLER
-   ========================================================= */
-if (periodSelect) {
-  periodSelect.addEventListener("change", async () => {
-    activePeriodId = periodSelect.value; // UUID string
 
-    const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
-    setPeriodLabel(selected);
 
-    await loadRota();
-  });
-}
-}
     // Shift modal refs
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
@@ -919,7 +907,19 @@ weekCommentSave.addEventListener("click", async () => {
 });
 
 
+/* =========================================================
+   6) PERIOD DROPDOWN HANDLER
+   ========================================================= */
+if (periodSelect) {
+  periodSelect.addEventListener("change", async () => {
+    activePeriodId = periodSelect.value; // UUID string
 
+    const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
+    setPeriodLabel(selected);
+
+    await loadRota();
+  });
+}
 
     /* =========================================================
        5) PIN MODAL (open/close)

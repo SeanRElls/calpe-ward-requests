@@ -232,7 +232,19 @@
     .weekend{
       background: var(--weekend-fill);
     }
+    
+.badge.admin{
+  cursor: pointer;
+  user-select: none;
+}
 
+.badge.admin:hover{
+  filter: brightness(0.9);
+}
+
+.badge.admin:active{
+  transform: scale(0.97);
+}
     tr.section-row td{
       height: 22px;
       font-weight: 850;
@@ -372,10 +384,7 @@
       gap: 10px;
       margin: 12px 0 16px;
     }
-  #adminBtn{
-  flex: 0 0 auto;
-  min-width: 0;
-}
+
     .shift-btn{
       padding: 14px 0;
       font-size: 14px;
@@ -430,9 +439,7 @@
 <div class="badge" id="periodNavLabel">Loading periods…</div>
         <div class="badge" id="loginBadge">Not logged in</div>
         <div class="badge admin" id="adminBadge" style="display:none;">ADMIN</div>
-        <button id="adminBtn" type="button" style="display:none; padding:6px 10px; border-radius:999px; font-size:12px;">
-  Admin
-</button>
+       
       </div>
     </div>
 
@@ -799,7 +806,7 @@ let weekWindowStart = 0; // index into allWeeks
     const pinCancelBtn = document.getElementById("pinCancel");
     const loginBadge = document.getElementById("loginBadge");
     const adminBadge = document.getElementById("adminBadge");
-    const adminBtn = document.getElementById("adminBtn");
+    
 const periodSelect = document.getElementById("periodSelect");
 const periodNavLabel = document.getElementById("periodNavLabel");
     
@@ -841,6 +848,12 @@ weekCommentModal.addEventListener("click", (e) => {
   if (e.target === weekCommentModal) closeWeekCommentModal();
 });
 
+    adminBadge.addEventListener("click", () => {
+  if (!currentUser?.is_admin) return;
+
+  openAdminConsole(); // we’ll build this next
+});
+    
 // Click handler for 💬 buttons (event delegation)
 document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".week-comment-btn");
@@ -929,6 +942,12 @@ if (periodSelect) {
   });
 }
 
+    /* =========================
+   ADMIN CONSOLE (stub)
+   ========================= */
+function openAdminConsole(){
+  alert("Admin console coming next.");
+}
     /* =========================================================
        5) PIN MODAL (open/close)
        ========================================================= */
@@ -1018,15 +1037,11 @@ function updateBadges(){
   if(!currentUser){
     loginBadge.textContent = "Not logged in";
     adminBadge.style.display = "none";
-    if (adminBtn) adminBtn.style.display = "none";
     return;
   }
 
   loginBadge.textContent = `Logged in: ${currentUser.name}`;
-
-  const isAdmin = !!currentUser.is_admin;
-  adminBadge.style.display = isAdmin ? "inline-block" : "none";
-  if (adminBtn) adminBtn.style.display = isAdmin ? "inline-flex" : "none";
+  adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
 }
 
 /* =========================================================

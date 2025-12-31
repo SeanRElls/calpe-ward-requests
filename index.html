@@ -1300,13 +1300,27 @@ async function toggleHiddenPeriod(periodId){
 
   const periodId = newPeriod.id;
 
-  // 2) Create 5 rota_weeks rows (default open=true)
-  const weeksPayload = Array.from({ length: 5 }, () => ({ open: true }));
+  // 2) Create 5 rota_weeks rows (default open=true) + REQUIRED week_start
+const weeksPayload = [];
+for (let wi = 0; wi < 5; wi++){
+  const ws = addDays(r.start, wi * 7); // Sunday of each week
+  weeksPayload.push({
+    open: true,
+    week_start: isoDate(ws)            // ✅ REQUIRED by your DB constraint
+  });
+}
 
-  const { data: createdWeeks, error: wErr } = await supabaseClient
-    .from("rota_weeks")
-    .insert(weeksPayload)
-    .select("id, open");
+const { data: createdWeeks, error: wErr } = await supabaseClient
+  .from("rota_weeks")
+  .insert(weeksPayload)
+  .select("id, open, week_start")
+  .order("week_start", { ascending: true });
+
+if (wErr) throw wErr;
+if (!createdWeeks || createdWeeks.length !== 5) {
+  throw new Error("Failed to create 5 rota_weeks rows.");
+}
+
 
   if (wErr) throw wErr;
   if (!createdWeeks || createdWeeks.length !== 5) {
@@ -2062,6 +2076,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

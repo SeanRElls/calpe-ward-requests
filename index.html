@@ -526,13 +526,32 @@
       <button id="adminTabGenerate" type="button" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Generate</button>
     </div>
 
-    <!-- TAB: PERIODS -->
-    <div id="adminViewPeriods">
-      <div id="adminPeriodsList"
-           style="border:1px solid #ddd; border-radius:10px; padding:10px; max-height:280px; overflow:auto;">
-        Loading periods…
-      </div>
+ <!-- TAB: PERIODS -->
+<div id="adminViewPeriods">
+
+  <!-- Period picker -->
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+    <div style="font-weight:800;">Rota period</div>
+    <select id="adminPeriodSelect" style="padding:8px 10px; border-radius:999px; border:1px solid #ccc; font-size:12px; min-width:220px;"></select>
+    <div class="subtitle" id="adminPeriodMeta"></div>
+  </div>
+
+  <!-- Period controls -->
+  <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="adminSetActiveBtn" type="button" style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Set active</button>
+      <button id="adminToggleHiddenBtn" type="button" style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Toggle hidden</button>
     </div>
+  </div>
+
+  <!-- Weeks list -->
+  <div style="border:1px solid #ddd; border-radius:10px; padding:10px;">
+    <div style="font-weight:800; margin-bottom:6px;">Weeks</div>
+    <div id="adminWeeksList" class="subtitle">Pick a period…</div>
+  </div>
+
+</div>
+
 
     <!-- TAB: GENERATE -->
     <div id="adminViewGenerate" style="display:none;">
@@ -848,6 +867,14 @@ let weekWindowStart = 0; // index into allWeeks
     
 const periodSelect = document.getElementById("periodSelect");
 const periodNavLabel = document.getElementById("periodNavLabel");
+
+    const adminPeriodSelect = document.getElementById("adminPeriodSelect");
+const adminPeriodMeta = document.getElementById("adminPeriodMeta");
+const adminSetActiveBtn = document.getElementById("adminSetActiveBtn");
+const adminToggleHiddenBtn = document.getElementById("adminToggleHiddenBtn");
+const adminWeeksList = document.getElementById("adminWeeksList");
+
+let adminSelectedPeriodId = null;
     
 
 
@@ -992,7 +1019,7 @@ const adminTabPeriods = document.getElementById("adminTabPeriods");
 const adminTabGenerate = document.getElementById("adminTabGenerate");
 const adminViewPeriods = document.getElementById("adminViewPeriods");
 const adminViewGenerate = document.getElementById("adminViewGenerate");
-const adminPeriodsList = document.getElementById("adminPeriodsList");
+
 const adminGeneratePreview = document.getElementById("adminGeneratePreview");
 const adminGenerateBtn = document.getElementById("adminGenerateBtn");
 
@@ -1001,7 +1028,7 @@ function openAdminConsole(){
   adminModal.style.display = "flex";
   adminModal.setAttribute("aria-hidden","false");
   showAdminTab("periods");
-  loadAdminPeriods(); // refresh list every time you open
+  loadAdminPeriodsForDropdown();   // NEW
   refreshGeneratePreview();
 }
 
@@ -1027,18 +1054,202 @@ function showAdminTab(which){
 if (adminTabPeriods) adminTabPeriods.addEventListener("click", () => showAdminTab("periods"));
 if (adminTabGenerate) adminTabGenerate.addEventListener("click", () => showAdminTab("generate"));
 
-async function loadAdminPeriods(){
-  adminPeriodsList.textContent = "Loading periods…";
+/* =========================
+   ADMIN PERIODS (v2 dropdown)
+   ========================= */
+
+if (adminPeriodSelect) {
+  adminPeriodSelect.addEventListener("change", async () => {
+    adminSelectedPeriodId = adminPeriodSelect.value;
+    renderAdminPeriodMeta(adminSelectedPeriodId);
+    await loadAdminWeeks(adminSelectedPeriodId);
+  });
+}
+
+if (adminSetActiveBtn) {
+  adminSetActiveBtn.addEventListener("click", async () => {
+    if (!adminSelectedPeriodId) return;
+    try {
+      await setActivePeriod(adminSelectedPeriodId);
+      await loadRota(); // refresh main view
+      await loadAdminPeriodsForDropdown(); // refresh admin UI
+    } catch (e) {
+      console.error(e);
+      alert("Set active failed. Check console.");
+    }
+  });
+}
+
+if (adminToggleHiddenBtn) {
+  adminToggleHiddenBtn.addEventListener("click", async () => {
+    if (!adminSelectedPeriodId) return;
+    try {
+      await toggleHiddenPeriod(adminSelectedPeriodId);
+      await loadRota(); // refresh main view
+      await loadAdminPeriodsForDropdown(); // refresh admin UI
+    } catch (e) {
+      console.error(e);
+      alert("Toggle hidden failed. Check console.");
+    }
+  });
+}
+
+async function loadAdminPeriodsForDropdown(){
+  if (!adminPeriodSelect) return;
+
+  adminPeriodMeta.textContent = "Loading…";
+  adminWeeksList.textContent = "Loading…";
 
   let periods;
   try {
-    periods = await fetchRotaPeriods();
+    periods = await fetchRotaPeriods(); // admin sees all
   } catch (e) {
     console.error(e);
-    adminPeriodsList.textContent = "Failed to load periods (check console).";
+    adminPeriodMeta.textContent = "Failed to load periods.";
+    adminWeeksList.textContent = "Failed to load weeks.";
     return;
   }
 
+  periodsCache = periods;
+
+  // Fill dropdown
+  adminPeriodSelect.innerHTML = "";
+  for (const p of periods){
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    const s = fmt(new Date(p.start_date));
+    const e = fmt(new Date(p.end_date));
+    opt.textContent = `${s} – ${e}${p.is_active ? " ★" : ""}${p.is_hidden ? " (hidden)" : ""}`;
+    adminPeriodSelect.appendChild(opt);
+  }
+
+  // Default selection
+  if (!adminSelectedPeriodId) {
+    const active = periods.find(p => p.is_active) || periods[periods.length - 1];
+    adminSelectedPeriodId = active?.id || periods[0]?.id;
+  }
+
+  adminPeriodSelect.value = String(adminSelectedPeriodId);
+
+  renderAdminPeriodMeta(adminSelectedPeriodId);
+  await loadAdminWeeks(adminSelectedPeriodId);
+}
+
+function renderAdminPeriodMeta(periodId){
+  const p = periodsCache.find(x => String(x.id) === String(periodId));
+  if (!p){
+    adminPeriodMeta.textContent = "";
+    return;
+  }
+
+  const bits = [];
+  if (p.is_active) bits.push("✅ Active");
+  if (p.is_hidden) bits.push("🙈 Hidden");
+  adminPeriodMeta.textContent = bits.join(" · ") || "—";
+}
+
+async function loadAdminWeeks(periodId){
+  adminWeeksList.textContent = "Loading weeks…";
+
+  const { data, error } = await supabaseClient
+    .from("rota_dates")
+    .select("date, week_id, rota_weeks(id, open)")
+    .eq("period_id", periodId)
+    .order("date");
+
+  if (error) {
+    console.error(error);
+    adminWeeksList.textContent = "Failed to load weeks.";
+    return;
+  }
+
+  const weeks = groupDatesIntoWeeks(data || []);
+  if (!weeks.length){
+    adminWeeksList.textContent = "No weeks found for this period.";
+    return;
+  }
+
+  adminWeeksList.innerHTML = weeks.map(w => {
+    const s = fmt(w.weekStart);
+    const e = fmt(w.weekEnd);
+    const state = w.open ? "Open" : "Closed";
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #eee;">
+        <div>
+          <div style="font-weight:800;">${s} – ${e}</div>
+          <div style="font-size:11px; color:#666;">${state}</div>
+        </div>
+        <button type="button"
+                data-week-id="${w.weekId || ""}"
+                data-week-open="${w.open ? "1" : "0"}"
+                style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
+          Toggle open/close
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  // Bind toggles
+  adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const weekId = btn.dataset.weekId;
+      if (!weekId) return alert("Missing weekId for this row.");
+
+      const currentlyOpen = btn.dataset.weekOpen === "1";
+
+      try {
+        const { error: e2 } = await supabaseClient
+          .from("rota_weeks")
+          .update({ open: !currentlyOpen })
+          .eq("id", weekId);
+
+        if (e2) throw e2;
+
+        await loadRota();               // refresh main rota
+        await loadAdminWeeks(periodId); // refresh list state
+      } catch (e) {
+        console.error(e);
+        alert("Failed to toggle week. Check console.");
+      }
+    });
+  });
+}
+
+  // build dropdown
+  adminPeriodSelect.innerHTML = "";
+  for (const p of periods){
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    const s = fmt(new Date(p.start_date));
+    const e = fmt(new Date(p.end_date));
+    opt.textContent = `${s} – ${e}${p.is_active ? " ★" : ""}${p.is_hidden ? " (hidden)" : ""}`;
+    adminPeriodSelect.appendChild(opt);
+  }
+
+  // choose default selection
+  if (!adminSelectedPeriodId) {
+    const active = periods.find(p => p.is_active) || periods[periods.length - 1];
+    adminSelectedPeriodId = active?.id || periods[0]?.id;
+  }
+
+  adminPeriodSelect.value = String(adminSelectedPeriodId);
+  renderAdminPeriodMeta(adminSelectedPeriodId);
+  await loadAdminWeeks(adminSelectedPeriodId);
+}
+
+function renderAdminPeriodMeta(periodId){
+  const p = periodsCache.find(x => String(x.id) === String(periodId));
+  if (!p){
+    adminPeriodMeta.textContent = "";
+    return;
+  }
+  const bits = [];
+  if (p.is_active) bits.push("✅ Active");
+  if (p.is_hidden) bits.push("🙈 Hidden");
+  adminPeriodMeta.textContent = bits.join(" · ") || "—";
+}
+
+  
   periodsCache = periods;
 
   adminPeriodsList.innerHTML = periods.map(p => {
@@ -1772,6 +1983,7 @@ if (pe.shift === "O") {
   </script>
 </body>
 </html>
+
 
 
 

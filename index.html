@@ -369,12 +369,7 @@
   background: rgba(0,0,0,0.35);
   display: none;
 
-  /* backdrop shouldn't scroll */
-  overflow: hidden;
 
-  /* top align */
-  align-items: flex-start;
-  justify-content: center;
 
   z-index: 1000;
   padding: 14px;
@@ -486,18 +481,7 @@
       .btns{ flex: 1 1 100%; min-width: 0; }
       button{ min-width: 0; }
     }
-/* =========================
-   ADMIN USERS – clean + subtle
-   ========================= */
-#adminViewUsers input,
-#adminViewUsers select{
-  height: 36px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid #d9dce1;
-  font-size: 12px;
-  background: #fff;
-}
+
 
 #adminUsersList{
   border: 1px solid #eceef2;
@@ -872,9 +856,9 @@
     <p class="subtitle">Manage rota periods and generate new weeks.</p>
 
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px;">
-      <button id="adminTabPeriods" type="button" class="primary" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Rota periods</button>
-      <button id="adminTabGenerate" type="button" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Generate</button>
-      <button id="adminTabUsers" type="button" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Users</button>
+      <button id="adminTabPeriods" type="button" class="primary">Rota periods</button>
+      <button id="adminTabGenerate" type="button">Generate</button>
+      <button id="adminTabUsers" type="button">Users</button>
     </div>
 
  <!-- TAB: PERIODS -->
@@ -3022,6 +3006,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

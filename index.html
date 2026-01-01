@@ -375,23 +375,34 @@
 
   z-index: 1000;
   padding: 14px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  align-items: flex-start;
+  justify-content: center;
 }
 
-  .modal{
+.modal{
   width: min(520px, 100%);
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  padding: 14px;
 
-  /* important bits */
-  max-height: calc(100vh - 28px);
+  /* ✅ scrolling */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-
-  /* avoid iOS elastic scroll dragging the page */
   overscroll-behavior: contain;
 
-  padding: 14px;
+  /* ✅ REAL viewport height on modern mobile */
+  max-height: calc(100dvh - 28px);
+
+  /* ✅ keep last content reachable above iPhone home bar */
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+
+/* ✅ fallback for older iOS that doesn't support dvh properly */
+@supports not (height: 100dvh){
+  .modal{ max-height: calc(100vh - 28px); }
 }
 
 
@@ -2498,6 +2509,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

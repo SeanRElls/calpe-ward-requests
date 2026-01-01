@@ -530,84 +530,73 @@
   }
 }
 
-        /* =========================
-   MOBILE HEADER CLEANUP
+     /* =========================
+   MOBILE HEADER LAYOUT (FINAL)
    ========================= */
 @media (max-width: 520px){
 
-  /* tighten overall header spacing */
-  .titlebar{ gap: 8px; margin: 0 0 10px; }
-  h1{ font-size: 20px; line-height: 1.1; }
+  /* Title area tighter */
+  .titlebar{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 10px;
+  }
 
-  /* make the close pill less fat */
+  h1{
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  /* Space under Requests closed/open pill */
+  #closeLabel{
+    margin-top: 4px;
+    margin-bottom: 8px;
+  }
+
   .close-pill{
     padding: 6px 10px;
     gap: 8px;
     font-size: 11px;
   }
+
   .close-pill .timeleft{
     padding: 3px 7px;
     font-size: 11px;
   }
 
-  /* when closed, don’t try to show a whole essay */
   .close-pill .mini{
     display: none;
   }
-}
 
-        
-  @media (max-width: 520px){
-
-  /* force the controls to wrap neatly */
+  /* RIGHT SIDE CONTROLS */
   .rightbits{
     width: 100%;
     display: flex;
-    gap: 8px;
     flex-wrap: wrap;
+    gap: 8px;
     justify-content: flex-start;
   }
 
-  /* dropdown and date badge become two equal chips */
-  #periodSelect,
-
-
+  /* Dropdown takes full row */
   #periodSelect{
-    flex: 1 1 200px;
-    min-width: 180px;
+    flex: 1 1 100%;
+    width: 100%;
+    height: 34px;
+    font-size: 12px;
+    border-radius: 999px;
   }
 
-}
-@media (max-width: 520px){
-
-  #loginBadge{
-    font-size: 11px;
-    padding: 5px 9px;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .badge.admin{
+  /* Logged-in + ADMIN sit together underneath */
+  #loginBadge,
+  #adminBadge{
+    flex: 0 0 auto;
     font-size: 11px;
     padding: 6px 10px;
+    white-space: nowrap;
   }
 }
 
-        .header-subrow{
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-@media (max-width: 520px){
-  .header-subrow{
-    gap: 6px;
-  }
-  /* keep close pill from forcing a full new line unless needed */
-  #closeLabel{ margin-top: 0; }
-}
         
   </style>
 </head>
@@ -2579,6 +2568,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

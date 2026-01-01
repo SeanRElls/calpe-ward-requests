@@ -1299,25 +1299,26 @@ async function fetchWeekComments(weekId){
 }
 
 async function upsertWeekComment(weekId, userId, comment){
-  const payload = {
-    week_id: weekId,
-    user_id: userId,
-    comment: comment ?? ""
-  };
+  if (!currentUser) throw new Error("Not logged in.");
 
-  const { data, error } = await supabaseClient
-   await supabaseClient.rpc("upsert_week_comment", {
-  p_week_id: activeWeekIdForComment,
-  p_user_id: currentUser.id,
-  p_pin: sessionStorage.getItem(pinKey(currentUser.id)),
-  p_comment: weekCommentInput.value
-});
-    .select("week_id, user_id, comment, updated_at")
-    .single();
+  const pin = sessionStorage.getItem(pinKey(currentUser.id));
+  if (!pin) throw new Error("Missing session PIN. Log in again.");
+
+  const { data, error } = await supabaseClient.rpc("upsert_week_comment", {
+    p_week_id: weekId,
+    p_user_id: userId,
+    p_pin: pin,
+    p_comment: comment ?? ""
+  });
 
   if (error) throw error;
-  return data;
+
+  // Depending on how your SQL function is written, data may be:
+  // - the row object, OR
+  // - an array with one row (common in PostgREST)
+  return Array.isArray(data) ? data[0] : data;
 }
+
 async function resetWeeksFullyOpen(periodId){
   if (!currentUser?.is_admin) { alert("Admin only."); return; }
 
@@ -3234,6 +3235,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

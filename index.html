@@ -1665,7 +1665,10 @@ if (adminGenerateBtn) {
   adminGenerateBtn.addEventListener("click", async () => {
     try {
       const r = computeNextPeriodRange();
-      if (!r) return alert("Cannot generate: no periods loaded.");
+      if (!r) {
+        alert("Cannot generate: no periods loaded.");
+        return;
+      }
 
       const ok = confirm(`Generate new 5-week period:\n${fmt(r.start)} – ${fmt(r.end)} ?`);
       if (!ok) return;
@@ -1675,38 +1678,36 @@ if (adminGenerateBtn) {
 
       const newPeriod = await generateNextFiveWeekPeriod();
 
-      // Refresh caches + UI
-      await loadRota(); // pulls periods + shows new one in dropdown
-      await loadAdminPeriodsForDropdown(); // refresh admin dropdown + weeks list
+      await loadRota();
+      await loadAdminPeriodsForDropdown();
       refreshGeneratePreview();
 
-      // Optional: auto-select the new period in admin + main UI
       adminSelectedPeriodId = newPeriod.id;
       activePeriodId = newPeriod.id;
 
-      // Set active automatically so staff see it immediately (comment this out if you don't want that)
       await setActivePeriod(newPeriod.id);
 
       await loadRota();
       await loadAdminPeriodsForDropdown();
 
       alert(`Generated new period: ${fmt(new Date(newPeriod.start_date))} – ${fmt(new Date(newPeriod.end_date))}`);
-  } catch (e) {
-  console.error(e);
+    } catch (e) {
+      console.error(e);
 
-  const msg =
-    e?.message ||
-    e?.details ||
-    e?.hint ||
-    (e?.error && (e.error.message || e.error.details)) ||
-    JSON.stringify(e, null, 2);
+      const msg =
+        e?.message ||
+        e?.details ||
+        e?.hint ||
+        (e?.error && (e.error.message || e.error.details)) ||
+        JSON.stringify(e, null, 2);
 
-  alert("Generate failed:\n\n" + msg);
-} finally {
-  adminGenerateBtn.disabled = false;
-}
+      alert("Generate failed:\n\n" + msg);
+    } finally {
+      adminGenerateBtn.disabled = false;
+    }
   });
 }
+
 
     async function setPeriodCloseTime(periodId, closesAtIsoOrNull){
   const { error } = await supabaseClient
@@ -2414,6 +2415,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

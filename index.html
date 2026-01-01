@@ -1514,7 +1514,7 @@ adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
     }
   });
 });
-
+}
 
 /* =========================
    ADMIN PERIOD ACTIONS (v1)
@@ -1625,6 +1625,13 @@ const { error: dErr } = await supabaseClient
 if (dErr) throw dErr;
 
 return newPeriod;
+} // ✅ CLOSE generateNextFiveWeekPeriod
+
+/* =========================
+   ADMIN GENERATE PREVIEW (stub)
+   ========================= */
+function computeNextPeriodRange(){
+
 
 /* =========================
    ADMIN GENERATE PREVIEW (stub)
@@ -2418,6 +2425,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

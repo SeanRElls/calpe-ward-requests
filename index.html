@@ -673,9 +673,9 @@
    ADMIN UI PATCH: compact, colored, tabs sticky
    ========================================================= */
 :root{
-  --accent: #1d4ed8;                 /* richer blue */
-  --accent-hover: #1e40af;           /* darker hover */
-  --accent-weak: rgba(29,78,216,0.12);
+  --accent: #3B82F6;                 /* light, clean blue */
+  --accent-hover: #2563EB;           /* slightly deeper on hover */
+  --accent-weak: rgba(59,130,246,0.14);
 
   --ink: #0f172a;
   --card: #ffffff;
@@ -689,11 +689,7 @@
   border: 1px solid rgba(0,0,0,0.06);
   color: #fff;
 }
-.badge.admin:hover,
-#adminModal button.primary:hover{
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-}
+
     
 /* Admin modal container tighter + nicer */
 #adminModal .modal{
@@ -746,12 +742,19 @@ border-color: rgba(37,99,235,0.22);
 }
 
 /* Primary action buttons: colored, not black */
-#adminModal button.primary{
+#adminModal button.primary,
+.badge.admin{
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 6px 16px rgba(59,130,246,0.20);
 }
-
+.badge.admin:hover,
+#adminModal button.primary:hover{
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+    
 /* Cards inside admin: softer */
 #adminViewUsers > div,
 #adminViewPeriods > div,
@@ -1796,7 +1799,7 @@ function renderAdminUsers(){
               ${u.is_active === false ? `<span class="user-tag inactive">inactive</span>` : ""}
               ${u.is_admin ? `<span class="user-tag admin">admin</span>` : ""}
             </div>
-            <div class="user-role">${escapeHtml(role)}</div>
+            
           </div>
 
           <div class="user-actions">
@@ -3105,6 +3108,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

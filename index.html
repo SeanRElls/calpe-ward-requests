@@ -1306,8 +1306,12 @@ async function upsertWeekComment(weekId, userId, comment){
   };
 
   const { data, error } = await supabaseClient
-    .from("week_comments")
-    .upsert(payload, { onConflict: "week_id,user_id" })
+   await supabaseClient.rpc("upsert_week_comment", {
+  p_week_id: activeWeekIdForComment,
+  p_user_id: currentUser.id,
+  p_pin: sessionStorage.getItem(pinKey(currentUser.id)),
+  p_comment: weekCommentInput.value
+});
     .select("week_id, user_id, comment, updated_at")
     .single();
 
@@ -3230,6 +3234,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

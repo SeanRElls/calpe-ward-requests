@@ -2519,7 +2519,7 @@ async function loadRota() {
   // -----------------------------
   const { data: users, error: userError } = await supabaseClient
     .from("users")
-    .select("id, name, role_id, is_admin, roles(name)")
+.select("id, name, role_id, is_admin, is_active, roles(name)")
     .order("name");
 
   if (userError) {
@@ -2622,7 +2622,13 @@ if (start && end) {
 // 7E) Render table (weeks + users)
 // -----------------------------
 const weeks = groupDatesIntoWeeks(dates);
-render(users, weeks);
+
+let visibleUsers = users;
+if (!currentUser?.is_admin) {
+  visibleUsers = users.filter(u => u.is_active !== false);
+}
+
+render(visibleUsers, weeks);;
 
   
 // Period label
@@ -2878,6 +2884,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

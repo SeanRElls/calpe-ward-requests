@@ -482,7 +482,91 @@
       .btns{ flex: 1 1 100%; min-width: 0; }
       button{ min-width: 0; }
     }
+/* =========================
+   ADMIN USERS – polish
+   ========================= */
+#adminViewUsers input,
+#adminViewUsers select{
+  height: 36px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+}
 
+#adminViewUsers button{
+  min-width: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+#adminUsersList{
+  border: 1px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.user-row{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  justify-content:space-between;
+  padding: 10px 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.user-row:last-child{ border-bottom: 0; }
+
+.user-row:hover{ background:#fafafa; }
+
+.user-meta{
+  min-width:0;
+}
+
+.user-name{
+  font-weight: 800;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.user-role{
+  font-size: 11px;
+  color: #777;
+  margin-top: 2px;
+}
+
+.user-actions{
+  display:flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.user-tag{
+  display:inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid #ddd;
+  background: #f7f7f7;
+  color: #333;
+}
+
+.user-tag.admin{
+  background:#111;
+  border-color:#111;
+  color:#fff;
+}
+
+.user-tag.inactive{
+  background:#f3f3f3;
+  color:#666;
+}
     /* ===== SHIFT PICKER ===== */
     .shift-grid{
       display: grid;
@@ -1571,24 +1655,25 @@ function renderAdminUsers(){
     const inactiveTag = (u.is_active === false) ? `<span class="badge" style="margin-left:6px;">inactive</span>` : "";
     const adminTag = u.is_admin ? `<span class="badge admin" style="margin-left:6px;">admin</span>` : "";
 
-    return `
-      <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;">
-        <div style="min-width:0;">
-          <div style="font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            ${escapeHtml(u.name || "")}${inactiveTag}${adminTag}
-          </div>
-          <div class="subtitle">${escapeHtml(role)}</div>
-        </div>
-        <div style="display:flex; gap:6px; flex:0 0 auto;">
-          <button type="button" data-act="edit" data-id="${u.id}"
-            style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Edit</button>
-          <button type="button" data-act="toggle" data-id="${u.id}"
-            style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
-            ${u.is_active === false ? "Reactivate" : "Deactivate"}
-          </button>
-        </div>
+return `
+  <div class="user-row">
+    <div class="user-meta">
+      <div class="user-name">
+        ${escapeHtml(u.name || "")}
+        ${u.is_active === false ? `<span class="user-tag inactive">inactive</span>` : ""}
+        ${u.is_admin ? `<span class="user-tag admin">admin</span>` : ""}
       </div>
-    `;
+      <div class="user-role">${escapeHtml(role)}</div>
+    </div>
+
+    <div class="user-actions">
+      <button type="button" data-act="edit" data-id="${u.id}">Edit</button>
+      <button type="button" data-act="toggle" data-id="${u.id}">
+        ${u.is_active === false ? "Reactivate" : "Deactivate"}
+      </button>
+    </div>
+  </div>
+`;
   }).join("");
 }
 
@@ -2520,6 +2605,7 @@ async function loadRota() {
   const { data: users, error: userError } = await supabaseClient
     .from("users")
 .select("id, name, role_id, is_admin, is_active, roles(name)")
+
     .order("name");
 
   if (userError) {
@@ -2622,6 +2708,10 @@ if (start && end) {
 // 7E) Render table (weeks + users)
 // -----------------------------
 const weeks = groupDatesIntoWeeks(dates);
+
+
+// Hide inactive users from the rota table (for everyone)
+const visibleUsers = users.filter(u => u.is_active !== false);
 
 let visibleUsers = users;
 if (!currentUser?.is_admin) {
@@ -2884,6 +2974,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

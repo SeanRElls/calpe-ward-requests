@@ -50,14 +50,10 @@
 /* Scroll container for the whole rota */
 .rota-scroll{
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch; /* iOS smooth scroll */
-}
-
-/* iOS sometimes needs this to actually allow horizontal panning */
-.rota-scroll{
-  touch-action: pan-x;
+  overflow: auto;                 /* both x + y */
+  max-height: calc(100vh - 220px);/* adjust this number */
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
 
 
@@ -273,7 +269,14 @@
     
 .week-label { font-weight: 600; }
 
-    
+    .header-subrow{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 8px;              /* <-- this is your "space after the badge" */
+  align-items:center;
+}
+#periodLabel{ margin: 0; }
+#closeLabel{ margin: 0; }
     th.week-label{
       font-weight: 800;
       font-size: 12px;
@@ -454,7 +457,27 @@
       flex: 1;
       min-width: 110px;
     }
+/* =========================================================
+   ADMIN UI BUTTON OVERRIDES
+   Put this directly BELOW your global button{...} rule
+   ========================================================= */
+#adminModal button{
+  flex: 0 0 auto;         /* stop stretching */
+  min-width: auto;        /* stop forced width */
+  padding: 7px 10px;      /* smaller + cleaner */
+  border-radius: 10px;    /* less chunky */
+  font-size: 12px;
+  background: #fff;       /* no grey slabs */
+  border: 1px solid #d9dce1;
+}
 
+#adminModal button.primary{
+  background:#111;
+  border-color:#111;
+  color:#fff;
+}
+
+    
     button.primary{
       background:#111;
       border-color:#111;
@@ -483,28 +506,21 @@
       button{ min-width: 0; }
     }
 /* =========================
-   ADMIN USERS – polish
+   ADMIN USERS – clean + subtle
    ========================= */
 #adminViewUsers input,
 #adminViewUsers select{
   height: 36px;
   padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
+  border-radius: 12px;
+  border: 1px solid #d9dce1;
   font-size: 12px;
-}
-
-#adminViewUsers button{
-  min-width: auto;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  flex: 0 0 auto;
+  background: #fff;
 }
 
 #adminUsersList{
-  border: 1px solid #eee;
-  border-radius: 12px;
+  border: 1px solid #eceef2;
+  border-radius: 14px;
   overflow: hidden;
   background: #fff;
 }
@@ -514,13 +530,14 @@
   gap: 10px;
   align-items:center;
   justify-content:space-between;
-  padding: 10px 10px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f2f4;
 }
 
+.user-row:hover{ background:#f8f9fb; }
 .user-row:last-child{ border-bottom: 0; }
 
-.user-row:hover{ background:#fafafa; }
+
 
 .user-meta{
   min-width:0;
@@ -567,6 +584,13 @@
   background:#f3f3f3;
   color:#666;
 }
+
+    #adminViewUsers #adminSaveUserBtn,
+#adminViewUsers #adminCancelUserEditBtn{
+  height: 36px;
+  border-radius: 999px;
+}
+
     /* ===== SHIFT PICKER ===== */
     .shift-grid{
       display: grid;
@@ -2970,6 +2994,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

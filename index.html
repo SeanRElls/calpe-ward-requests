@@ -1599,6 +1599,9 @@ if (adminBadge) {
     openAdminConsole();
   });
 }
+    if (currentUser && !currentUser.is_admin) {
+  document.getElementById("adminTabUsers")?.remove();
+}
 
     
 // Click handler for 💬 buttons (event delegation)
@@ -1635,7 +1638,7 @@ document.addEventListener("click", async (e) => {
       weekCommentAdminList.innerHTML = rows.length
         ? rows.map(r => `<div style="padding:6px 0; border-bottom:1px solid #eee;">
             <div style="font-weight:700;">
-  ${usersById.get(r.user_id) || r.user_id}
+${escapeHtml(usersById.get(r.user_id) || r.user_id)}
 </div><div style="font-size:11px; color:#777;">
   ${r.updated_at ? new Date(r.updated_at).toLocaleString("en-GB") : ""}
 </div>
@@ -1862,10 +1865,10 @@ async function toggleUserActive(userId){
   const ok = confirm(`${next ? "Reactivate" : "Deactivate"} ${u.name}?`);
   if (!ok) return;
 
-  const { error } = await supabaseClient
-    .from("users")
-    .update({ is_active: next })
-    .eq("id", userId);
+const { error } = await supabaseClient.rpc("set_user_active", {
+  p_user_id: userId,
+  p_active: next
+});
 
   if (error){
     console.error(error);
@@ -2182,6 +2185,10 @@ adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
 /* =========================
    ADMIN PERIOD ACTIONS (v1)
    ========================= */
+    if (!currentUser?.is_admin) {
+  alert("Admin only.");
+  return;
+}
 async function setActivePeriod(periodId){
   // 1) set all inactive
   const { error: e1 } = await supabaseClient
@@ -2201,8 +2208,9 @@ async function setActivePeriod(periodId){
 
   activePeriodId = periodId; // keep UI aligned
 }
-
+    
 async function toggleHiddenPeriod(periodId){
+  if (!currentUser?.is_admin) { alert("Admin only."); return; }
   const p = periodsCache.find(x => String(x.id) === String(periodId));
   if (!p) return;
 
@@ -2215,7 +2223,9 @@ async function toggleHiddenPeriod(periodId){
   if (error) throw error;
 }
 // create 5 week period 
+
     async function generateNextFiveWeekPeriod(){
+  if (!currentUser?.is_admin) { alert("Admin only."); return; }
   const r = computeNextPeriodRange();
   if (!r) throw new Error("No existing periods. Cannot generate next period.");
 
@@ -2382,7 +2392,9 @@ if (adminGenerateBtn) {
 }
 
     // OPTIONAL BASELINE RESET HELPERS
+
 async function resetWeeksAfterClose(periodId){
+  if (!currentUser?.is_admin) { alert("Admin only."); return; }
   const { data: wkRows, error: wkErr } = await supabaseClient
     .from("rota_dates")
     .select("week_id")
@@ -2400,8 +2412,29 @@ async function resetWeeksAfterClose(periodId){
 
   if (resetErr) throw resetErr;
 }
+    async function resetWeeksOpen(periodId){
+  if (!currentUser?.is_admin) { alert("Admin only."); return; }
 
-async function resetWeeksFullyOpen(periodId){
+  const { data: wkRows, error: wkErr } = await supabaseClient
+    .from("rota_dates")
+    .select("week_id")
+    .eq("period_id", periodId);
+
+  if (wkErr) throw wkErr;
+
+  const weekIds = [...new Set((wkRows || []).map(r => r.week_id).filter(Boolean))];
+  if (!weekIds.length) return;
+
+  const { error: resetErr } = await supabaseClient
+    .from("rota_weeks")
+    .update({ open: true })
+    .in("id", weekIds);
+
+  if (resetErr) throw resetErr;
+}
+
+async function setActivePeriod(periodId){
+  if (!currentUser?.is_admin) { alert("Admin only."); return; }
   const { data: wkRows, error: wkErr } = await supabaseClient
     .from("rota_dates")
     .select("week_id")
@@ -2451,8 +2484,9 @@ if (adminClosesAtClearBtn) {
       await setPeriodCloseTime(adminSelectedPeriodId, null);
 
       // Optional: when you clear the close time, reopen everything by default
-      await resetWeeksFullyOpen(adminSelectedPeriodId);
-
+      
+ await resetWeeksAfterClose(adminSelectedPeriodId);
+await resetWeeksOpen(adminSelectedPeriodId);
       await loadRota();
       await loadAdminPeriodsForDropdown();
       alert("Close time cleared.");
@@ -3127,6 +3161,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

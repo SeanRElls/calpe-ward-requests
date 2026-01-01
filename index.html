@@ -1461,6 +1461,7 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
  let periodsCache = [];
 let activePeriodId = null;
     let activePeriodObj = null; // ← the actual period object
+    let closeTriggeredReload = false;
     
 // ===== 5-week window navigation =====
 const WINDOW_WEEKS = 5;
@@ -1613,18 +1614,26 @@ const render = () => {
   const now = new Date();
   const msLeft = closeAt - now;
 
-  if (msLeft <= 0){
-    closeLabel.innerHTML = `
-      <span class="close-pill is-closed">
-        <span class="dot"></span>
-        <span class="msg">Requests closed</span>
-        <span class="mini">Closed at ${closeAt.toLocaleString("en-GB")}</span>
-      </span>
-    `;
-    clearInterval(closeCountdownTimer);
-    closeCountdownTimer = null;
-    return;
+if (msLeft <= 0){
+  closeLabel.innerHTML = `
+    <span class="close-pill is-closed">
+      <span class="dot"></span>
+      <span class="msg">Requests closed</span>
+      <span class="mini">Closed at ${closeAt.toLocaleString("en-GB")}</span>
+    </span>
+  `;
+
+  clearInterval(closeCountdownTimer);
+  closeCountdownTimer = null;
+
+  // ✅ FIX 3: force UI to re-render locked state once
+  if (!closeTriggeredReload) {
+    closeTriggeredReload = true;
+    loadRota(); // re-fetch + redraw so cells become locked
   }
+
+  return;
+}
 
   const soon = msLeft <= 24 * 60 * 60 * 1000;
 
@@ -1796,13 +1805,15 @@ weekCommentSave.addEventListener("click", async () => {
    ========================================================= */
 if (periodSelect) {
   periodSelect.addEventListener("change", async () => {
-    activePeriodId = periodSelect.value; // UUID string
+    closeTriggeredReload = false; // ✅ reset for new period
+    activePeriodId = periodSelect.value;
 
- const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
-activePeriodObj = selected; // ✅ add this
-updateCloseLabel(selected);
-applyUnlockState(); // ✅ optional but nice so it locks instantly
-await loadRota();
+    const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
+    activePeriodObj = selected;
+
+    updateCloseLabel(selected);
+    applyUnlockState();
+    await loadRota();
   });
 }
 
@@ -2693,15 +2704,37 @@ function openShiftModal(){
 }
 
 function closeShiftModal(){
+  document.activeElement?.blur?.(); // ✅ helps on mobile + prevents stuck focus
   shiftModal.style.display = "none";
   shiftModal.setAttribute("aria-hidden", "true");
-
-  document.body.classList.remove("modal-open"); // ✅ unlock background scroll
-
+  document.body.classList.remove("modal-open");
   activeCell = null;
 }
+// ===============================
+// FIX 1: Shift modal close actions
+// ===============================
 
+// Cancel button closes
+if (shiftCancelBtn) shiftCancelBtn.addEventListener("click", closeShiftModal);
 
+// Clicking the backdrop closes (only if you clicked the overlay itself)
+if (shiftModal) {
+  shiftModal.addEventListener("click", (e) => {
+    if (e.target === shiftModal) closeShiftModal();
+  });
+}
+
+// Escape closes (only add ONCE globally)
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+
+  if (shiftModal && shiftModal.style.display === "flex") closeShiftModal();
+  if (modal && modal.style.display === "flex") closePinModal();
+  if (weekCommentModal && weekCommentModal.style.display === "flex") closeWeekCommentModal();
+  if (adminModal && adminModal.style.display === "flex") closeAdminConsole();
+});
+
+    
 document.querySelectorAll(".shift-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
     if (!activeCell) return;
@@ -2842,10 +2875,24 @@ function toast(msg){
 async function upsertRequestCell(userId, date, value, importantRank){
   if (!currentUser) throw new Error("Not logged in.");
 
-  // get pin from session storage (you already set it in setSessionPin)
   const pin = sessionStorage.getItem(pinKey(currentUser.id));
   if (!pin) throw new Error("Missing session PIN. Log in again.");
 
+  // Admin editing someone else -> admin RPC
+  if (currentUser.is_admin && String(userId) !== String(currentUser.id)) {
+    const { data, error } = await supabaseClient.rpc("admin_set_request_cell", {
+      p_admin_id: currentUser.id,
+      p_pin: pin,
+      p_target_user_id: userId,
+      p_date: date,
+      p_value: value,
+      p_important_rank: importantRank ?? null
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  // Normal -> user RPC
   const { data, error } = await supabaseClient.rpc("set_request_cell", {
     p_user_id: userId,
     p_pin: pin,
@@ -2853,7 +2900,6 @@ async function upsertRequestCell(userId, date, value, importantRank){
     p_value: value,
     p_important_rank: importantRank ?? null
   });
-
   if (error) throw error;
   return data;
 }
@@ -2867,14 +2913,28 @@ async function deleteRequestCell(userId, date){
   const pin = sessionStorage.getItem(pinKey(currentUser.id));
   if (!pin) throw new Error("Missing session PIN. Log in again.");
 
+  // Admin editing someone else -> admin RPC
+  if (currentUser.is_admin && String(userId) !== String(currentUser.id)) {
+    const { error } = await supabaseClient.rpc("admin_clear_request_cell", {
+      p_admin_id: currentUser.id,
+      p_pin: pin,
+      p_target_user_id: userId,
+      p_date: date
+    });
+    if (error) throw error;
+    return;
+  }
+
+  // Normal -> user RPC
   const { error } = await supabaseClient.rpc("clear_request_cell", {
     p_user_id: userId,
     p_pin: pin,
     p_date: date
   });
-
   if (error) throw error;
 }
+
+    
 async function loadRota() {
   // -----------------------------
   // 7A) Load users
@@ -3258,6 +3318,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

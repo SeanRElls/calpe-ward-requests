@@ -2711,14 +2711,10 @@ const weeks = groupDatesIntoWeeks(dates);
 
 
 // Hide inactive users from the rota table (for everyone)
+// (Admins can still view/manage them in Admin → Users with "Show inactive")
 const visibleUsers = users.filter(u => u.is_active !== false);
 
-let visibleUsers = users;
-if (!currentUser?.is_admin) {
-  visibleUsers = users.filter(u => u.is_active !== false);
-}
-
-render(visibleUsers, weeks);;
+render(visibleUsers, weeks);
 
   
 // Period label
@@ -2974,6 +2970,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

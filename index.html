@@ -2854,40 +2854,39 @@ async function deleteRequestCell(userId, date){
   if (error) throw error;
 }
     
-/* =========================================================
-   7) DATA LOADING (users + dates + requests)
-   ========================================================= */
 async function loadRota() {
-// -----------------------------
-// 7A) Load users
-// -----------------------------
-const { data: users, error: userError } = await supabaseClient
-  .from("users")
-  .select("id, name, role_id, is_admin, is_active, roles(name)")
-  .order("name");
+  // -----------------------------
+  // 7A) Load users
+  // -----------------------------
+  const { data: users, error: userError } = await supabaseClient
+    .from("users")
+    .select("id, name, role_id, is_admin, is_active, roles(name)")
+    .order("name");
+
+  if (userError) {
+    console.error("Users load error:", userError);
+    alert("Failed to load users.");
+    return;
+  }
+
+  // Build helper map
+  usersById = new Map((users || []).map(u => [u.id, u.name]));
 
   // 🔐 Restore logged-in user from localStorage (ONE TIME LOGIN)
-const savedId = localStorage.getItem(STORAGE_KEY);
-if (savedId && !currentUser) {
-  const restored = users.find(u => String(u.id) === String(savedId));
-  if (restored) {
-    currentUser = restored;
-    updateBadges();
-  } else {
-    localStorage.removeItem(STORAGE_KEY);
+  const savedId = localStorage.getItem(STORAGE_KEY);
+  if (savedId && !currentUser) {
+    const restored = (users || []).find(u => String(u.id) === String(savedId));
+    if (restored) {
+      currentUser = restored;
+      updateBadges();
+      applyUnlockState(); // optional, but nice if table is already there
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
   }
-}
-  
 
-if (userError) {
-  console.error("Users load error:", userError);
-  alert("Failed to load users.");
-  return;
-}
 
-usersById = new Map((users || []).map(u => [u.id, u.name]));
-const savedId = localStorage.getItem(STORAGE_KEY);
-  
+
 
 // -----------------------------
 // 7C) Load rota periods (dropdown + active)
@@ -3235,6 +3234,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

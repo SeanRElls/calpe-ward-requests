@@ -570,25 +570,13 @@
 
   /* dropdown and date badge become two equal chips */
   #periodSelect,
-  #periodNavLabel{
-    height: 34px;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    font-size: 12px;
-  }
+
 
   #periodSelect{
     flex: 1 1 200px;
     min-width: 180px;
   }
 
-  #periodNavLabel{
-    flex: 1 1 140px;
-    justify-content: center;
-    padding: 0 10px;
-    background: #f1f1f1;
-  }
 }
 @media (max-width: 520px){
 
@@ -645,7 +633,6 @@
 </div>
       <div class="rightbits">
         <select id="periodSelect"></select>
-<div class="badge" id="periodNavLabel">Loading periods…</div>
         <div class="badge" id="loginBadge">Not logged in</div>
         <div class="badge admin" id="adminBadge" style="display:none;">ADMIN</div>
        
@@ -1039,15 +1026,6 @@ async function upsertWeekComment(weekId, userId, comment){
   return data || [];
 }
 
-function setPeriodLabel(p){
-  if (!p) {
-    periodNavLabel.textContent = "No period";
-    return;
-  }
-  const s = new Date(p.start_date);
-  const e = new Date(p.end_date);
-  periodNavLabel.textContent = `${fmt(s)} – ${fmt(e)}`;
-}
 
 function populatePeriodDropdown(periods){
   periodSelect.innerHTML = "";
@@ -1126,7 +1104,7 @@ let weekWindowStart = 0; // index into allWeeks
     const adminBadge = document.getElementById("adminBadge");
     
 const periodSelect = document.getElementById("periodSelect");
-const periodNavLabel = document.getElementById("periodNavLabel");
+
 
     const adminPeriodSelect = document.getElementById("adminPeriodSelect");
 const adminPeriodMeta = document.getElementById("adminPeriodMeta");
@@ -1382,7 +1360,6 @@ if (periodSelect) {
 
  const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
 activePeriodObj = selected; // ✅ add this
-setPeriodLabel(selected);
 updateCloseLabel(selected);
 applyUnlockState(); // ✅ optional but nice so it locks instantly
 await loadRota();
@@ -2296,7 +2273,6 @@ periodSelect.value = String(activePeriodId);
 
 const selected = periods.find(p => String(p.id) === String(activePeriodId));
 activePeriodObj = selected;   // ← THIS is 5A in action
-setPeriodLabel(selected);
 updateCloseLabel(selected);
   
 // -----------------------------
@@ -2603,6 +2579,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

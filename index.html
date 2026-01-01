@@ -738,6 +738,7 @@
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px;">
       <button id="adminTabPeriods" type="button" class="primary" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Rota periods</button>
       <button id="adminTabGenerate" type="button" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Generate</button>
+      <button id="adminTabUsers" type="button" style="flex:0 0 auto; min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">Users</button>
     </div>
 
  <!-- TAB: PERIODS -->
@@ -801,7 +802,66 @@
         </div>
       </div>
     </div>
+<!-- TAB: USERS -->
+<div id="adminViewUsers" style="display:none;">
 
+  <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+      <div style="font-weight:800;">Users</div>
+
+      <label class="subtitle" style="display:flex; gap:6px; align-items:center;">
+        <input type="checkbox" id="adminShowInactiveUsers" />
+        Show inactive
+      </label>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+      <input id="adminUserSearch" placeholder="Search name…"
+        style="flex:1; min-width:180px; padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;" />
+
+      <button id="adminAddUserBtn" class="primary" type="button"
+        style="min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">
+        + Add user
+      </button>
+    </div>
+
+    <div id="adminUsersList" style="margin-top:10px;"></div>
+  </div>
+
+  <div style="border:1px solid #ddd; border-radius:10px; padding:10px;">
+    <div style="font-weight:800; margin-bottom:6px;">Add / Edit</div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <input id="adminEditUserName" placeholder="Name"
+        style="flex:1; min-width:180px; padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;" />
+
+      <select id="adminEditUserRole"
+        style="min-width:160px; padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;">
+        <option value="1">Charge Nurse</option>
+        <option value="2">Staff Nurse</option>
+        <option value="3">Nursing Assistant</option>
+      </select>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+      <input id="adminEditUserPin" placeholder="New PIN (4 digits)" inputmode="numeric" maxlength="4"
+        style="flex:1; min-width:180px; padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;" />
+
+      <button id="adminSaveUserBtn" class="primary" type="button"
+        style="min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">
+        Save
+      </button>
+
+      <button id="adminCancelUserEditBtn" type="button"
+        style="min-width:auto; padding:8px 12px; border-radius:999px; font-size:12px;">
+        Cancel
+      </button>
+    </div>
+
+    <div class="subtitle" id="adminUserEditHelp" style="margin-top:8px;"></div>
+  </div>
+
+</div>
     <div class="btns" style="margin-top:12px;">
       <button id="adminClose" type="button">Close</button>
     </div>
@@ -1139,6 +1199,21 @@ const adminClosesAtHelp = document.getElementById("adminClosesAtHelp");
 
 let adminSelectedPeriodId = null;
     
+    const adminTabUsers = document.getElementById("adminTabUsers");
+const adminViewUsers = document.getElementById("adminViewUsers");
+
+const adminUsersList = document.getElementById("adminUsersList");
+const adminAddUserBtn = document.getElementById("adminAddUserBtn");
+const adminUserSearch = document.getElementById("adminUserSearch");
+const adminShowInactiveUsers = document.getElementById("adminShowInactiveUsers");
+
+const adminEditUserName = document.getElementById("adminEditUserName");
+const adminEditUserRole = document.getElementById("adminEditUserRole");
+const adminEditUserPin  = document.getElementById("adminEditUserPin");
+const adminSaveUserBtn  = document.getElementById("adminSaveUserBtn");
+const adminCancelUserEditBtn = document.getElementById("adminCancelUserEditBtn");
+const adminUserEditHelp = document.getElementById("adminUserEditHelp");
+
 
 
     // Shift modal refs
@@ -1419,17 +1494,223 @@ if (adminModal) adminModal.addEventListener("click", (e) => {
   if (e.target === adminModal) closeAdminConsole();
 });
 
+// [ADMIN-UI-1] Tab switching (Periods / Generate / Users)
 function showAdminTab(which){
-  const isPeriods = (which === "periods");
-  adminViewPeriods.style.display = isPeriods ? "block" : "none";
-  adminViewGenerate.style.display = isPeriods ? "none" : "block";
+  const isPeriods  = (which === "periods");
+  const isGenerate = (which === "generate");
+  const isUsers    = (which === "users");
+
+  adminViewPeriods.style.display  = isPeriods  ? "block" : "none";
+  adminViewGenerate.style.display = isGenerate ? "block" : "none";
+  adminViewUsers.style.display    = isUsers    ? "block" : "none";
 
   adminTabPeriods.classList.toggle("primary", isPeriods);
-  adminTabGenerate.classList.toggle("primary", !isPeriods);
+  adminTabGenerate.classList.toggle("primary", isGenerate);
+  adminTabUsers.classList.toggle("primary", isUsers);
 }
 
 if (adminTabPeriods) adminTabPeriods.addEventListener("click", () => showAdminTab("periods"));
 if (adminTabGenerate) adminTabGenerate.addEventListener("click", () => showAdminTab("generate"));
+
+    // [ADMIN-UI-4] Users tab
+if (adminTabUsers) {
+  adminTabUsers.addEventListener("click", () => {
+    showAdminTab("users");
+    loadAdminUsers();
+  });
+}
+/* =========================================================
+   [ADMIN-USERS-1] ADMIN USERS CRUD (Add/Edit/Deactivate)
+   ========================================================= */
+
+let adminUsersCache = [];
+let adminEditingUserId = null;
+
+function escapeHtml(s){
+  return String(s).replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+async function loadAdminUsers(){
+  if (!adminUsersList) return;
+
+  adminUsersList.textContent = "Loading users…";
+
+  const { data, error } = await supabaseClient
+    .from("users")
+    .select("id, name, role_id, is_admin, is_active, roles(name)")
+    .order("name");
+
+  if (error) {
+    console.error(error);
+    adminUsersList.textContent = "Failed to load users.";
+    return;
+  }
+
+  adminUsersCache = data || [];
+  renderAdminUsers();
+}
+
+function renderAdminUsers(){
+  if (!adminUsersList) return;
+
+  const q = (adminUserSearch?.value || "").trim().toLowerCase();
+  const showInactive = !!adminShowInactiveUsers?.checked;
+
+  let rows = adminUsersCache.slice();
+
+  if (!showInactive) rows = rows.filter(u => u.is_active !== false);
+  if (q) rows = rows.filter(u => (u.name || "").toLowerCase().includes(q));
+
+  if (!rows.length){
+    adminUsersList.innerHTML = `<div class="subtitle" style="margin-top:8px;">No users.</div>`;
+    return;
+  }
+
+  adminUsersList.innerHTML = rows.map(u => {
+    const role = u.roles?.name || `Role ${u.role_id}`;
+    const inactiveTag = (u.is_active === false) ? `<span class="badge" style="margin-left:6px;">inactive</span>` : "";
+    const adminTag = u.is_admin ? `<span class="badge admin" style="margin-left:6px;">admin</span>` : "";
+
+    return `
+      <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;">
+        <div style="min-width:0;">
+          <div style="font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${escapeHtml(u.name || "")}${inactiveTag}${adminTag}
+          </div>
+          <div class="subtitle">${escapeHtml(role)}</div>
+        </div>
+        <div style="display:flex; gap:6px; flex:0 0 auto;">
+          <button type="button" data-act="edit" data-id="${u.id}"
+            style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Edit</button>
+          <button type="button" data-act="toggle" data-id="${u.id}"
+            style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">
+            ${u.is_active === false ? "Reactivate" : "Deactivate"}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function clearUserEditor(){
+  adminEditingUserId = null;
+  if (adminEditUserName) adminEditUserName.value = "";
+  if (adminEditUserRole) adminEditUserRole.value = "2";
+  if (adminEditUserPin)  adminEditUserPin.value = "";
+  if (adminUserEditHelp) adminUserEditHelp.textContent = "Fill details and click Save.";
+}
+
+function startEditUser(userId){
+  const u = adminUsersCache.find(x => x.id === userId);
+  if (!u) return;
+
+  adminEditingUserId = u.id;
+  adminEditUserName.value = u.name || "";
+  adminEditUserRole.value = String(u.role_id || 2);
+  adminEditUserPin.value = "";
+  adminUserEditHelp.textContent = "Leave PIN blank to keep current PIN.";
+}
+
+async function toggleUserActive(userId){
+  const u = adminUsersCache.find(x => x.id === userId);
+  if (!u) return;
+
+  const next = (u.is_active === false) ? true : false;
+
+  const ok = confirm(`${next ? "Reactivate" : "Deactivate"} ${u.name}?`);
+  if (!ok) return;
+
+  const { error } = await supabaseClient
+    .from("users")
+    .update({ is_active: next })
+    .eq("id", userId);
+
+  if (error){
+    console.error(error);
+    alert("Update failed.");
+    return;
+  }
+
+  await loadRota();
+  await loadAdminUsers();
+}
+
+/* =========================================================
+   [ADMIN-USERS-2] Wire UI events for Users tab
+   ========================================================= */
+
+adminUserSearch?.addEventListener("input", renderAdminUsers);
+adminShowInactiveUsers?.addEventListener("change", renderAdminUsers);
+
+adminUsersList?.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  const act = btn.dataset.act;
+
+  if (act === "edit") startEditUser(id);
+  if (act === "toggle") toggleUserActive(id);
+});
+
+adminAddUserBtn?.addEventListener("click", clearUserEditor);
+adminCancelUserEditBtn?.addEventListener("click", clearUserEditor);
+
+/* =========================================================
+   [ADMIN-USERS-3] Save user (insert/update + optional PIN)
+   ========================================================= */
+
+adminSaveUserBtn?.addEventListener("click", async () => {
+  const name = adminEditUserName.value.trim();
+  const role_id = Number(adminEditUserRole.value);
+  const pin = (adminEditUserPin.value || "").trim();
+
+  if (!name) return alert("Name is required.");
+  if (![1,2,3].includes(role_id)) return alert("Role invalid.");
+  if (pin && !/^\d{4}$/.test(pin)) return alert("PIN must be 4 digits.");
+
+  try {
+    if (!adminEditingUserId){
+      const { data, error } = await supabaseClient
+        .from("users")
+        .insert({ name, role_id, is_admin: false, is_active: true })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      if (pin) await adminSetUserPin(data.id, pin);
+    } else {
+      const { error } = await supabaseClient
+        .from("users")
+        .update({ name, role_id })
+        .eq("id", adminEditingUserId);
+
+      if (error) throw error;
+
+      if (pin) await adminSetUserPin(adminEditingUserId, pin);
+    }
+
+    await loadRota();
+    await loadAdminUsers();
+    clearUserEditor();
+    alert("Saved.");
+  } catch (e) {
+    console.error(e);
+    alert("Save failed. Check console.");
+  }
+});
+
+/* =========================================================
+   [ADMIN-USERS-4] PIN setter via RPC (recommended)
+   ========================================================= */
+async function adminSetUserPin(userId, pin){
+  const { error } = await supabaseClient.rpc("set_user_pin", {
+    p_user_id: userId,
+    p_pin: pin
+  });
+  if (error) throw error;
+}
 
 /* =========================
    ADMIN PERIODS (v2 dropdown)
@@ -2597,6 +2878,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

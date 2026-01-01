@@ -596,6 +596,35 @@
     white-space: nowrap;
   }
 }
+@media (max-width: 520px){
+  .rightbits{
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #periodSelect{
+    flex: 1 1 100%;
+    width: 100%;
+    height: 40px;
+    font-size: 13px;
+  }
+
+  #loginBadge{
+    flex: 1 1 auto;
+    max-width: calc(100% - 90px); /* leaves room for ADMIN */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #adminBadge{
+    flex: 0 0 auto;
+  }
+}
 
         
   </style>
@@ -2568,6 +2597,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

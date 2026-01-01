@@ -680,6 +680,7 @@
 --accent: #4F8DF7;                 /* softer, cleaner */
 --accent-hover: #2F6FEA;           /* still blue, less harsh */
 --accent-weak: rgba(79,141,247,0.16);
+  --accent-weak-hover: rgba(79,141,247,0.24); /* ✅ add this */
 
   --ink: #0f172a;
   --card: #ffffff;
@@ -1376,26 +1377,7 @@ function roleLabel(u){
      u.role_id === 2 ? "staff_nurse" :
      u.role_id === 3 ? "nursing_assistant" : "staff_nurse");
 }
-    async function resetWeeksFullyClosed(periodId){
-  if (!currentUser?.is_admin) { alert("Admin only."); return; }
 
-  const { data: wkRows, error: wkErr } = await supabaseClient
-    .from("rota_dates")
-    .select("week_id")
-    .eq("period_id", periodId);
-
-  if (wkErr) throw wkErr;
-
-  const weekIds = [...new Set((wkRows || []).map(r => r.week_id).filter(Boolean))];
-  if (!weekIds.length) return;
-
-  const { error: resetErr } = await supabaseClient
-    .from("rota_weeks")
-    .update({ open: false, open_after_close: false })
-    .in("id", weekIds);
-
-  if (resetErr) throw resetErr;
-}
 
 function populatePeriodDropdown(periods){
   periodSelect.innerHTML = "";
@@ -1635,12 +1617,13 @@ const render = () => {
 
 function openWeekCommentModal(){
   if (!activeWeekIdForComment) return;
-
+  document.body.classList.add("modal-open");  // ✅
   weekCommentModal.style.display = "flex";
   weekCommentModal.setAttribute("aria-hidden","false");
 }
 
 function closeWeekCommentModal(){
+  document.body.classList.remove("modal-open"); // ✅
   weekCommentModal.style.display = "none";
   weekCommentModal.setAttribute("aria-hidden","true");
   activeWeekIdForComment = null;
@@ -1660,9 +1643,7 @@ if (adminBadge) {
     openAdminConsole();
   });
 }
-    if (currentUser && !currentUser.is_admin) {
-  document.getElementById("adminTabUsers")?.remove();
-}
+ 
 
     
 // Click handler for 💬 buttons (event delegation)
@@ -2646,12 +2627,19 @@ function updateBadges(){
   if(!currentUser){
     loginBadge.textContent = "Not logged in";
     adminBadge.style.display = "none";
-      sessionPin = null; // ✅ add this
+    sessionPin = null;
     return;
   }
 
   loginBadge.textContent = `Logged in: ${currentUser.name}`;
   adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
+
+  // ✅ hide Users tab for non-admin AFTER login
+  if (!currentUser.is_admin) {
+    document.getElementById("adminTabUsers")?.remove();
+    document.getElementById("adminViewUsers")?.remove();
+  }
+}inBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
 }
 
 /* =========================================================
@@ -3221,6 +3209,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

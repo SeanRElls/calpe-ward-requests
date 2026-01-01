@@ -1143,22 +1143,39 @@ function groupDatesIntoWeeks(dates){
     const ws = startOfWeekSunday(d);
     const key = isoDate(ws);
 
+    const rowWeekId = item.week_id ?? item.rota_weeks?.id ?? null;
+
+    // Interpret flags ONLY if rota_weeks exists; otherwise don't "invent" openness
+    const rowOpen = (item.rota_weeks?.open);
+    const rowOpenAfterClose = (item.rota_weeks?.open_after_close);
+
     if (!map.has(key)) {
-     map.set(key, {
-  weekStart: ws,
-  days: [],
-  open: (item.rota_weeks && item.rota_weeks.open) ?? true,
-  openAfterClose: (item.rota_weeks && item.rota_weeks.open_after_close) ?? false,
- weekId: item.rota_weeks?.id || item.week_id || null
-});
+      map.set(key, {
+        weekStart: ws,
+        days: [],
+        weekId: rowWeekId,
+
+        // Start with "unknown" until we see real flags
+        open: null,
+        openAfterClose: null
+      });
     }
 
     const weekObj = map.get(key);
 
-    // If we didn’t have an id when we created the week, but this row has one, store it
-    if (!weekObj.weekId && (item.rota_weeks?.id || item.week_id)) {
-  weekObj.weekId = item.rota_weeks?.id || item.week_id;
-}
+    // Capture weekId if we didn't have it yet
+    if (!weekObj.weekId && rowWeekId) weekObj.weekId = rowWeekId;
+
+    // Aggregate open flags (AND), but only when we have real values
+    if (typeof rowOpen === "boolean") {
+      weekObj.open = (weekObj.open === null) ? rowOpen : (weekObj.open && rowOpen);
+    }
+    if (typeof rowOpenAfterClose === "boolean") {
+      weekObj.openAfterClose = (weekObj.openAfterClose === null)
+        ? rowOpenAfterClose
+        : (weekObj.openAfterClose && rowOpenAfterClose);
+    }
+
     weekObj.days.push(item);
   }
 
@@ -1172,27 +1189,32 @@ function groupDatesIntoWeeks(dates){
       const dd = addDays(w.weekStart, i);
       const ds = isoDate(dd);
 
- const row = dayLookup.get(ds) || {
-  date: ds,
-  rota_weeks: { 
-    open: w.open,
-    open_after_close: w.openAfterClose,
-    id: w.weekId
-  }
-};
+      const row = dayLookup.get(ds) || {
+        date: ds,
+        week_id: w.weekId,
+        rota_weeks: (w.weekId ? {
+          id: w.weekId,
+          open: w.open,
+          open_after_close: w.openAfterClose
+        } : null)
+      };
 
       ordered.push(row);
     }
 
-weeks.push({
-  weekStart: w.weekStart,
-  weekEnd: addDays(w.weekStart, 6),
-  open: w.open,
-  openAfterClose: w.openAfterClose,
-  weekId: w.weekId,
-  days: ordered
-});
+    // If still null (never saw rota_weeks), be conservative:
+    // treat as CLOSED so editing/comments don't misbehave.
+    const finalOpen = (w.open === null) ? false : w.open;
+    const finalAfter = (w.openAfterClose === null) ? false : w.openAfterClose;
 
+    weeks.push({
+      weekStart: w.weekStart,
+      weekEnd: addDays(w.weekStart, 6),
+      weekId: w.weekId,
+      open: finalOpen,
+      openAfterClose: finalAfter,
+      days: ordered
+    });
   }
 
   weeks.sort((a,b) => a.weekStart - b.weekStart);
@@ -3112,15 +3134,19 @@ function render(users, weeks){
     th.colSpan = 7;
     th.innerHTML = `
   <span class="week-label">${fmt(w.weekStart)} – ${fmt(w.weekEnd)}</span>
+${w.weekId ? `
   <button
     class="week-comment-btn"
     type="button"
-  data-week-id="${w.weekId || ""}"
-
-
+    data-week-id="${String(w.weekId)}"
     title="Week comment"
   >💬</button>
-`;
+` : `
+  <span
+    style="opacity:0.35; margin-left:6px;"
+    title="Week has no ID (rota_dates.week_id missing)"
+  >💬</span>
+`}
     r1.appendChild(th);
 
     if(idx !== weeks.length - 1){
@@ -3329,6 +3355,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

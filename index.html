@@ -2814,16 +2814,17 @@ function toast(msg){
 async function upsertRequestCell(userId, date, value, importantRank){
   if (!currentUser) throw new Error("Not logged in.");
 
-  const { data, error } = await supabaseClient
-    .from("requests")
-    .upsert({
-      user_id: userId,
-      date,
-      value,
-      important_rank: importantRank ?? null
-    }, { onConflict: "user_id,date" })
-    .select()
-    .single();
+  // get pin from session storage (you already set it in setSessionPin)
+  const pin = sessionStorage.getItem(pinKey(currentUser.id));
+  if (!pin) throw new Error("Missing session PIN. Log in again.");
+
+  const { data, error } = await supabaseClient.rpc("set_request_cell", {
+    p_user_id: userId,
+    p_pin: pin,
+    p_date: date,
+    p_value: value,
+    p_important_rank: importantRank ?? null
+  });
 
   if (error) throw error;
   return data;
@@ -2835,15 +2836,17 @@ async function upsertRequestCell(userId, date, value, importantRank){
 async function deleteRequestCell(userId, date){
   if (!currentUser) throw new Error("Not logged in.");
 
-  const { error } = await supabaseClient
-    .from("requests")
-    .delete()
-    .eq("user_id", userId)
-    .eq("date", date);
+  const pin = sessionStorage.getItem(pinKey(currentUser.id));
+  if (!pin) throw new Error("Missing session PIN. Log in again.");
+
+  const { error } = await supabaseClient.rpc("clear_request_cell", {
+    p_user_id: userId,
+    p_pin: pin,
+    p_date: date
+  });
 
   if (error) throw error;
 }
-    
 async function loadRota() {
   // -----------------------------
   // 7A) Load users
@@ -3227,6 +3230,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

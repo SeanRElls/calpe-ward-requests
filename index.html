@@ -669,81 +669,133 @@
     white-space: nowrap;
   }
 }
-/* =========================
-   ADMIN MODAL – consistent, not chunky
-   ========================= */
+/* =========================================================
+   ADMIN UI PATCH: compact, colored, tabs sticky
+   ========================================================= */
+:root{
+  --accent: #2f7dd1;         /* blue that doesn't look like a funeral */
+  --accent-weak: #e9f2ff;
+  --ink: #0f172a;
+  --card: #ffffff;
+  --line: #e6e8ee;
+  --soft: #f6f7fb;
+}
+
+/* Make ADMIN badge not "villain mode" */
+.badge.admin{
+  background: var(--accent);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: #fff;
+}
+
+/* Admin modal container tighter + nicer */
 #adminModal .modal{
-  padding: 16px;
+  padding: 14px;
   border-radius: 16px;
+  background: var(--card);
+}
+
+/* Sticky tab row (so it doesn't "disappear" when you scroll) */
+#adminModal .modal > div:first-of-type{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card);
+  padding-top: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Tabs: compact segmented control style */
+#adminTabPeriods, #adminTabGenerate, #adminTabUsers{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--ink);
+  min-width: 0;
+  flex: 0 0 auto;
+}
+#adminTabPeriods.is-active,
+#adminTabGenerate.is-active,
+#adminTabUsers.is-active{
+  background: var(--accent-weak);
+  border-color: rgba(47,125,209,0.35);
+  color: var(--accent);
+}
+
+/* Buttons inside admin: smaller by default */
+#adminModal button{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  min-width: auto;
+}
+
+/* Primary action buttons: colored, not black */
+#adminModal button.primary{
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Cards inside admin: softer */
+#adminViewUsers > div,
+#adminViewPeriods > div,
+#adminViewGenerate > div{
+  border: 1px solid var(--line) !important;
+  border-radius: 14px !important;
   background: #fff;
 }
 
-/* Stop global .btns flex rules messing up admin */
-#adminModal .btns{
-  justify-content: flex-end !important;
-  flex: 0 0 auto !important;
-  min-width: 0 !important;
-}
-#adminModal .btns button{
-  flex: 0 0 auto !important;
-  min-width: auto !important;
-}
-
-/* Tabs */
-#adminModal #adminTabPeriods,
-#adminModal #adminTabGenerate,
-#adminModal #adminTabUsers{
-  padding: 7px 12px !important;
-  border-radius: 999px !important;
-  border: 1px solid #e3e6ea !important;
-  background: #fff !important;
-  font-weight: 700;
-}
-#adminModal button.primary{
-  background:#111 !important;
-  border-color:#111 !important;
-  color:#fff !important;
-}
-
-/* Cards in admin */
-#adminModal #adminViewUsers > div,
-#adminModal #adminViewPeriods > div,
-#adminModal #adminViewGenerate > div{
-  border-color: #eceef2 !important;
-  border-radius: 14px !important;
-}
-
-/* Users list + rows */
-#adminUsersList{
-  border: 1px solid #eceef2;
-  border-radius: 14px;
-  overflow: hidden;
-}
-.user-row{
-  padding: 10px 12px;
-  align-items: center;
-}
-.user-actions button{
-  height: 32px !important;
+/* Inputs/selects: compact + clean */
+#adminViewUsers input,
+#adminViewUsers select,
+#adminViewPeriods input,
+#adminViewPeriods select{
+  height: 34px !important;
   padding: 6px 10px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  font-size: 12px !important;
+  background: #fff !important;
+}
+
+/* Users list rows: tighter */
+.user-row{
+  padding: 8px 10px;
+}
+.user-name{
+  font-size: 13px;
+}
+.user-role{
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* User action buttons: small and subtle */
+.user-actions button{
+  height: 30px !important;
+  padding: 0 10px !important;
   border-radius: 999px !important;
   font-size: 12px !important;
+  background: #fff;
 }
 
-/* Form controls */
-#adminViewUsers input,
-#adminViewUsers select{
-  height: 40px !important;
-  border-radius: 12px !important;
-  border-color: #e3e6ea !important;
-  font-size: 13px !important;
+/* Tags */
+.user-tag.admin{
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
-
-/* Close button */
-#adminModal #adminClose{
-  height: 36px !important;
-  padding: 0 14px !important;
-  border-radius: 999px !important;
+.user-tag.inactive{
+  background: #f1f2f6;
+  border-color: #e2e5ee;
+  color: #6b7280;
 }
 
         
@@ -1624,9 +1676,9 @@ function showAdminTab(which){
   adminViewGenerate.style.display = isGenerate ? "block" : "none";
   adminViewUsers.style.display    = isUsers    ? "block" : "none";
 
-  adminTabPeriods.classList.toggle("primary", isPeriods);
-  adminTabGenerate.classList.toggle("primary", isGenerate);
-  adminTabUsers.classList.toggle("primary", isUsers);
+adminTabPeriods.classList.toggle("is-active", isPeriods);
+adminTabGenerate.classList.toggle("is-active", isGenerate);
+adminTabUsers.classList.toggle("is-active", isUsers);
 }
 
 if (adminTabPeriods) adminTabPeriods.addEventListener("click", () => showAdminTab("periods"));
@@ -3006,6 +3058,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

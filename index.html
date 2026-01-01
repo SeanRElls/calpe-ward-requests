@@ -2649,17 +2649,19 @@ function updateBadges(){
     loginBadge.textContent = "Not logged in";
     adminBadge.style.display = "none";
     sessionPin = null;
+
+    // hide users tab if present
+    adminTabUsers && (adminTabUsers.style.display = "none");
+    adminViewUsers && (adminViewUsers.style.display = "none");
     return;
   }
 
   loginBadge.textContent = `Logged in: ${currentUser.name}`;
   adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
 
-  // Hide Users tab for non-admin (optional)
-  if (!currentUser.is_admin) {
-    document.getElementById("adminTabUsers")?.remove();
-    document.getElementById("adminViewUsers")?.remove();
-  }
+  // show/hide users tab
+  if (adminTabUsers) adminTabUsers.style.display = currentUser.is_admin ? "" : "none";
+  if (adminViewUsers) adminViewUsers.style.display = currentUser.is_admin ? "" : "none";
 }
 /* =========================================================
    PATCH 2) SHIFT PICKER LOGIC (with OFF priority)
@@ -3189,8 +3191,11 @@ function applyUnlockState(){
 
     const userId = r.dataset.userId;
 
-    const isUnlocked =
-      currentUser && (currentUser.is_admin || currentUser.id === userId);
+  const isUnlocked =
+  currentUser && (
+    currentUser.is_admin ||
+    String(currentUser.id) === String(userId)
+  );
 
     r.classList.toggle("unlocked", !!isUnlocked);
     r.classList.toggle("locked", !isUnlocked);
@@ -3234,6 +3239,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

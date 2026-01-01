@@ -2664,19 +2664,21 @@ function updateBadges(){
     adminBadge.style.display = "none";
     sessionPin = null;
 
-    // hide users tab if present
-    adminTabUsers && (adminTabUsers.style.display = "none");
-    adminViewUsers && (adminViewUsers.style.display = "none");
+    // hide users tab button only
+    if (adminTabUsers) adminTabUsers.style.display = "none";
     return;
   }
 
   loginBadge.textContent = `Logged in: ${currentUser.name}`;
   adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
 
-  // show/hide users tab
+  // show/hide users tab button only
   if (adminTabUsers) adminTabUsers.style.display = currentUser.is_admin ? "" : "none";
-  if (adminViewUsers) adminViewUsers.style.display = currentUser.is_admin ? "" : "none";
+
+  // DO NOT touch adminViewUsers here.
+  // Tab visibility is handled by showAdminTab().
 }
+
 /* =========================================================
    PATCH 2) SHIFT PICKER LOGIC (with OFF priority)
    ========================================================= */
@@ -3256,6 +3258,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

@@ -673,8 +673,10 @@
    ADMIN UI PATCH: compact, colored, tabs sticky
    ========================================================= */
 :root{
---accent: #2563eb;
---accent-weak: rgba(37,99,235,0.10);
+  --accent: #1d4ed8;                 /* richer blue */
+  --accent-hover: #1e40af;           /* darker hover */
+  --accent-weak: rgba(29,78,216,0.12);
+
   --ink: #0f172a;
   --card: #ffffff;
   --line: #e6e8ee;
@@ -687,7 +689,12 @@
   border: 1px solid rgba(0,0,0,0.06);
   color: #fff;
 }
-
+.badge.admin:hover,
+#adminModal button.primary:hover{
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+    
 /* Admin modal container tighter + nicer */
 #adminModal .modal{
   padding: 14px;
@@ -3074,6 +3081,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

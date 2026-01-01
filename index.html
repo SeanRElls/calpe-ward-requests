@@ -2010,14 +2010,17 @@ async function toggleUserActive(userId){
   if (!u) return;
 
   const next = (u.is_active === false) ? true : false;
-
   const ok = confirm(`${next ? "Reactivate" : "Deactivate"} ${u.name}?`);
   if (!ok) return;
 
-const { error } = await supabaseClient.rpc("set_user_active", {
-  p_user_id: userId,
-  p_active: next
-});
+  const pin = getSessionPinOrThrow(); // 🔑 THIS WAS MISSING
+
+  const { error } = await supabaseClient.rpc("set_user_active", {
+    p_admin_id: currentUser.id,
+    p_pin: pin,
+    p_user_id: userId,
+    p_active: next
+  });
 
   if (error){
     console.error(error);
@@ -2028,6 +2031,7 @@ const { error } = await supabaseClient.rpc("set_user_active", {
   await loadRota();
   await loadAdminUsers();
 }
+
 
 /* =========================================================
    [ADMIN-USERS-2] Wire UI events for Users tab
@@ -3356,6 +3360,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

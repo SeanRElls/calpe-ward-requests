@@ -1745,12 +1745,43 @@ weekCommentSave.addEventListener("click", async () => {
   if (!activeWeekIdForComment || !currentUser) return;
 
   try {
-    await upsertWeekComment(activeWeekIdForComment, currentUser.id, weekCommentInput.value);
+    await upsertWeekComment(
+      activeWeekIdForComment,
+      currentUser.id,
+      weekCommentInput.value
+    );
 
-    // Mark bubble for THIS week based on whether the user's comment is non-empty
+    // Re-fetch so bubble reflects whether ANY comment exists (not just yours)
+    const rows = await fetchWeekComments(activeWeekIdForComment);
+
+    // Update the bubble indicator for this week header button
     const selector = `.week-comment-btn[data-week-id="${CSS.escape(String(activeWeekIdForComment))}"]`;
     const btn = document.querySelector(selector);
-    if (btn) {   // safest: re-fetch to know if ANY comment exists   const rows = await fetchWeekComments(activeWeekIdForComment);   btn.classList.toggle("has-comment", (rows || []).length > 0); }
+    if (btn) {
+      btn.classList.toggle("has-comment", (rows || []).length > 0);
+    }
+
+    // If admin, refresh the visible comment list too
+    if (currentUser.is_admin) {
+      weekCommentAdminList.style.display = "block";
+      if (!rows || rows.length === 0) {
+        weekCommentAdminList.innerHTML = `<div class="subtitle">No comments yet.</div>`;
+      } else {
+        weekCommentAdminList.innerHTML = rows.map(r => {
+          const uid = String(r.user_id);
+          const name = usersById.get(uid) || uid;
+          const when = r.updated_at ? new Date(r.updated_at).toLocaleString("en-GB") : "";
+          const commentSafe = escapeHtml(r.comment || "");
+          return `
+            <div style="padding:6px 0; border-bottom:1px solid #eee;">
+              <div style="font-weight:700;">${escapeHtml(name)}</div>
+              <div style="font-size:11px; color:#777;">${when}</div>
+              <div style="white-space:pre-wrap;">${commentSafe}</div>
+            </div>
+          `;
+        }).join("");
+      }
+    }
 
     closeWeekCommentModal();
   } catch (err) {
@@ -1758,6 +1789,7 @@ weekCommentSave.addEventListener("click", async () => {
     alert("Failed to save comment. Check console.");
   }
 });
+    
 
 /* =========================================================
    6) PERIOD DROPDOWN HANDLER
@@ -3224,6 +3256,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

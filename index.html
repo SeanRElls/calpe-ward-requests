@@ -2856,7 +2856,6 @@ const { data: users, error: userError } = await supabaseClient
   .select("id, name, role_id, is_admin, is_active")
   .order("name");
 
-    .order("name");
 
   if (userError) {
     console.error("Users load error:", userError);
@@ -3220,6 +3219,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

@@ -1631,7 +1631,7 @@ if (!closeAt){
   return;
 }
 
-const render = () => {
+const renderCloseLabel = () => {
   const now = new Date();
   const msLeft = closeAt - now;
 
@@ -1669,8 +1669,8 @@ if (msLeft <= 0){
 };
 
 
-  render();
-  closeCountdownTimer = setInterval(render, 30000);
+renderCloseLabel();
+closeCountdownTimer = setInterval(renderCloseLabel, 30000);
 }
 
 
@@ -3355,6 +3355,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

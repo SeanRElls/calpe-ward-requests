@@ -510,16 +510,14 @@
 
 .user-name{
   font-weight: 800;
+  font-size: 15px;
+  line-height: 1.15;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
 
-.user-role{
-  font-size: 11px;
-  color: #777;
-  margin-top: 2px;
-}
+
 
 .user-actions{
   display:flex;
@@ -673,9 +671,10 @@
    ADMIN UI PATCH: compact, colored, tabs sticky
    ========================================================= */
 :root{
-  --accent: #3B82F6;                 /* light, clean blue */
-  --accent-hover: #2563EB;           /* slightly deeper on hover */
-  --accent-weak: rgba(59,130,246,0.14);
+  --accent: #2563eb;                  /* cleaner blue */
+  --accent-hover: #1d4ed8;
+  --accent-weak: rgba(37,99,235,0.12); /* softer fill */
+  --accent-weak-hover: rgba(37,99,235,0.18);
 
   --ink: #0f172a;
   --card: #ffffff;
@@ -742,17 +741,27 @@ border-color: rgba(37,99,235,0.22);
 }
 
 /* Primary action buttons: colored, not black */
-#adminModal button.primary,
-.badge.admin{
-  background: var(--accent);
-  border-color: transparent;
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(59,130,246,0.20);
+#adminModal button.primary{
+  background: var(--accent-weak) !important;
+  border: 1px solid rgba(37,99,235,0.28) !important;
+  color: var(--accent) !important;
+  box-shadow: none !important;
 }
-.badge.admin:hover,
 #adminModal button.primary:hover{
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background: var(--accent-weak-hover) !important;
+  border-color: rgba(37,99,235,0.38) !important;
+}
+
+/* keep ADMIN badge readable but not “villain button” */
+.badge.admin{
+  background: var(--accent-weak);
+  border: 1px solid rgba(37,99,235,0.28);
+  color: var(--accent);
+  box-shadow: none;
+}
+.badge.admin:hover{
+  background: var(--accent-weak-hover);
+  border-color: rgba(37,99,235,0.38);
 }
     
 /* Cards inside admin: softer */
@@ -794,14 +803,19 @@ border-color: rgba(37,99,235,0.22);
   padding: 0 10px !important;
   border-radius: 999px !important;
   font-size: 12px !important;
-  background: #fff;
+  background: #fff !important;
+  border: 1px solid #d6dbe4 !important;
+  color: #0f172a !important;
+}
+.user-actions button:hover{
+  background: #f8fafc !important;
 }
 
 /* Tags */
 .user-tag.admin{
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--accent-weak);
+  border-color: rgba(37,99,235,0.28);
+  color: var(--accent);
 }
 .user-tag.inactive{
   background: #f1f2f6;
@@ -823,7 +837,15 @@ border-color: rgba(37,99,235,0.22);
   font-size: 12px;
   color: #667085;
 }
-        
+  
+    .user-group-title{
+  padding: 10px 12px;
+  font-weight: 800;
+  font-size: 12px;
+  color: #64748b;
+  background: #f8fafc;
+  border-top: 1px solid #eef2f7;
+}
   </style>
 </head>
 
@@ -1783,12 +1805,9 @@ function renderAdminUsers(){
     const members = rows.filter(u => Number(u.role_id) === g.role_id);
     if (!members.length) continue;
 
-    html.push(`
-      <div style="padding:10px 12px; font-weight:900; font-size:12px; color:#334155; background:#f8fafc; border-top:1px solid #eef2f7;">
-        ${g.title}
-      </div>
-    `);
-
+ html.push(`
+  <div class="user-group-title">${g.title}</div>
+`);
     html.push(members.map(u => {
       const role = roleLabel(u);
       return `
@@ -3108,6 +3127,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

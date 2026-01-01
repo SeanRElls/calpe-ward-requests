@@ -499,11 +499,19 @@
 <body>
   <div class="wrap">
     <div class="titlebar">
-      <div>
-        <h1>Calpe Ward Requests</h1>
-        <div class="subtitle" id="periodLabel"></div>
-        <div class="subtitle" id="closeLabel"></div>
-      </div>
+     <div style="display:flex; gap:12px; align-items:center;">
+  <img
+    src="logo.png"
+    alt="Calpe Ward"
+    style="height:44px; width:auto;"
+  />
+
+  <div>
+    <h1>Calpe Ward Requests</h1>
+    <div class="subtitle" id="periodLabel"></div>
+    <div class="subtitle" id="closeLabel"></div>
+  </div>
+</div>
       <div class="rightbits">
         <select id="periodSelect"></select>
 <div class="badge" id="periodNavLabel">Loading periods…</div>
@@ -2210,8 +2218,9 @@ render(users, weeks);
   
 // Period label
 if (weeks.length) {
-  document.getElementById("periodLabel").textContent =
-    `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} (Sun–Sat weeks)`;
+document.getElementById("periodLabel").textContent =
+  `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} · 5-week period`;
+
 }
 
 // Apply locks + badges
@@ -2460,6 +2469,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

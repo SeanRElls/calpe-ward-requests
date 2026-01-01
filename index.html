@@ -81,6 +81,11 @@
   white-space: nowrap;
 }
 
+    body.modal-open{
+  overflow: hidden;
+  
+}
+    
 .close-pill .dot{
   width: 8px;
   height: 8px;
@@ -1285,17 +1290,20 @@ const adminGenerateBtn = document.getElementById("adminGenerateBtn");
 
 function openAdminConsole(){
   if (!currentUser?.is_admin) return;
+  document.body.classList.add("modal-open");
   adminModal.style.display = "flex";
   adminModal.setAttribute("aria-hidden","false");
   showAdminTab("periods");
-  loadAdminPeriodsForDropdown();   // NEW
+  loadAdminPeriodsForDropdown();
   refreshGeneratePreview();
 }
 
 function closeAdminConsole(){
+  document.body.classList.remove("modal-open");
   adminModal.style.display = "none";
   adminModal.setAttribute("aria-hidden","true");
 }
+
 
 if (adminCloseBtn) adminCloseBtn.addEventListener("click", closeAdminConsole);
 if (adminModal) adminModal.addEventListener("click", (e) => {
@@ -2481,6 +2489,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

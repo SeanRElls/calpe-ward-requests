@@ -1380,9 +1380,10 @@ function renderAdminPeriodMeta(periodId){
 async function loadAdminWeeks(periodId){
   adminWeeksList.textContent = "Loading weeks…";
 
+  // Pull all dates for the period, but we only need them to discover the weeks + open state
   const { data, error } = await supabaseClient
     .from("rota_dates")
-    .select("date, week_id, rota_weeks(id, open)")
+    .select("week_id, date, rota_weeks(id, open, week_start, week_end)")
     .eq("period_id", periodId)
     .order("date");
 
@@ -1392,60 +1393,76 @@ async function loadAdminWeeks(periodId){
     return;
   }
 
-  const weeks = groupDatesIntoWeeks(data || []);
+  // Build unique weeks list from rota_dates (because rota_weeks doesn't have period_id)
+  const weekMap = new Map();
+  for (const row of (data || [])) {
+    const w = row.rota_weeks;
+    if (!w?.id) continue;
+
+    if (!weekMap.has(w.id)) {
+      weekMap.set(w.id, {
+        weekId: w.id,
+        open: !!w.open,
+        weekStart: w.week_start ? new Date(w.week_start) : startOfWeekSunday(new Date(row.date)),
+        weekEnd: w.week_end ? new Date(w.week_end) : addDays(startOfWeekSunday(new Date(row.date)), 6)
+      });
+    } else {
+      // If somehow duplicates disagree, prefer CLOSED (safety)
+      const existing = weekMap.get(w.id);
+      existing.open = existing.open && !!w.open;
+    }
+  }
+
+  const weeks = [...weekMap.values()].sort((a,b) => a.weekStart - b.weekStart);
+
   if (!weeks.length){
     adminWeeksList.textContent = "No weeks found for this period.";
     return;
   }
 
-    // --- PERIOD LOCK STATUS (deadline lock) ---
+  // Period lock (deadline)
   const p = periodsCache.find(x => String(x.id) === String(periodId));
-  const periodClosed = isPeriodClosed(p); // true if closes_at passed
-  
-adminWeeksList.innerHTML = weeks.map(w => {
+  const periodClosed = isPeriodClosed(p);
+
+  adminWeeksList.innerHTML = weeks.map(w => {
     const s = fmt(w.weekStart);
     const e = fmt(w.weekEnd);
     const isOpen = !!w.open;
 
-    // If period is locked, show that instead of week open/closed
-    const pill = periodClosed
-      ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#f3f3f3; border:1px solid #d0d0d0; color:#666;">
-          PERIOD LOCKED
-        </span>`
-      : (isOpen
-          ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#e9fff0; border:1px solid #9fe0b1; color:#0b6b2b;">OPEN</span>`
-          : `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#ffecec; border:1px solid #ffb3b3; color:#8a1f1f;">CLOSED</span>`
-        );
+    const pill = isOpen
+      ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#e9fff0; border:1px solid #9fe0b1; color:#0b6b2b;">OPEN</span>`
+      : `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#ffecec; border:1px solid #ffb3b3; color:#8a1f1f;">CLOSED</span>`;
+
+    const lockNote = periodClosed
+      ? `<div style="margin-top:4px; font-size:11px; color:#666;">🔒 Period locked (staff cannot edit)</div>`
+      : ``;
 
     const btnText = isOpen ? "Close week" : "Open week";
-    const btnNote = periodClosed ? " (period locked)" : "";
 
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #eee;">
         <div>
           <div style="font-weight:800;">${s} – ${e}</div>
           <div style="margin-top:4px;">${pill}</div>
+          ${lockNote}
         </div>
 
         <button type="button"
           class="week-toggle-btn"
-          data-week-id="${w.weekId || ""}"
+          data-week-id="${w.weekId}"
           data-week-open="${isOpen ? "1" : "0"}">
-          ${btnText}${btnNote}
+          ${btnText}
         </button>
       </div>
     `;
-  }).join("");;
+  }).join("");
 
-
-  // Bind toggles (ADMIN MANAGEMENT should still work even if period is closed)
+  // Bind toggles (admins can still manage weeks regardless of period close)
   adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
     btn.addEventListener("click", async () => {
       if (!currentUser?.is_admin) return;
 
       const weekId = btn.dataset.weekId;
-      if (!weekId) return alert("Missing weekId for this row.");
-
       const currentlyOpen = btn.dataset.weekOpen === "1";
 
       try {
@@ -1456,8 +1473,8 @@ adminWeeksList.innerHTML = weeks.map(w => {
 
         if (e2) throw e2;
 
-        await loadRota();               // refresh main rota
-        await loadAdminWeeks(periodId); // refresh list state
+        await loadRota();
+        await loadAdminWeeks(periodId);
       } catch (e) {
         console.error(e);
         alert("Failed to toggle week. Check console.");
@@ -2368,6 +2385,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

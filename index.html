@@ -1149,17 +1149,16 @@ function groupDatesIntoWeeks(dates){
   days: [],
   open: (item.rota_weeks && item.rota_weeks.open) ?? true,
   openAfterClose: (item.rota_weeks && item.rota_weeks.open_after_close) ?? false,
-  weekId: item.rota_weeks?.id || null
+ weekId: item.rota_weeks?.id || item.week_id || null
 });
     }
 
     const weekObj = map.get(key);
 
     // If we didn’t have an id when we created the week, but this row has one, store it
-    if (!weekObj.weekId && item.rota_weeks?.id) {
-      weekObj.weekId = item.rota_weeks.id;
-    }
-
+    if (!weekObj.weekId && (item.rota_weeks?.id || item.week_id)) {
+  weekObj.weekId = item.rota_weeks?.id || item.week_id;
+}
     weekObj.days.push(item);
   }
 
@@ -2242,7 +2241,8 @@ const weeks = [...weekMap.values()].sort((a,b) => a.weekStart - b.weekStart);
 
 const lockNote = `
   <div style="margin-top:4px; font-size:11px; color:#666;">
-    ${isOpen ? "Requests open for staff" : "Requests locked for staff"}
+   ${isOpen ? "Requests open for staff" : "Requests locked for staff"} 
+${periodClosed ? "(after close time)" : "(before close time)"}
   </div>
 `;
 
@@ -2282,14 +2282,15 @@ adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
     const openAfterClose = btn.dataset.openAfterClose === "1";
     const periodClosed = btn.dataset.periodClosed === "1";
 
-    // Toggle the “active” field for the current period state
-const effectiveNow = periodClosed ? openAfterClose : open;
-const nextEffective = !effectiveNow;
+// ✅ Toggle the correct flag depending on whether period is closed
+let nextOpen = open;
+let nextOpenAfterClose = openAfterClose;
 
-// keep both flags aligned to the *same* value
-const nextOpen = nextEffective;
-const nextOpenAfterClose = nextEffective;
-
+if (periodClosed) {
+  nextOpenAfterClose = !openAfterClose;  // after deadline behavior
+} else {
+  nextOpen = !open;                      // normal behavior
+}
     try {
       const { error } = await supabaseClient.rpc("admin_set_week_open_flags", {
         p_admin_id: currentUser.id,
@@ -2431,7 +2432,7 @@ if (adminGenerateBtn) {
       activePeriodId = newPeriodId;
 
       // Optional: auto-set active so staff see it immediately
-      await setActivePeriod(newPeriodId);
+  // await setActivePeriod(newPeriodId); // only activate when ready
 
       // Refresh again so ★ active + dropdown state update
       await loadRota();
@@ -2954,17 +2955,19 @@ async function loadRota() {
   usersById = new Map((users || []).map(u => [u.id, u.name]));
 
   // 🔐 Restore logged-in user from localStorage (ONE TIME LOGIN)
-  const savedId = localStorage.getItem(STORAGE_KEY);
-  if (savedId && !currentUser) {
-    const restored = (users || []).find(u => String(u.id) === String(savedId));
-    if (restored) {
-      currentUser = restored;
-      updateBadges();
-      applyUnlockState(); // optional, but nice if table is already there
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
+const savedId = localStorage.getItem(STORAGE_KEY);
+if (savedId && !currentUser) {
+  const restored = (users || []).find(u => String(u.id) === String(savedId));
+  const restoredPin = restored ? sessionStorage.getItem(pinKey(restored.id)) : null;
+
+  if (restored && restoredPin) {
+    currentUser = restored;
+    updateBadges();
+    applyUnlockState();
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
   }
+}
 
 
 
@@ -3080,6 +3083,14 @@ updateBadges();
 function render(users, weeks){
   const table = document.getElementById("rota");
   table.innerHTML = "";
+
+  // Debug guard: ensure every week has an ID
+  weeks.forEach(w => {
+    if (!w.weekId) {
+      console.warn("Missing weekId for week:", w.weekStart, w);
+    }
+  });
+
 
   const thead = document.createElement("thead");
   const tbody = document.createElement("tbody");
@@ -3318,6 +3329,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

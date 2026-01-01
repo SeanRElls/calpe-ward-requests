@@ -1461,9 +1461,12 @@ const weeks = [...weekMap.values()].sort((a,b) => a.weekStart - b.weekStart);
       ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#e9fff0; border:1px solid #9fe0b1; color:#0b6b2b;">OPEN</span>`
       : `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#ffecec; border:1px solid #ffb3b3; color:#8a1f1f;">CLOSED</span>`;
 
-    const lockNote = periodClosed
-      ? `<div style="margin-top:4px; font-size:11px; color:#666;">🔒 Period locked (staff cannot edit)</div>`
-      : ``;
+const lockNote = `
+  <div style="margin-top:4px; font-size:11px; color:#666;">
+    ${isOpen ? "Requests open for staff" : "Requests locked for staff"}
+  </div>
+`;
+
 
     const btnText = isOpen ? "Close week" : "Open week";
 
@@ -1718,6 +1721,45 @@ if (adminGenerateBtn) {
   if (error) throw error;
 }
 
+    // OPTIONAL BASELINE RESET HELPERS
+async function resetWeeksAfterClose(periodId){
+  const { data: wkRows, error: wkErr } = await supabaseClient
+    .from("rota_dates")
+    .select("week_id")
+    .eq("period_id", periodId);
+
+  if (wkErr) throw wkErr;
+
+  const weekIds = [...new Set((wkRows || []).map(r => r.week_id).filter(Boolean))];
+  if (!weekIds.length) return;
+
+  const { error: resetErr } = await supabaseClient
+    .from("rota_weeks")
+    .update({ open_after_close: false })
+    .in("id", weekIds);
+
+  if (resetErr) throw resetErr;
+}
+
+async function resetWeeksFullyOpen(periodId){
+  const { data: wkRows, error: wkErr } = await supabaseClient
+    .from("rota_dates")
+    .select("week_id")
+    .eq("period_id", periodId);
+
+  if (wkErr) throw wkErr;
+
+  const weekIds = [...new Set((wkRows || []).map(r => r.week_id).filter(Boolean))];
+  if (!weekIds.length) return;
+
+  const { error: resetErr } = await supabaseClient
+    .from("rota_weeks")
+    .update({ open: true, open_after_close: false })
+    .in("id", weekIds);
+
+  if (resetErr) throw resetErr;
+}
+
 if (adminClosesAtSaveBtn) {
   adminClosesAtSaveBtn.addEventListener("click", async () => {
     if (!adminSelectedPeriodId) return alert("Pick a rota period first.");
@@ -1725,7 +1767,11 @@ if (adminClosesAtSaveBtn) {
 
     try {
       const iso = datetimeLocalToISOString(adminClosesAtInput.value);
+
       await setPeriodCloseTime(adminSelectedPeriodId, iso);
+
+      // ✅ close time should slam all 5 weeks shut by default
+      await resetWeeksAfterClose(adminSelectedPeriodId);
 
       await loadRota(); // refresh main
       await loadAdminPeriodsForDropdown(); // refresh admin cache + UI
@@ -1744,6 +1790,9 @@ if (adminClosesAtClearBtn) {
     try {
       await setPeriodCloseTime(adminSelectedPeriodId, null);
 
+      // Optional: when you clear the close time, reopen everything by default
+      await resetWeeksFullyOpen(adminSelectedPeriodId);
+
       await loadRota();
       await loadAdminPeriodsForDropdown();
       alert("Close time cleared.");
@@ -1753,7 +1802,6 @@ if (adminClosesAtClearBtn) {
     }
   });
 }
-
 
     /* =========================================================
        5) PIN MODAL (open/close)
@@ -2412,6 +2460,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

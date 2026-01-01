@@ -2564,7 +2564,16 @@ function closePinModal(){
   selectedUser = null;
   pinConfirmBtn.disabled = false;
 }
+    
+pinCancelBtn.addEventListener("click", closePinModal);
+modal.addEventListener("click", (e) => { if(e.target === modal) closePinModal(); });
 
+pinInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    pinConfirmBtn.click();
+  }
+});
 
     /* =========================================================
        6) AUTH (verify PIN via RPC)
@@ -3202,6 +3211,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

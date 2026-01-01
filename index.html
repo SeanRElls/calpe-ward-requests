@@ -2361,14 +2361,12 @@ if (pe.shift === "O") {
    ========================================================= */
 function applyUnlockState(){
   const rows = document.querySelectorAll("#rota tbody tr");
-  const periodClosed = isPeriodClosed(activePeriodObj); // ✅ 5-week lock
 
   rows.forEach(r => {
     if (r.classList.contains("section-row")) return;
 
     const userId = r.dataset.userId;
 
-    // you can log in, but editing depends on locks
     const isUnlocked =
       currentUser && (currentUser.is_admin || currentUser.id === userId);
 
@@ -2379,12 +2377,10 @@ function applyUnlockState(){
       const isClosedWeek = td.classList.contains("closed");
 
       // ✅ FINAL rule:
-      // - must be your row (or admin, if you ever decide)
-      // - week must be open
-      // - period must not be closed
-     const canEdit = !!isUnlocked && !isClosedWeek && !periodClosed;
-
-
+      // - must be your row (or admin)
+      // - week must be open (closed class blocks)
+      // periodClosed is NOT a blocker: week toggle overrides it
+      const canEdit = !!isUnlocked && !isClosedWeek;
 
       td.classList.toggle("editable", canEdit);
 
@@ -2406,6 +2402,7 @@ function applyUnlockState(){
   });
 }
 
+
     /* =========================================================
        10) BOOT
        ========================================================= */
@@ -2415,6 +2412,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

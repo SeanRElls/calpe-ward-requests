@@ -688,6 +688,13 @@
   const da = String(x.getDate()).padStart(2,"0");
   return `${y}-${m}-${da}`;
 }
+    
+function effectiveOpenForWeek(w){
+  if (!activePeriodObj) return !!w.open; // fallback
+  return isPeriodClosed(activePeriodObj)
+    ? !!w.openAfterClose
+    : !!w.open;
+}
 
     function startOfWeekSunday(dateObj){
       const d = new Date(dateObj);
@@ -2415,6 +2422,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

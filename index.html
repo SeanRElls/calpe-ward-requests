@@ -707,12 +707,13 @@ function groupDatesIntoWeeks(dates){
     const key = isoDate(ws);
 
     if (!map.has(key)) {
-      map.set(key, {
-        weekStart: ws,
-        days: [],
-        open: (item.rota_weeks && item.rota_weeks.open) ?? true,
-        weekId: item.rota_weeks?.id || null
-      });
+     map.set(key, {
+  weekStart: ws,
+  days: [],
+  open: (item.rota_weeks && item.rota_weeks.open) ?? true,
+  openAfterClose: (item.rota_weeks && item.rota_weeks.open_after_close) ?? false,
+  weekId: item.rota_weeks?.id || null
+});
     }
 
     const weekObj = map.get(key);
@@ -735,21 +736,27 @@ function groupDatesIntoWeeks(dates){
       const dd = addDays(w.weekStart, i);
       const ds = isoDate(dd);
 
-      const row = dayLookup.get(ds) || {
-        date: ds,
-        rota_weeks: { open: w.open, id: w.weekId }
-      };
+ const row = dayLookup.get(ds) || {
+  date: ds,
+  rota_weeks: { 
+    open: w.open,
+    open_after_close: w.openAfterClose,
+    id: w.weekId
+  }
+};
 
       ordered.push(row);
     }
 
-    weeks.push({
-      weekStart: w.weekStart,
-      weekEnd: addDays(w.weekStart, 6),
-      open: w.open,
-      weekId: w.weekId,
-      days: ordered
-    });
+weeks.push({
+  weekStart: w.weekStart,
+  weekEnd: addDays(w.weekStart, 6),
+  open: w.open,
+  openAfterClose: w.openAfterClose,
+  weekId: w.weekId,
+  days: ordered
+});
+
   }
 
   weeks.sort((a,b) => a.weekStart - b.weekStart);
@@ -1383,7 +1390,7 @@ async function loadAdminWeeks(periodId){
   // Pull all dates for the period, but we only need them to discover the weeks + open state
   const { data, error } = await supabaseClient
     .from("rota_dates")
-    .select("week_id, date, rota_weeks(id, open, week_start, week_end)")
+.select("date, week_id, period_id, rota_weeks(id, open, open_after_close)")
     .eq("period_id", periodId)
     .order("date");
 
@@ -1394,26 +1401,39 @@ async function loadAdminWeeks(periodId){
   }
 
   // Build unique weeks list from rota_dates (because rota_weeks doesn't have period_id)
-  const weekMap = new Map();
-  for (const row of (data || [])) {
-    const w = row.rota_weeks;
-    if (!w?.id) continue;
+const weekMap = new Map();
 
-    if (!weekMap.has(w.id)) {
-      weekMap.set(w.id, {
-        weekId: w.id,
-        open: !!w.open,
-        weekStart: w.week_start ? new Date(w.week_start) : startOfWeekSunday(new Date(row.date)),
-        weekEnd: w.week_end ? new Date(w.week_end) : addDays(startOfWeekSunday(new Date(row.date)), 6)
-      });
-    } else {
-      // If somehow duplicates disagree, prefer CLOSED (safety)
-      const existing = weekMap.get(w.id);
-      existing.open = existing.open && !!w.open;
-    }
+for (const row of (data || [])) {
+  const w = row.rota_weeks;
+  if (!w?.id) continue;
+
+  // Compute week start/end from the date in rota_dates
+  const ws = startOfWeekSunday(new Date(row.date));
+  const we = addDays(ws, 6);
+
+  if (!weekMap.has(w.id)) {
+    weekMap.set(w.id, {
+      weekId: w.id,
+      open: !!w.open,
+      openAfterClose: !!w.open_after_close,
+      weekStart: ws,
+      weekEnd: we
+    });
+  } else {
+    const existing = weekMap.get(w.id);
+
+    // Keep flags consistent (safety: if any row says closed, treat as closed)
+    existing.open = existing.open && !!w.open;
+    existing.openAfterClose = existing.openAfterClose && !!w.open_after_close;
+
+    // Expand bounds in case of weird data ordering
+    if (ws < existing.weekStart) existing.weekStart = ws;
+    if (we > existing.weekEnd) existing.weekEnd = we;
   }
+}
 
-  const weeks = [...weekMap.values()].sort((a,b) => a.weekStart - b.weekStart);
+const weeks = [...weekMap.values()].sort((a,b) => a.weekStart - b.weekStart);
+
 
   if (!weeks.length){
     adminWeeksList.textContent = "No weeks found for this period.";
@@ -1427,7 +1447,8 @@ async function loadAdminWeeks(periodId){
   adminWeeksList.innerHTML = weeks.map(w => {
     const s = fmt(w.weekStart);
     const e = fmt(w.weekEnd);
-    const isOpen = !!w.open;
+   const isOpen = periodClosed ? !!w.openAfterClose : !!w.open;
+
 
     const pill = isOpen
       ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:#e9fff0; border:1px solid #9fe0b1; color:#0b6b2b;">OPEN</span>`
@@ -1459,27 +1480,33 @@ async function loadAdminWeeks(periodId){
 
   // Bind toggles (admins can still manage weeks regardless of period close)
   adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      if (!currentUser?.is_admin) return;
+  btn.addEventListener("click", async () => {
+  if (!currentUser?.is_admin) return;
 
-      const weekId = btn.dataset.weekId;
-      const currentlyOpen = btn.dataset.weekOpen === "1";
+  const weekId = btn.dataset.weekId;
 
-      try {
-        const { error: e2 } = await supabaseClient
-          .from("rota_weeks")
-          .update({ open: !currentlyOpen })
-          .eq("id", weekId);
+  const p = periodsCache.find(x => String(x.id) === String(periodId));
+  const periodClosed = isPeriodClosed(p);
 
-        if (e2) throw e2;
+  const field = periodClosed ? "open_after_close" : "open";
+  const currentlyOpen = btn.dataset.weekOpen === "1";
 
-        await loadRota();
-        await loadAdminWeeks(periodId);
-      } catch (e) {
-        console.error(e);
-        alert("Failed to toggle week. Check console.");
-      }
-    });
+  try {
+    const { error: e2 } = await supabaseClient
+      .from("rota_weeks")
+      .update({ [field]: !currentlyOpen })
+      .eq("id", weekId);
+
+    if (e2) throw e2;
+
+    await loadRota();
+    await loadAdminWeeks(periodId);
+  } catch (e) {
+    console.error(e);
+    alert("Failed to toggle week. Check console.");
+  }
+});
+
   });
 }
 
@@ -1551,12 +1578,12 @@ for (let wi = 0; wi < 5; wi++){
   const ws = addDays(r.start, wi * 7);      // Sunday
   const we = addDays(ws, 6);               // Saturday
 
-  weeksPayload.push({
-    open: true,
-    week_start: isoDate(ws),               // ✅ required
-    week_end: isoDate(we)                  // ✅ required (your new error)
-  });
-}
+weeksPayload.push({
+  open: true,
+  open_after_close: false,   // ✅ new
+  week_start: isoDate(ws),
+  week_end: isoDate(we)
+});
 
 const { data: createdWeeks, error: wErr } = await supabaseClient
   .from("rota_weeks")
@@ -1832,11 +1859,7 @@ function updateBadges(){
 function openShiftModal(){
   if (!activeCell) return;
 
-  if (isPeriodClosed(activePeriodObj)) {
-    alert("Requests are closed for this 5-week period.");
-    activeCell = null;
-    return;
-  }
+
 
   shiftModal.style.display = "flex";
   shiftModal.setAttribute("aria-hidden", "false");
@@ -2091,7 +2114,7 @@ updateCloseLabel(selected);
 // -----------------------------
 const { data: dates, error: dateError } = await supabaseClient
   .from("rota_dates")
-  .select("date, week_id, period_id, rota_weeks(id, open)")
+ .select("date, week_id, period_id, rota_weeks(id, open, open_after_close)")
   .eq("period_id", activePeriodId)
   .order("date");
 
@@ -2135,7 +2158,9 @@ if (start && end) {
 // -----------------------------
 const weeks = groupDatesIntoWeeks(dates);
 render(users, weeks);
-
+const periodClosed = isPeriodClosed(activePeriodObj);
+const effectiveOpenForWeek = (w) => periodClosed ? !!w.openAfterClose : !!w.open;
+  
 // Period label
 if (weeks.length) {
   document.getElementById("periodLabel").textContent =
@@ -2168,7 +2193,8 @@ function render(users, weeks){
 
   weeks.forEach((w, idx) => {
     const th = document.createElement("th");
-    th.className = "week-head " + (w.open ? "" : "closed");
+    th.className = "week-head " + (effectiveOpenForWeek(w) ? "" : "closed");
+
 
     th.colSpan = 7;
     th.innerHTML = `
@@ -2203,7 +2229,8 @@ function render(users, weeks){
   weeks.forEach((w, idx) => {
     for(let i=0;i<7;i++){
       const th = document.createElement("th");
-      th.className = "day " + (w.open ? "" : "closed");
+     th.className = "day " + (effectiveOpenForWeek(w) ? "" : "closed");
+
       th.textContent = dayLetters[i];
       r2.appendChild(th);
     }
@@ -2227,7 +2254,8 @@ function render(users, weeks){
       const d = new Date(w.days[i].date);
       const isWeekend = (i === 0 || i === 6);
       const th = document.createElement("th");
-      th.className = "date " + (w.open ? "" : "closed") + (isWeekend ? " weekend" : "");
+     th.className = "date " + (effectiveOpenForWeek(w) ? "" : "closed") + (isWeekend ? " weekend" : "");
+
       th.textContent = d.getDate();
       r3.appendChild(th);
     }
@@ -2274,7 +2302,8 @@ function render(users, weeks){
           const dateStr = w.days[i].date;
 
           const td = document.createElement("td");
-          td.className = "cell" + (w.open ? "" : " closed") + (isWeekend ? " weekend" : "");
+          td.className = "cell" + (effectiveOpenForWeek(w) ? "" : " closed") + (isWeekend ? " weekend" : "");
+
           td.dataset.userId = u.id;
           td.dataset.date = dateStr;
 
@@ -2354,7 +2383,8 @@ function applyUnlockState(){
       // - must be your row (or admin, if you ever decide)
       // - week must be open
       // - period must not be closed
-      const canEdit = !!isUnlocked && !isClosedWeek && !periodClosed;
+     const canEdit = !!isUnlocked && !isClosedWeek;
+
 
       td.classList.toggle("editable", canEdit);
 
@@ -2385,6 +2415,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

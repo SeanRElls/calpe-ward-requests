@@ -1311,15 +1311,56 @@ async function upsertWeekComment(weekId, userId, comment){
   if (error) throw error;
   return data;
 }
+async function resetWeeksFullyOpen(periodId){
+  if (!currentUser?.is_admin) { alert("Admin only."); return; }
 
-    async function fetchRotaPeriods(){
-  // Staff: show active + non-hidden
-  // Admin: show all
+  const { data: wkRows, error: wkErr } = await supabaseClient
+    .from("rota_dates")
+    .select("week_id")
+    .eq("period_id", periodId);
+
+  if (wkErr) throw wkErr;
+
+  const weekIds = [...new Set((wkRows || []).map(r => r.week_id).filter(Boolean))];
+  if (!weekIds.length) return;
+
+  const { error: resetErr } = await supabaseClient
+    .from("rota_weeks")
+    .update({ open: true, open_after_close: true })
+    .in("id", weekIds);
+
+  if (resetErr) throw resetErr;
+}
+
+async function resetWeeksFullyClosed(periodId){
+  if (!currentUser?.is_admin) { alert("Admin only."); return; }
+
+  const { data: wkRows, error: wkErr } = await supabaseClient
+    .from("rota_dates")
+    .select("week_id")
+    .eq("period_id", periodId);
+
+  if (wkErr) throw wkErr;
+
+  const weekIds = [...new Set((wkRows || []).map(r => r.week_id).filter(Boolean))];
+  if (!weekIds.length) return;
+
+  const { error: resetErr } = await supabaseClient
+    .from("rota_weeks")
+    .update({ open: false, open_after_close: false })
+    .in("id", weekIds);
+
+  if (resetErr) throw resetErr;
+}
+
+    
+  async function fetchRotaPeriods(){
   let q = supabaseClient
     .from("rota_periods")
-.select("id, start_date, end_date, is_hidden, is_active, closes_at")
+    .select("id, name, start_date, end_date, is_hidden, is_active, closes_at")
     .order("start_date", { ascending: true });
 
+  // Staff: show active + non-hidden. Admin: show all.
   if (!currentUser?.is_admin) {
     q = q.or("is_hidden.eq.false,is_active.eq.true");
   }
@@ -1335,7 +1376,27 @@ function roleLabel(u){
      u.role_id === 2 ? "staff_nurse" :
      u.role_id === 3 ? "nursing_assistant" : "staff_nurse");
 }
-    
+    async function resetWeeksFullyClosed(periodId){
+  if (!currentUser?.is_admin) { alert("Admin only."); return; }
+
+  const { data: wkRows, error: wkErr } = await supabaseClient
+    .from("rota_dates")
+    .select("week_id")
+    .eq("period_id", periodId);
+
+  if (wkErr) throw wkErr;
+
+  const weekIds = [...new Set((wkRows || []).map(r => r.week_id).filter(Boolean))];
+  if (!weekIds.length) return;
+
+  const { error: resetErr } = await supabaseClient
+    .from("rota_weeks")
+    .update({ open: false, open_after_close: false })
+    .in("id", weekIds);
+
+  if (resetErr) throw resetErr;
+}
+
 function populatePeriodDropdown(periods){
   periodSelect.innerHTML = "";
 
@@ -2185,10 +2246,7 @@ adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
 /* =========================
    ADMIN PERIOD ACTIONS (v1)
    ========================= */
-    if (!currentUser?.is_admin) {
-  alert("Admin only.");
-  return;
-}
+  
 async function setActivePeriod(periodId){
   // 1) set all inactive
   const { error: e1 } = await supabaseClient
@@ -2433,7 +2491,7 @@ async function resetWeeksAfterClose(periodId){
   if (resetErr) throw resetErr;
 }
 
-async function setActivePeriod(periodId){
+async function resetWeeksDefaultForPeriod(periodId){
   if (!currentUser?.is_admin) { alert("Admin only."); return; }
   const { data: wkRows, error: wkErr } = await supabaseClient
     .from("rota_dates")
@@ -3161,6 +3219,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

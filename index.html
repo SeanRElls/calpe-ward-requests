@@ -1238,7 +1238,12 @@ function countUserRequestsThisWeek(userId, dateStr){
   return count;
 }
 
-
+function getSessionPinOrThrow(){
+  if (!currentUser) throw new Error("Not logged in.");
+  const pin = sessionStorage.getItem(pinKey(currentUser.id));
+  if (!pin) throw new Error("Missing session PIN. Log in again.");
+  return pin;
+}
     
 function nextOffPrioritySmart(currentRank, taken){
   // Cycle intent: null -> 1 -> 2 -> 3 -> null
@@ -1287,16 +1292,19 @@ function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
 
   return taken;
 }
-
 async function fetchWeekComments(weekId){
-  const { data, error } = await supabaseClient
-    .from("week_comments")
-    .select("user_id, comment, updated_at")
-    .eq("week_id", weekId);
+  const pin = getSessionPinOrThrow();
+
+  const { data, error } = await supabaseClient.rpc("get_week_comments", {
+    p_week_id: weekId,
+    p_user_id: currentUser.id,
+    p_pin: pin
+  });
 
   if (error) throw error;
   return data || [];
 }
+
 
 async function upsertWeekComment(weekId, userId, comment){
   if (!currentUser) throw new Error("Not logged in.");
@@ -1706,7 +1714,7 @@ document.addEventListener("click", async (e) => {
           const uid = String(r.user_id);
           const name = usersById.get(uid) || uid;
           const when = r.updated_at ? new Date(r.updated_at).toLocaleString("en-GB") : "";
-          const commentSafe = String(r.comment || "").replace(/</g, "&lt;");
+          const commentSafe = escapeHtml(r.comment || "");
 
           return `
             <div style="padding:6px 0; border-bottom:1px solid #eee;">
@@ -1742,7 +1750,7 @@ weekCommentSave.addEventListener("click", async () => {
     // Mark bubble for THIS week based on whether the user's comment is non-empty
     const selector = `.week-comment-btn[data-week-id="${CSS.escape(String(activeWeekIdForComment))}"]`;
     const btn = document.querySelector(selector);
-    if (btn) btn.classList.toggle("has-comment", !!weekCommentInput.value.trim());
+    if (btn) {   // safest: re-fetch to know if ANY comment exists   const rows = await fetchWeekComments(activeWeekIdForComment);   btn.classList.toggle("has-comment", (rows || []).length > 0); }
 
     closeWeekCommentModal();
   } catch (err) {
@@ -1834,9 +1842,13 @@ let adminUsersCache = [];
 let adminEditingUserId = null;
 
 function escapeHtml(s){
-  return String(s).replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return String(s)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 }
-
 async function loadAdminUsers(){
   if (!adminUsersList) return;
 
@@ -2203,9 +2215,12 @@ const lockNote = `
         </div>
 
         <button type="button"
-          class="week-toggle-btn"
-          data-week-id="${w.weekId}"
-          data-week-open="${isOpen ? "1" : "0"}">
+  class="week-toggle-btn"
+  data-week-id="${w.weekId}"
+  data-open="${w.open ? "1" : "0"}"
+  data-open-after-close="${w.openAfterClose ? "1" : "0"}"
+  data-period-closed="${periodClosed ? "1" : "0"}"
+>
           ${btnText}
         </button>
       </div>
@@ -2217,146 +2232,99 @@ adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
   btn.addEventListener("click", async () => {
     if (!currentUser?.is_admin) return;
 
+    const pin = getSessionPinOrThrow();
     const weekId = btn.dataset.weekId;
 
-    const p = periodsCache.find(x => String(x.id) === String(periodId));
-    const periodClosed = isPeriodClosed(p);
+    const open = btn.dataset.open === "1";
+    const openAfterClose = btn.dataset.openAfterClose === "1";
+    const periodClosed = btn.dataset.periodClosed === "1";
 
-    const field = periodClosed ? "open_after_close" : "open";
-    const currentlyOpen = btn.dataset.weekOpen === "1";
+    // Toggle the “active” field for the current period state
+const effectiveNow = periodClosed ? openAfterClose : open;
+const nextEffective = !effectiveNow;
+
+// keep both flags aligned to the *same* value
+const nextOpen = nextEffective;
+const nextOpenAfterClose = nextEffective;
 
     try {
-      const { error: e2 } = await supabaseClient
-        .from("rota_weeks")
-        .update({ [field]: !currentlyOpen })
-        .eq("id", weekId);
-
-      if (e2) throw e2;
+      const { error } = await supabaseClient.rpc("admin_set_week_open_flags", {
+        p_admin_id: currentUser.id,
+        p_pin: pin,
+        p_week_id: weekId,
+        p_open: nextOpen,
+        p_open_after_close: nextOpenAfterClose
+      });
+      if (error) throw error;
 
       await loadRota();
-      await loadAdminWeeks(periodId);
+      await loadAdminWeeks(periodId); 
     } catch (e) {
       console.error(e);
       alert("Failed to toggle week. Check console.");
     }
   });
 });
-}
-
+ }
 /* =========================
    ADMIN PERIOD ACTIONS (v1)
    ========================= */
   
 async function setActivePeriod(periodId){
-  // 1) set all inactive
-  const { error: e1 } = await supabaseClient
-    .from("rota_periods")
-    .update({ is_active: false })
-    .neq("id", periodId);
+  const pin = getSessionPinOrThrow();
 
-  if (e1) throw e1;
+  const { error } = await supabaseClient.rpc("admin_set_active_period", {
+    p_admin_id: currentUser.id,
+    p_pin: pin,
+    p_period_id: periodId
+  });
 
-  // 2) set chosen active
-  const { error: e2 } = await supabaseClient
-    .from("rota_periods")
-    .update({ is_active: true })
-    .eq("id", periodId);
-
-  if (e2) throw e2;
-
-  activePeriodId = periodId; // keep UI aligned
+  if (error) throw error;
+  activePeriodId = periodId;
 }
     
 async function toggleHiddenPeriod(periodId){
-  if (!currentUser?.is_admin) { alert("Admin only."); return; }
-  const p = periodsCache.find(x => String(x.id) === String(periodId));
-  if (!p) return;
+  if (!currentUser?.is_admin) throw new Error("Admin only.");
+  const pin = getSessionPinOrThrow();
 
-  const { error } = await supabaseClient
-    .from("rota_periods")
-    
-    .update({ is_hidden: !p.is_hidden })
-    .eq("id", periodId);
+  const { error } = await supabaseClient.rpc("admin_toggle_hidden_period", {
+    p_admin_id: currentUser.id,
+    p_pin: pin,
+    p_period_id: periodId
+  });
 
   if (error) throw error;
 }
 // create 5 week period 
 
-    async function generateNextFiveWeekPeriod(){
-  if (!currentUser?.is_admin) { alert("Admin only."); return; }
+async function generateNextFiveWeekPeriod(){
+  if (!currentUser?.is_admin) throw new Error("Admin only.");
+
+  const pin = getSessionPinOrThrow();
   const r = computeNextPeriodRange();
-  if (!r) throw new Error("No existing periods. Cannot generate next period.");
+  if (!r) throw new Error("No existing periods.");
 
   const startStr = isoDate(r.start);
   const endStr   = isoDate(r.end);
-      const periodName = `${fmt(r.start)} – ${fmt(r.end)}`;
+  const periodName = `${fmt(r.start)} – ${fmt(r.end)}`;
 
-  // 1) Create rota_periods row
-  const { data: newPeriod, error: pErr } = await supabaseClient
-  .from("rota_periods")
-  .insert({
-    name: periodName,          // ✅ REQUIRED COLUMN
-    start_date: startStr,
-    end_date: endStr,
-    is_hidden: false,
-    is_active: false
-  })
-    .select("id, start_date, end_date, is_hidden, is_active")
-    .single();
+  // 1️⃣ create period + weeks + dates server-side
+  const { data: periodId, error } = await supabaseClient.rpc(
+    "admin_create_five_week_period",
+    {
+      p_admin_id: currentUser.id,
+      p_pin: pin,
+      p_name: periodName,
+      p_start_date: startStr,
+      p_end_date: endStr
+    }
+  );
 
-  if (pErr) throw pErr;
+  if (error) throw error;
 
-  const periodId = newPeriod.id;
-
-// 2) Create 5 rota_weeks rows
-const weeksPayload = [];
-for (let wi = 0; wi < 5; wi++){
-  const ws = addDays(r.start, wi * 7);      // Sunday
-  const we = addDays(ws, 6);               // Saturday
-
-  weeksPayload.push({
-    open: true,
-    open_after_close: false,
-    week_start: isoDate(ws),
-    week_end: isoDate(we)
-  });
+  // ✅ return UUID only
+  return periodId;
 }
-
-// Insert all 5 weeks at once (AFTER the loop)
-const { data: createdWeeks, error: wErr } = await supabaseClient
-  .from("rota_weeks")
-  .insert(weeksPayload)
-  .select("id, open, open_after_close, week_start, week_end")
-  .order("week_start", { ascending: true });
-
-if (wErr) throw wErr;
-if (!createdWeeks || createdWeeks.length !== 5) {
-  throw new Error("Failed to create 5 rota_weeks rows.");
-}
-
-// 3) Create 35 rota_dates rows, each linked to the correct week
-const datesPayload = [];
-for (let wi = 0; wi < 5; wi++){
-  const weekId = createdWeeks[wi].id;
-
-  for (let di = 0; di < 7; di++){
-    const d = addDays(r.start, wi * 7 + di);
-    datesPayload.push({
-      date: isoDate(d),
-      period_id: periodId,
-      week_id: weekId
-    });
-  }
-}
-
-const { error: dErr } = await supabaseClient
-  .from("rota_dates")
-  .insert(datesPayload);
-
-if (dErr) throw dErr;
-
-return newPeriod;
-} // ✅ CLOSE generateNextFiveWeekPeriod
 
 
 
@@ -2407,21 +2375,26 @@ if (adminGenerateBtn) {
       adminGenerateBtn.disabled = true;
       adminGeneratePreview.textContent = "Generating…";
 
-      const newPeriod = await generateNextFiveWeekPeriod();
+      // ✅ RPC returns a UUID (string), not a period object
+      const newPeriodId = await generateNextFiveWeekPeriod();
 
+      // Refresh caches + UI
       await loadRota();
       await loadAdminPeriodsForDropdown();
       refreshGeneratePreview();
 
-      adminSelectedPeriodId = newPeriod.id;
-      activePeriodId = newPeriod.id;
+      // Select the new period everywhere
+      adminSelectedPeriodId = newPeriodId;
+      activePeriodId = newPeriodId;
 
-      await setActivePeriod(newPeriod.id);
+      // Optional: auto-set active so staff see it immediately
+      await setActivePeriod(newPeriodId);
 
+      // Refresh again so ★ active + dropdown state update
       await loadRota();
       await loadAdminPeriodsForDropdown();
 
-      alert(`Generated new period: ${fmt(new Date(newPeriod.start_date))} – ${fmt(new Date(newPeriod.end_date))}`);
+      alert("Generated new 5-week period.");
     } catch (e) {
       console.error(e);
 
@@ -2435,16 +2408,22 @@ if (adminGenerateBtn) {
       alert("Generate failed:\n\n" + msg);
     } finally {
       adminGenerateBtn.disabled = false;
+      // nice-to-have: restore preview if generation failed
+      refreshGeneratePreview();
     }
   });
 }
 
 
-    async function setPeriodCloseTime(periodId, closesAtIsoOrNull){
-  const { error } = await supabaseClient
-    .from("rota_periods")
-    .update({ closes_at: closesAtIsoOrNull })
-    .eq("id", periodId);
+async function setPeriodCloseTime(periodId, closesAtIsoOrNull){
+  const pin = getSessionPinOrThrow();
+
+  const { error } = await supabaseClient.rpc("admin_set_period_closes_at", {
+    p_admin_id: currentUser.id,
+    p_pin: pin,
+    p_period_id: periodId,
+    p_closes_at: closesAtIsoOrNull
+  });
 
   if (error) throw error;
 }
@@ -3245,6 +3224,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

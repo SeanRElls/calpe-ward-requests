@@ -457,25 +457,6 @@
       flex: 1;
       min-width: 110px;
     }
-/* =========================================================
-   ADMIN UI BUTTON OVERRIDES
-   Put this directly BELOW your global button{...} rule
-   ========================================================= */
-#adminModal button{
-  flex: 0 0 auto;         /* stop stretching */
-  min-width: auto;        /* stop forced width */
-  padding: 7px 10px;      /* smaller + cleaner */
-  border-radius: 10px;    /* less chunky */
-  font-size: 12px;
-  background: #fff;       /* no grey slabs */
-  border: 1px solid #d9dce1;
-}
-
-#adminModal button.primary{
-  background:#111;
-  border-color:#111;
-  color:#fff;
-}
 
     
     button.primary{
@@ -704,34 +685,81 @@
     white-space: nowrap;
   }
 }
-@media (max-width: 520px){
-  .rightbits{
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: space-between;
-    align-items: center;
-  }
+/* =========================
+   ADMIN MODAL – consistent, not chunky
+   ========================= */
+#adminModal .modal{
+  padding: 16px;
+  border-radius: 16px;
+  background: #fff;
+}
 
-  #periodSelect{
-    flex: 1 1 100%;
-    width: 100%;
-    height: 40px;
-    font-size: 13px;
-  }
+/* Stop global .btns flex rules messing up admin */
+#adminModal .btns{
+  justify-content: flex-end !important;
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+}
+#adminModal .btns button{
+  flex: 0 0 auto !important;
+  min-width: auto !important;
+}
 
-  #loginBadge{
-    flex: 1 1 auto;
-    max-width: calc(100% - 90px); /* leaves room for ADMIN */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+/* Tabs */
+#adminModal #adminTabPeriods,
+#adminModal #adminTabGenerate,
+#adminModal #adminTabUsers{
+  padding: 7px 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid #e3e6ea !important;
+  background: #fff !important;
+  font-weight: 700;
+}
+#adminModal button.primary{
+  background:#111 !important;
+  border-color:#111 !important;
+  color:#fff !important;
+}
 
-  #adminBadge{
-    flex: 0 0 auto;
-  }
+/* Cards in admin */
+#adminModal #adminViewUsers > div,
+#adminModal #adminViewPeriods > div,
+#adminModal #adminViewGenerate > div{
+  border-color: #eceef2 !important;
+  border-radius: 14px !important;
+}
+
+/* Users list + rows */
+#adminUsersList{
+  border: 1px solid #eceef2;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.user-row{
+  padding: 10px 12px;
+  align-items: center;
+}
+.user-actions button{
+  height: 32px !important;
+  padding: 6px 10px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+}
+
+/* Form controls */
+#adminViewUsers input,
+#adminViewUsers select{
+  height: 40px !important;
+  border-radius: 12px !important;
+  border-color: #e3e6ea !important;
+  font-size: 13px !important;
+}
+
+/* Close button */
+#adminModal #adminClose{
+  height: 36px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
 }
 
         
@@ -2994,6 +3022,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

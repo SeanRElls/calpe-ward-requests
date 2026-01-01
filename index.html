@@ -2539,36 +2539,32 @@ await resetWeeksOpen(adminSelectedPeriodId);
     /* =========================================================
        5) PIN MODAL (open/close)
        ========================================================= */
-    function openPinModal(user){
-      selectedUser = user;
+function openPinModal(user){
+  selectedUser = user;
 
-      pinTitle.textContent = `PIN for ${user.name}`;
-      pinDesc.textContent = "Enter your 4-digit PIN to unlock editing.";
-      pinErr.style.display = "none";
-      pinInput.value = "";
+  pinTitle.textContent = `PIN for ${user.name}`;
+  pinDesc.textContent = "Enter your 4-digit PIN to unlock editing.";
+  pinErr.style.display = "none";
+  pinInput.value = "";
 
-      modal.style.display = "flex";
-      modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");   // ✅ lock background scroll
 
-      setTimeout(() => pinInput.focus(), 50);
-    }
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden", "false");
 
-    function closePinModal(){
-      modal.style.display = "none";
-      modal.setAttribute("aria-hidden", "true");
-      selectedUser = null;
-      pinConfirmBtn.disabled = false;
-    }
+  setTimeout(() => pinInput.focus(), 50);
+}
 
-    pinCancelBtn.addEventListener("click", closePinModal);
-    modal.addEventListener("click", (e) => { if(e.target === modal) closePinModal(); });
+function closePinModal(){
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
 
-    pinInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        pinConfirmBtn.click();
-      }
-    });
+  document.body.classList.remove("modal-open"); // ✅ unlock background scroll
+
+  selectedUser = null;
+  pinConfirmBtn.disabled = false;
+}
+
 
     /* =========================================================
        6) AUTH (verify PIN via RPC)
@@ -2647,7 +2643,7 @@ function updateBadges(){
 function openShiftModal(){
   if (!activeCell) return;
 
-
+  document.body.classList.add("modal-open");   // ✅ lock background scroll
 
   shiftModal.style.display = "flex";
   shiftModal.setAttribute("aria-hidden", "false");
@@ -2656,13 +2652,12 @@ function openShiftModal(){
 function closeShiftModal(){
   shiftModal.style.display = "none";
   shiftModal.setAttribute("aria-hidden", "true");
+
+  document.body.classList.remove("modal-open"); // ✅ unlock background scroll
+
   activeCell = null;
 }
 
-shiftCancelBtn.addEventListener("click", closeShiftModal);
-shiftModal.addEventListener("click", (e) => {
-  if (e.target === shiftModal) closeShiftModal();
-});
 
 document.querySelectorAll(".shift-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
@@ -3207,6 +3202,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

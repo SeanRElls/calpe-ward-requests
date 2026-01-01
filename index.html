@@ -2634,14 +2634,12 @@ function updateBadges(){
   loginBadge.textContent = `Logged in: ${currentUser.name}`;
   adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
 
-  // ✅ hide Users tab for non-admin AFTER login
+  // Hide Users tab for non-admin (optional)
   if (!currentUser.is_admin) {
     document.getElementById("adminTabUsers")?.remove();
     document.getElementById("adminViewUsers")?.remove();
   }
-}inBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
 }
-
 /* =========================================================
    PATCH 2) SHIFT PICKER LOGIC (with OFF priority)
    ========================================================= */
@@ -3209,6 +3207,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

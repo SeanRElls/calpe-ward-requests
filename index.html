@@ -1627,14 +1627,10 @@ if (dErr) throw dErr;
 return newPeriod;
 } // ✅ CLOSE generateNextFiveWeekPeriod
 
-/* =========================
-   ADMIN GENERATE PREVIEW (stub)
-   ========================= */
-function computeNextPeriodRange(){
 
 
 /* =========================
-   ADMIN GENERATE PREVIEW (stub)
+   ADMIN GENERATE PREVIEW
    ========================= */
 function computeNextPeriodRange(){
   if (!periodsCache?.length) return null;
@@ -1647,16 +1643,10 @@ function computeNextPeriodRange(){
 
   const lastEnd = new Date(latest.end_date);
 
-  // Start from the day after the latest period ends
   let start = addDays(lastEnd, 1);
+  while (start.getDay() !== 0) start = addDays(start, 1);
 
-  // Move FORWARD to the next Sunday (never backwards)
-  while (start.getDay() !== 0) {
-    start = addDays(start, 1);
-  }
-
-  const end = addDays(start, 34); // 35 days total
-
+  const end = addDays(start, 34);
   return { start, end, latest };
 }
 
@@ -1670,7 +1660,6 @@ function refreshGeneratePreview(){
   adminGeneratePreview.textContent =
     `Next period: ${fmt(r.start)} – ${fmt(r.end)} (5 weeks, Sun–Sat).`;
 }
-
 
 if (adminGenerateBtn) {
   adminGenerateBtn.addEventListener("click", async () => {
@@ -2425,6 +2414,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

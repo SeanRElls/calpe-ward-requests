@@ -1973,26 +1973,14 @@ adminSaveUserBtn?.addEventListener("click", async () => {
   if (pin && !/^\d{4}$/.test(pin)) return alert("PIN must be 4 digits.");
 
   try {
-    if (!adminEditingUserId){
-      const { data, error } = await supabaseClient
-        .from("users")
-        .insert({ name, role_id, is_admin: false, is_active: true })
-        .select("id")
-        .single();
+    const { data: userId, error } = await supabaseClient.rpc("admin_upsert_user", {
+      p_user_id: adminEditingUserId, // null = add
+      p_name: name,
+      p_role_id: role_id
+    });
+    if (error) throw error;
 
-      if (error) throw error;
-
-      if (pin) await adminSetUserPin(data.id, pin);
-    } else {
-      const { error } = await supabaseClient
-        .from("users")
-        .update({ name, role_id })
-        .eq("id", adminEditingUserId);
-
-      if (error) throw error;
-
-      if (pin) await adminSetUserPin(adminEditingUserId, pin);
-    }
+    if (pin) await adminSetUserPin(userId, pin);
 
     await loadRota();
     await loadAdminUsers();
@@ -3239,6 +3227,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

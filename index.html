@@ -1238,6 +1238,8 @@ function countUserRequestsThisWeek(userId, dateStr){
   return count;
 }
 
+
+    
 function nextOffPrioritySmart(currentRank, taken){
   // Cycle intent: null -> 1 -> 2 -> 3 -> null
   let desired =
@@ -1423,6 +1425,20 @@ let currentUser = null;      // user object when logged in (by PIN)
 let selectedUser = null;     // user you clicked before PIN entry
     let usersById = new Map();
 let sessionPin = null; // store PIN in memory only (not localStorage)
+
+
+    function pinKey(userId){ return `calpeward.pin.${userId}`; }
+
+function setSessionPin(userId, pin){
+  sessionPin = pin;
+  sessionStorage.setItem(pinKey(userId), pin);
+}
+
+function clearSessionPin(userId){
+  sessionPin = null;
+  if (userId) sessionStorage.removeItem(pinKey(userId));
+}
+    
 /* =========================================================
    3b) STATE (editing + requests)
    ========================================================= */
@@ -2613,7 +2629,7 @@ pinInput.addEventListener("keydown", (e) => {
         }
 
   currentUser = selectedUser;
-sessionPin = pin; // ✅ critical (used for saving requests)
+setSessionPin(selectedUser.id, pin); // ✅ critical (used for saving requests)
 localStorage.setItem(STORAGE_KEY, currentUser.id);
 
 closePinModal();
@@ -2854,16 +2870,8 @@ if (userError) {
 }
 
 usersById = new Map((users || []).map(u => [u.id, u.name]));
+const savedId = localStorage.getItem(STORAGE_KEY);
   
-  // -----------------------------
-  // 7B) Restore login (localStorage)
-  // -----------------------------
-  const savedId = localStorage.getItem(STORAGE_KEY);
-  if (savedId) {
-    const found = users.find(u => u.id === savedId);
-    if (found) currentUser = found;
-    sessionPin = null; // ✅ force re-PIN before any write
-  }
 
 // -----------------------------
 // 7C) Load rota periods (dropdown + active)
@@ -3211,6 +3219,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

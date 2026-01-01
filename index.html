@@ -2822,15 +2822,18 @@ function toast(msg){
 
 // Upsert a single cell to Supabase
 async function upsertRequestCell(userId, date, value, importantRank){
-  if (!sessionPin) throw new Error("Not logged in (no PIN).");
+  if (!currentUser) throw new Error("Not logged in.");
 
-  const { data, error } = await supabaseClient.rpc("save_request_with_pin", {
-    p_user_id: userId,
-    p_pin: sessionPin,
-    p_date: date,
-    p_value: value,
-    p_important_rank: importantRank ?? null
-  });
+  const { data, error } = await supabaseClient
+    .from("requests")
+    .upsert({
+      user_id: userId,
+      date,
+      value,
+      important_rank: importantRank ?? null
+    }, { onConflict: "user_id,date" })
+    .select()
+    .single();
 
   if (error) throw error;
   return data;
@@ -2840,13 +2843,13 @@ async function upsertRequestCell(userId, date, value, importantRank){
 
 // Delete a cell completely (optional, but nice for CLEAR)
 async function deleteRequestCell(userId, date){
-  if (!sessionPin) throw new Error("Not logged in (no PIN).");
+  if (!currentUser) throw new Error("Not logged in.");
 
-  const { error } = await supabaseClient.rpc("clear_request_with_pin", {
-    p_user_id: userId,
-    p_pin: sessionPin,
-    p_date: date
-  });
+  const { error } = await supabaseClient
+    .from("requests")
+    .delete()
+    .eq("user_id", userId)
+    .eq("date", date);
 
   if (error) throw error;
 }
@@ -2862,6 +2865,19 @@ const { data: users, error: userError } = await supabaseClient
   .from("users")
   .select("id, name, role_id, is_admin, is_active, roles(name)")
   .order("name");
+
+  // 🔐 Restore logged-in user from localStorage (ONE TIME LOGIN)
+const savedId = localStorage.getItem(STORAGE_KEY);
+if (savedId && !currentUser) {
+  const restored = users.find(u => String(u.id) === String(savedId));
+  if (restored) {
+    currentUser = restored;
+    updateBadges();
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+  
 
 if (userError) {
   console.error("Users load error:", userError);
@@ -3219,6 +3235,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

@@ -204,12 +204,19 @@
     table tr:last-child td{ border-bottom: 1px solid var(--grid); }
     table tr th{ border-bottom: 1px solid var(--grid); }
 
-    thead th{
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: var(--header);
-    }
+thead th{
+  position: sticky;
+  z-index: 5;
+  background: var(--header);
+}
+    
+/* Stack the 3 sticky header rows */
+thead tr:nth-child(1) th { top: 0; z-index: 30; }     /* week range row */
+thead tr:nth-child(2) th { top: 28px; z-index: 29; }  /* day letters row */
+thead tr:nth-child(3) th { top: 50px; z-index: 28; }  /* date numbers row */
+
+/* Keep the sticky Name header above the others */
+thead tr th.name-col { z-index: 40; }
 
 .name-col{
   position: sticky;
@@ -3608,6 +3615,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

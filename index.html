@@ -1921,7 +1921,7 @@ async function loadAdminUsers(){
   const { data, error } = await supabaseClient
     .from("users")
     .select("id, name, role_id, is_admin, is_active, roles(name)")
-    .order("name");
+  .order("created_at", { ascending: true })
 
   if (error) {
     console.error(error);
@@ -3360,6 +3360,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

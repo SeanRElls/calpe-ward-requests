@@ -607,6 +607,103 @@
   }
 }
 
+    /* =========================================================
+   USER MODAL: reuse Admin styling so it doesn't look like 2009
+   ========================================================= */
+
+#userModal .modal{
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--card);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--ink);
+}
+
+#userModal h2{
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin-bottom: 6px;
+}
+
+#userModal .subtitle{
+  font-size: 12px;
+  color: #667085;
+}
+
+/* Card blocks inside the modal */
+#userModal .modal > div{
+  border: 1px solid var(--line) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+}
+
+/* Inputs: match admin compact style */
+#userModal input{
+  box-sizing: border-box !important;
+  height: 30px !important;
+  padding: 4px 10px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--line) !important;
+  font-size: 12px !important;
+  background: #fff !important;
+  letter-spacing: 2px !important; /* was comically wide */
+  text-align: center;
+  flex: 1 1 140px;
+  min-width: 140px !important;
+}
+
+/* Buttons: same as admin */
+#userModal button{
+  box-sizing: border-box !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  min-width: auto !important;
+  flex: 0 0 auto !important;
+  border: 1px solid #d6dbe4 !important;
+  background: #fff !important;
+  color: var(--ink) !important;
+}
+
+#userModal button:hover{
+  background: #f8fafc !important;
+}
+
+/* Primary button: match admin primary */
+#userModal button.primary{
+  background: var(--accent-weak) !important;
+  border: 1px solid rgba(37,99,235,0.28) !important;
+  color: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+#userModal button.primary:hover{
+  background: var(--accent-weak-hover) !important;
+  border-color: rgba(37,99,235,0.38) !important;
+}
+
+/* Tidy row + footer buttons */
+#userModal .row{
+  gap: 8px;
+}
+
+#userModal .btns{
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#userModal .btns:last-of-type{
+  justify-content: space-between;
+}
+
+/* Optional: make the bottom actions not look like slabs */
+#userLogout, #userClose{
+  flex: 1 1 0 !important;
+}
+
+    
      /* =========================
    MOBILE HEADER LAYOUT (FINAL)
    ========================= */
@@ -3521,6 +3618,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

@@ -2969,7 +2969,7 @@ async function loadRota() {
   const { data: users, error: userError } = await supabaseClient
     .from("users")
     .select("id, name, role_id, is_admin, is_active, roles(name)")
-    .order("name");
+    .order("created_at", { ascending: true })
 
   if (userError) {
     console.error("Users load error:", userError);
@@ -3360,6 +3360,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

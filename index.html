@@ -2918,7 +2918,9 @@ document.addEventListener("keydown", (e) => {
   if (modal && modal.style.display === "flex") closePinModal();
   if (weekCommentModal && weekCommentModal.style.display === "flex") closeWeekCommentModal();
   if (adminModal && adminModal.style.display === "flex") closeAdminConsole();
+  if (userModal && userModal.style.display === "flex") closeUserModal(); // ← THIS
 });
+
 
     
 document.querySelectorAll(".shift-btn").forEach(btn => {
@@ -3519,6 +3521,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

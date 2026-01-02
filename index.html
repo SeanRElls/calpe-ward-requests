@@ -1094,6 +1094,40 @@ border-color: rgba(37,99,235,0.22);
   </div>
 </div>
 
+  <!-- =========================
+     USER MENU MODAL (Account)
+     ========================= -->
+<div class="modal-backdrop" id="userModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="userTitle">
+    <h2 id="userTitle">Your account</h2>
+    <p class="subtitle" id="userMeta">—</p>
+
+    <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin:10px 0;">
+      <div style="font-weight:800; margin-bottom:6px;">Change PIN</div>
+
+      <div class="row" style="gap:8px;">
+        <input id="userOldPin" class="pin" inputmode="numeric" maxlength="4" placeholder="Current PIN" style="letter-spacing:8px; min-width:160px;" />
+        <input id="userNewPin" class="pin" inputmode="numeric" maxlength="4" placeholder="New PIN" style="letter-spacing:8px; min-width:160px;" />
+        <input id="userNewPin2" class="pin" inputmode="numeric" maxlength="4" placeholder="Repeat new PIN" style="letter-spacing:8px; min-width:160px;" />
+      </div>
+
+      <div class="btns" style="margin-top:10px;">
+        <button id="userSavePin" class="primary" type="button">Save new PIN</button>
+      </div>
+
+      <div class="err" id="userPinErr">Error.</div>
+      <div class="subtitle" id="userPinOk" style="display:none; margin-top:8px; color:#0b6b2b; font-weight:700;">
+        PIN updated.
+      </div>
+    </div>
+
+    <div class="btns" style="margin-top:12px;">
+      <button id="userLogout" type="button">Log out</button>
+      <button id="userClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
 
   <script>
     /* =========================================================
@@ -1539,6 +1573,18 @@ const adminSaveUserBtn  = document.getElementById("adminSaveUserBtn");
 const adminCancelUserEditBtn = document.getElementById("adminCancelUserEditBtn");
 const adminUserEditHelp = document.getElementById("adminUserEditHelp");
 
+// User modal refs
+const userModal = document.getElementById("userModal");
+const userCloseBtn = document.getElementById("userClose");
+const userLogoutBtn = document.getElementById("userLogout");
+
+const userMeta = document.getElementById("userMeta");
+const userOldPin = document.getElementById("userOldPin");
+const userNewPin = document.getElementById("userNewPin");
+const userNewPin2 = document.getElementById("userNewPin2");
+const userSavePin = document.getElementById("userSavePin");
+const userPinErr = document.getElementById("userPinErr");
+const userPinOk = document.getElementById("userPinOk");
 
 
     // Shift modal refs
@@ -1673,7 +1719,121 @@ renderCloseLabel();
 closeCountdownTimer = setInterval(renderCloseLabel, 30000);
 }
 
+function openUserModal(){
+  if (!currentUser) return;
 
+  userMeta.textContent = `${currentUser.name}${currentUser.is_admin ? " (admin)" : ""}`;
+  userOldPin.value = "";
+  userNewPin.value = "";
+  userNewPin2.value = "";
+
+  userPinErr.style.display = "none";
+  userPinOk.style.display = "none";
+
+  document.body.classList.add("modal-open");
+  userModal.style.display = "flex";
+  userModal.setAttribute("aria-hidden", "false");
+
+  setTimeout(() => userOldPin.focus(), 50);
+}
+
+function closeUserModal(){
+  userModal.style.display = "none";
+  userModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+}
+
+function logout(){
+  if (!currentUser) return;
+
+  // clear stored login + pin
+  localStorage.removeItem(STORAGE_KEY);
+  clearSessionPin(currentUser.id);
+
+  // clear state
+  currentUser = null;
+  selectedUser = null;
+  sessionPin = null;
+
+  closeUserModal();
+  updateBadges();
+  applyUnlockState();
+
+  // refresh UI (so any "editable" disappears + dropdown filtering updates)
+  loadRota();
+}
+
+// Wire badge click
+loginBadge.style.cursor = "pointer";
+loginBadge.addEventListener("click", () => {
+  if (!currentUser) return;        // don’t open it when not logged in
+  openUserModal();
+});
+
+// Close actions
+userCloseBtn?.addEventListener("click", closeUserModal);
+userLogoutBtn?.addEventListener("click", logout);
+userModal?.addEventListener("click", (e) => {
+  if (e.target === userModal) closeUserModal();
+});
+
+// Save PIN
+userSavePin?.addEventListener("click", async () => {
+  if (!currentUser) return;
+
+  userPinErr.style.display = "none";
+  userPinOk.style.display = "none";
+
+  const oldPin = userOldPin.value.trim();
+  const newPin = userNewPin.value.trim();
+  const newPin2 = userNewPin2.value.trim();
+
+  if (!/^\d{4}$/.test(oldPin)) return showUserPinErr("Current PIN must be 4 digits.");
+  if (!/^\d{4}$/.test(newPin)) return showUserPinErr("New PIN must be 4 digits.");
+  if (newPin !== newPin2) return showUserPinErr("New PINs do not match.");
+  if (oldPin === newPin) return showUserPinErr("New PIN must be different.");
+
+  userSavePin.disabled = true;
+
+  try {
+    // OPTIONAL: verify old pin first (you already have this RPC)
+    const { data: ok, error: vErr } = await supabaseClient.rpc("verify_user_pin", {
+      p_user_id: currentUser.id,
+      p_pin: oldPin
+    });
+    if (vErr) throw vErr;
+    if (ok !== true) return showUserPinErr("Current PIN is incorrect.");
+
+    // Change pin (YOU need this RPC - see SQL below)
+    const { error: cErr } = await supabaseClient.rpc("change_user_pin", {
+      p_user_id: currentUser.id,
+      p_old_pin: oldPin,
+      p_new_pin: newPin
+    });
+    if (cErr) throw cErr;
+
+    // Update session pin to the new one so their session keeps working
+    setSessionPin(currentUser.id, newPin);
+
+    userPinOk.style.display = "block";
+    userOldPin.value = "";
+    userNewPin.value = "";
+    userNewPin2.value = "";
+
+  } catch (e) {
+    console.error(e);
+    showUserPinErr("Failed to update PIN. Check console.");
+  } finally {
+    userSavePin.disabled = false;
+  }
+});
+
+function showUserPinErr(msg){
+  userPinErr.textContent = msg;
+  userPinErr.style.display = "block";
+}
+
+    
 function openWeekCommentModal(){
   if (!activeWeekIdForComment) return;
   document.body.classList.add("modal-open");  // ✅
@@ -2699,19 +2859,18 @@ updateCloseLabel(activePeriodObj);
 function updateBadges(){
   if(!currentUser){
     loginBadge.textContent = "Not logged in";
+    loginBadge.style.cursor = "default";
     adminBadge.style.display = "none";
     sessionPin = null;
-
-    // hide users tab button only
     if (adminTabUsers) adminTabUsers.style.display = "none";
     return;
   }
 
   loginBadge.textContent = `Logged in: ${currentUser.name}`;
+  loginBadge.style.cursor = "pointer";
   adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
-
-  // show/hide users tab button only
   if (adminTabUsers) adminTabUsers.style.display = currentUser.is_admin ? "" : "none";
+}
 
   // DO NOT touch adminViewUsers here.
   // Tab visibility is handled by showAdminTab().
@@ -3360,6 +3519,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

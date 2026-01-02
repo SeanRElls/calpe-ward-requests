@@ -702,6 +702,34 @@
 #userLogout, #userClose{
   flex: 1 1 0 !important;
 }
+/* Stack the 3 PIN inputs instead of row-across */
+#userModal .row{
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+/* Inputs full width and consistent */
+#userModal input{
+  width: 100% !important;
+  min-width: 0 !important;
+  text-align: left;            /* optional: looks less "form kiosk" */
+  letter-spacing: 2px !important;
+}
+
+/* Put the save button on its own row, right aligned */
+#userModal #userSavePin{
+  align-self: flex-end !important;
+}
+
+/* Bottom actions: keep on one row, logout left, close right */
+#userModal .btns:last-of-type{
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+#userModal #userLogout{ order: 1; }
+#userModal #userClose{ order: 2; }
 
     
      /* =========================
@@ -1208,9 +1236,9 @@ border-color: rgba(37,99,235,0.22);
         <input id="userNewPin2" class="pin" inputmode="numeric" maxlength="4" placeholder="Repeat new PIN" style="letter-spacing:8px; min-width:160px;" />
       </div>
 
-      <div class="btns" style="margin-top:10px;">
-        <button id="userSavePin" class="primary" type="button">Save new PIN</button>
-      </div>
+      <div class="btns" style="margin-top:10px; justify-content:flex-end;">
+  <button id="userSavePin" class="primary" type="button">Save new PIN</button>
+</div>
 
       <div class="err" id="userPinErr">Error.</div>
       <div class="subtitle" id="userPinOk" style="display:none; margin-top:8px; color:#0b6b2b; font-weight:700;">
@@ -3618,100 +3646,6 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

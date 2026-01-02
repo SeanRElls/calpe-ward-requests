@@ -204,19 +204,47 @@
     table tr:last-child td{ border-bottom: 1px solid var(--grid); }
     table tr th{ border-bottom: 1px solid var(--grid); }
 
+/* =========================================================
+   iOS Safari sticky header: no gaps, no jitter
+   ========================================================= */
+:root{
+  --h-week: 28px; /* row 1 height */
+  --h-day: 22px;  /* row 2 height */
+  --h-date: 22px; /* row 3 height */
+}
+
 thead th{
   position: sticky;
-  z-index: 5;
   background: var(--header);
-}
-    
-/* Stack the 3 sticky header rows */
-thead tr:nth-child(1) th { top: 0; z-index: 30; }     /* week range row */
-thead tr:nth-child(2) th { top: 28px; z-index: 29; }  /* day letters row */
-thead tr:nth-child(3) th { top: 50px; z-index: 28; }  /* date numbers row */
+  padding: 0 !important;
+  line-height: 1 !important;
+  background-clip: padding-box;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 
-/* Keep the sticky Name header above the others */
-thead tr th.name-col { z-index: 40; }
+  /* single border strategy (prevents tiny seams) */
+  border-bottom: 1px solid var(--grid) !important;
+}
+
+/* Force exact heights so Safari can't invent 0.5px gaps */
+thead th.week-label{ height: var(--h-week); }
+thead th.day{        height: var(--h-day); }
+thead th.date{       height: var(--h-date); }
+
+/* Stack sticky rows using the exact same heights */
+thead tr:nth-child(1) th{ top: 0; z-index: 30; }
+thead tr:nth-child(2) th{ top: var(--h-week); z-index: 29; }
+thead tr:nth-child(3) th{ top: calc(var(--h-week) + var(--h-day)); z-index: 28; }
+
+/* Remove top borders on lower header rows to avoid "double-border gaps" */
+thead tr:nth-child(2) th,
+thead tr:nth-child(3) th{
+  border-top: 0 !important;
+}
+
+/* Keep Name column pinned and layered correctly */
+thead .name-col{ z-index: 50 !important; background: var(--header) !important; }
+.name-col{ position: sticky; left: 0; z-index: 6; background:#fff; }
 
 .name-col{
   position: sticky;
@@ -604,8 +632,8 @@ thead tr th.name-col { z-index: 40; }
   flex: 0 0 auto;
 }
 
-    .week-head { z-index: 9; }
-.week-comment-btn { position: relative; z-index: 10; }
+.week-head{ z-index: 35; }
+.week-comment-btn{ position: relative; z-index: 60; }
 
     
   @media (max-width: 480px){
@@ -3615,6 +3643,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

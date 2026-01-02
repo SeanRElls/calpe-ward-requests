@@ -205,107 +205,59 @@
     table tr th{ border-bottom: 1px solid var(--grid); }
 
 /* =========================================================
-   iOS Safari sticky header: no gaps, no jitter
+   STICKY HEADER (single source of truth)
+   Fixes iOS "see-through" + keeps your old look
    ========================================================= */
+
 :root{
   --h-week: 28px; /* row 1 height */
-  --h-day: 22px;  /* row 2 height */
+  --h-day:  22px; /* row 2 height */
   --h-date: 22px; /* row 3 height */
 }
 
-thead th{
-  position: sticky;
-  background: var(--header);
-  padding: 0 !important;
-  line-height: 1 !important;
-  background-clip: padding-box;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-
-  /* single border strategy (prevents tiny seams) */
-  border-bottom: 1px solid var(--grid) !important;
+/* Make sure the scroll container forms a stacking context */
+.rota-scroll{
+  position: relative;
+  isolation: isolate; /* stops weird bleed-through compositing */
 }
 
-/* Force exact heights so Safari can't invent 0.5px gaps */
-thead th.week-label{ height: var(--h-week); }
-thead th.day{        height: var(--h-day); }
-thead th.date{       height: var(--h-date); }
-
-/* Stack sticky rows using the exact same heights */
-thead tr:nth-child(1) th{ top: 0; z-index: 30; }
-thead tr:nth-child(2) th{ top: var(--h-week); z-index: 29; }
-thead tr:nth-child(3) th{ top: calc(var(--h-week) + var(--h-day)); z-index: 28; }
-
-/* Remove top borders on lower header rows to avoid "double-border gaps" */
-thead tr:nth-child(2) th,
-thead tr:nth-child(3) th{
-  border-top: 0 !important;
-}
-
-/* Keep Name column pinned and layered correctly */
-thead .name-col{ z-index: 50 !important; background: var(--header) !important; }
-.name-col{ position: sticky; left: 0; z-index: 6; background:#fff; }
-
-.name-col{
-  position: sticky;
-  left: 0;
-  z-index: 6;
-  background: #fff;
-  text-align: left;
-  padding: 0 8px;
-  font-weight: 650;
-  border-right: 2px solid var(--sep);
-
-  width: clamp(140px, 38vw, 220px);
-  min-width: clamp(140px, 38vw, 220px);
-  max-width: clamp(140px, 38vw, 220px);
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-    /* =========================================================
-   iOS Safari: kill sticky header seams (OVERLAP rows)
-   Put this AFTER your current thead sticky rules
-   ========================================================= */
-
+/* Header cells: force truly opaque paint on iOS */
 thead th{
   position: sticky;
   background: var(--header) !important;
   background-clip: padding-box;
+  opacity: 1;
+
+  /* force its own composited layer */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 
-  /* Don’t rely on borders between sticky rows */
-  border-top: 0 !important;
+  /* crucial: always above tbody */
+  z-index: 100;
 }
 
-/* ✅ Overlap each lower sticky row by 1px so no “gap” can appear */
-thead tr:nth-child(1) th{ top: 0; z-index: 30; }
-thead tr:nth-child(2) th{ top: calc(var(--h-week) - 1px); z-index: 29; }
-thead tr:nth-child(3) th{ top: calc(var(--h-week) + var(--h-day) - 2px); z-index: 28; }
+/* Exact heights so Safari can’t invent half-pixel gaps */
+thead tr:nth-child(1) th{ height: var(--h-week); top: 0; z-index: 130; background:#ededed !important; }
+thead tr:nth-child(2) th{ height: var(--h-day);  top: calc(var(--h-week) - 1px); z-index: 120; }
+thead tr:nth-child(3) th{ height: var(--h-date); top: calc(var(--h-week) + var(--h-day) - 2px); z-index: 110; }
 
-/* ✅ Only draw the “real” bottom line once, on the last header row */
-thead tr:nth-child(1) th,
-thead tr:nth-child(2) th{
-  border-bottom: 0 !important;
-}
-
-/* Draw separator line with shadow instead of border (Safari behaves better) */
+/* Draw the bottom line once */
 thead tr:nth-child(3) th{
-  border-bottom: 0 !important;
   box-shadow: inset 0 -1px 0 var(--grid);
 }
 
-/* Optional: keep vertical grid lines consistent in header */
-thead th{
-  border-right: 1px solid var(--grid-soft) !important;
+/* Keep the pinned name header above everything */
+thead .name-col{
+  z-index: 200 !important;
+  background: #ededed !important;
 }
-thead tr th:first-child{
-  border-left: 1px solid var(--grid) !important;
+
+/* Keep body cells below header no matter what Safari feels like */
+tbody td{
+  position: relative;
+  z-index: 1;
 }
 
     
@@ -3687,6 +3639,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

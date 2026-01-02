@@ -607,23 +607,23 @@
   }
 }
 
-    /* =========================================================
-   USER MODAL: reuse Admin styling so it doesn't look like 2009
-   ========================================================= */
+/* =========================
+   USER MODAL - match ADMIN
+   ========================= */
 
 #userModal .modal{
   padding: 14px;
   border-radius: 16px;
   background: var(--card);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
 #userModal h2{
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.2px;
-  margin-bottom: 6px;
+  margin: 0 0 6px;
 }
 
 #userModal .subtitle{
@@ -631,107 +631,69 @@
   color: #667085;
 }
 
-/* Card blocks inside the modal */
+/* card block */
 #userModal .modal > div{
-  border: 1px solid var(--line) !important;
-  border-radius: 14px !important;
-  background: #fff !important;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
 }
 
-/* Inputs: match admin compact style */
-#userModal input{
-  box-sizing: border-box !important;
-  height: 30px !important;
-  padding: 4px 10px !important;
-  border-radius: 10px !important;
-  border: 1px solid var(--line) !important;
-  font-size: 12px !important;
-  background: #fff !important;
-  letter-spacing: 2px !important; /* was comically wide */
+/* stack the 3 inputs */
+#userModal .row{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* compact inputs */
+#userModal input.user-pin{
+  height: 30px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  background: #fff;
+  letter-spacing: 2px;
   text-align: center;
-  flex: 1 1 140px;
-  min-width: 140px !important;
+  box-sizing: border-box;
 }
 
-/* Buttons: same as admin */
+/* buttons like admin */
 #userModal button{
-  box-sizing: border-box !important;
-  height: 30px !important;
-  padding: 0 12px !important;
-  border-radius: 999px !important;
-  font-size: 12px !important;
-  min-width: auto !important;
-  flex: 0 0 auto !important;
-  border: 1px solid #d6dbe4 !important;
-  background: #fff !important;
-  color: var(--ink) !important;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid #d6dbe4;
+  background: #fff;
+  color: var(--ink);
+  min-width: auto;
+  flex: 0 0 auto;
 }
 
-#userModal button:hover{
-  background: #f8fafc !important;
-}
-
-/* Primary button: match admin primary */
 #userModal button.primary{
-  background: var(--accent-weak) !important;
-  border: 1px solid rgba(37,99,235,0.28) !important;
-  color: var(--accent) !important;
-  box-shadow: none !important;
+  background: var(--accent-weak);
+  border: 1px solid rgba(37,99,235,0.28);
+  color: var(--accent);
 }
 
 #userModal button.primary:hover{
-  background: var(--accent-weak-hover) !important;
-  border-color: rgba(37,99,235,0.38) !important;
+  background: var(--accent-weak-hover);
+  border-color: rgba(37,99,235,0.38);
 }
 
-/* Tidy row + footer buttons */
-#userModal .row{
-  gap: 8px;
-}
-
-#userModal .btns{
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-#userModal .btns:last-of-type{
-  justify-content: space-between;
-}
-
-/* Optional: make the bottom actions not look like slabs */
-#userLogout, #userClose{
-  flex: 1 1 0 !important;
-}
-/* Stack the 3 PIN inputs instead of row-across */
-#userModal .row{
-  flex-direction: column !important;
-  align-items: stretch !important;
-}
-
-/* Inputs full width and consistent */
-#userModal input{
-  width: 100% !important;
-  min-width: 0 !important;
-  text-align: left;            /* optional: looks less "form kiosk" */
-  letter-spacing: 2px !important;
-}
-
-/* Put the save button on its own row, right aligned */
+/* save button right aligned */
 #userModal #userSavePin{
-  align-self: flex-end !important;
+  align-self: flex-end;
 }
 
-/* Bottom actions: keep on one row, logout left, close right */
+/* bottom row: logout left, close right */
 #userModal .btns:last-of-type{
-  display: flex !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-#userModal #userLogout{ order: 1; }
-#userModal #userClose{ order: 2; }
-
-    
      /* =========================
    MOBILE HEADER LAYOUT (FINAL)
    ========================= */
@@ -1231,9 +1193,9 @@ border-color: rgba(37,99,235,0.22);
       <div style="font-weight:800; margin-bottom:6px;">Change PIN</div>
 
       <div class="row" style="gap:8px;">
-        <input id="userOldPin" class="pin" inputmode="numeric" maxlength="4" placeholder="Current PIN" style="letter-spacing:8px; min-width:160px;" />
-        <input id="userNewPin" class="pin" inputmode="numeric" maxlength="4" placeholder="New PIN" style="letter-spacing:8px; min-width:160px;" />
-        <input id="userNewPin2" class="pin" inputmode="numeric" maxlength="4" placeholder="Repeat new PIN" style="letter-spacing:8px; min-width:160px;" />
+        <input id="userOldPin" class="user-pin" inputmode="numeric" maxlength="4" placeholder="Current PIN" />
+        <input id="userNewPin" class="user-pin" inputmode="numeric" maxlength="4" placeholder="New PIN" />
+        <input id="userNewPin2" class="user-pin" inputmode="numeric" maxlength="4" placeholder="Repeat new PIN" />
       </div>
 
       <div class="btns" style="margin-top:10px; justify-content:flex-end;">
@@ -3646,6 +3608,7 @@ function applyUnlockState(){
   </script>
 </body>
 </html>
+
 
 
 

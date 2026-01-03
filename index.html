@@ -25,23 +25,35 @@
        ========================= -->
 
   <style>
-    :root{
-      --grid: #d9d9d9;
-      --grid-soft: #ececec;
-      --text: #111;
-      --muted: #6b6b6b;
-      --header: #f4f4f4;
-      --sheet-bg: #ffffff;
-      --sep: #c0c0c0;
-      --sep-fill: #e3e3e3;
+ :root{
+  --grid: #d9d9d9;
+  --grid-soft: #ececec;
+  --text: #111;
+  --muted: #6b6b6b;
+  --header: #f4f4f4;
+  --sheet-bg: #ffffff;
+  --sep: #c0c0c0;
+  --sep-fill: #e3e3e3;
 
-      --closed-fill: #f0f0f0;
-      --weekend-fill: #fafafa;
+  --closed-fill: #f0f0f0;
+  --weekend-fill: #fafafa;
 
-         --cn-band: #a8e6a1;
-      --sn-band: #9fd0ff;
-      --na-band: #ffd18a;
-    }
+  --cn-band: #a8e6a1;
+  --sn-band: #9fd0ff;
+  --na-band: #ffd18a;
+
+  /* ✅ shared modal/admin theme vars (so userModal doesn't rely on later CSS order) */
+  --accent: #4F8DF7;
+  --accent-hover: #2F6FEA;
+  --accent-weak: rgba(79,141,247,0.16);
+  --accent-weak-hover: rgba(79,141,247,0.24);
+
+  --ink: #0f172a;
+  --card: #ffffff;
+  --line: #e6e8ee;
+  --soft: #f6f7fb;
+}
+
 
     body{
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -421,16 +433,21 @@ tbody td{
   inset: 0;
   background: rgba(0,0,0,0.35);
   display: none;
-
-
-
   z-index: 1000;
+
   padding: 14px;
   padding-bottom: calc(14px + env(safe-area-inset-bottom));
+
   overflow: hidden;
   align-items: flex-start;
   justify-content: center;
 }
+
+/* ✅ When any modal backdrop is opened (including userModal) */
+.modal-backdrop[aria-hidden="false"]{
+  display: flex;
+}
+
 
 .modal{
   width: min(520px, 100%);
@@ -747,6 +764,120 @@ tbody td{
   gap: 8px;
 }
 
+/* ===== User modal header with FLAGS ===== */
+#userModal .user-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+#userModal .user-flags{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap: 6px;
+}
+
+#userModal .flags-label{
+  font-size: 11px;
+  font-weight: 500;
+  color: #667085;
+}
+
+#userModal .flags-buttons{
+  display:flex;
+  gap: 6px;
+}
+
+#userModal .flag-btn{
+  width: 38px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #d6dbe4;
+  background: #fff;
+  font-size: 14px;
+  line-height: 1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#userModal .flag-img{
+  width: 20px;
+  height: 20px;
+  display: block;
+  border-radius: 4px;
+}
+
+/* =========================
+   USER MODAL (clean header)
+   ========================= */
+
+#userModal .user-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+#userModal .user-head-left{ min-width:0; }
+
+#userModal .user-flags{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+#userModal .flags-label{
+  font-size: 12px;
+  font-weight: 600;        /* not shouty, not “FLAGS” energy */
+  color: #667085;
+}
+
+#userModal .flags-buttons{
+  display:flex;
+  gap: 8px;
+}
+
+#userModal .flag-btn{
+  font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji", system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1;
+
+  width: 38px;
+  height: 34px;
+  padding: 0;
+
+  border-radius: 999px;
+  border: 1px solid #d6dbe4;
+  background: #fff;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  user-select: none;
+}
+
+#userModal .flag-btn.is-active{
+  border-color: rgba(79,141,247,0.45);
+  background: rgba(79,141,247,0.10);
+  opacity: 1;
+}
+
+#userModal .flag-btn:not(.is-active){
+  opacity: 0.7;
+}
+
+
+
      /* =========================
    MOBILE HEADER LAYOUT (FINAL)
    ========================= */
@@ -992,6 +1123,31 @@ border-color: rgba(37,99,235,0.22);
   background: #f8fafc;
   border-top: 1px solid #eef2f7;
 }
+
+/* Account badge: make the badge a real button without button ugliness */
+button.badge{
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--grid, #d9d9d9);
+  background: #fff;
+  cursor: pointer;
+}
+
+.account-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-badge .acc-ic{
+  font-size: 13px;
+  line-height: 1;
+}
+
+.account-badge .acc-txt{
+  white-space: nowrap;
+}
+
   </style>
 </head>
 
@@ -1016,7 +1172,10 @@ border-color: rgba(37,99,235,0.22);
 </div>
       <div class="rightbits">
         <select id="periodSelect"></select>
-        <div class="badge" id="loginBadge">Not logged in</div>
+        <button class="badge account-badge" id="loginBadge" type="button">
+  <span class="acc-ic">👤</span>
+  <span class="acc-txt">Not logged in</span>
+</button>
         <div class="badge admin" id="adminBadge" style="display:none;">ADMIN</div>
        
       </div>
@@ -1234,39 +1393,60 @@ border-color: rgba(37,99,235,0.22);
   </div>
 </div>
 
-  <!-- =========================
+   <!-- =========================
      USER MENU MODAL (Account)
      ========================= -->
-<div class="modal-backdrop" id="userModal" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="userTitle">
-    <h2 id="userTitle">Your account</h2>
-    <p class="subtitle" id="userMeta">—</p>
+  <div class="modal-backdrop" id="userModal" aria-hidden="true" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="userTitle">
 
-    <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin:10px 0;">
-      <div style="font-weight:800; margin-bottom:6px;">Change PIN</div>
+      <!-- HEADER: title left, language right -->
+      <div class="user-head">
+        <div class="user-head-left">
+          <h2 id="userTitle">Your account</h2>
+          <p class="subtitle" id="userMeta">—</p>
+        </div>
 
-      <div class="row" style="gap:8px;">
-        <input id="userOldPin" class="user-pin" inputmode="numeric" maxlength="4" placeholder="Current PIN" />
-        <input id="userNewPin" class="user-pin" inputmode="numeric" maxlength="4" placeholder="New PIN" />
-        <input id="userNewPin2" class="user-pin" inputmode="numeric" maxlength="4" placeholder="Repeat new PIN" />
+        <div class="user-flags" aria-label="Language">
+          <div class="flags-label">Language</div>
+          <div class="flags-buttons">
+<button id="userLangEn" type="button" class="flag-btn" title="English" aria-label="English">
+  <img class="flag-img" src="icons/gb.svg" alt="">
+</button>
+<button id="userLangEs" type="button" class="flag-btn" title="Español" aria-label="Español">
+  <img class="flag-img" src="icons/es.svg" alt="">
+</button>
+          </div>
+        </div>
       </div>
 
-      <div class="btns" style="margin-top:10px; justify-content:flex-end;">
-  <button id="userSavePin" class="primary" type="button">Save new PIN</button>
-</div>
+      <!-- CHANGE PIN CARD -->
+      <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin:10px 0;">
+        <div style="font-weight:800; margin-bottom:6px;">Change PIN</div>
 
-      <div class="err" id="userPinErr">Error.</div>
-      <div class="subtitle" id="userPinOk" style="display:none; margin-top:8px; color:#0b6b2b; font-weight:700;">
-        PIN updated.
+        <div class="row" style="gap:8px;">
+          <input id="userOldPin" class="user-pin" inputmode="numeric" maxlength="4" placeholder="Current PIN" />
+          <input id="userNewPin" class="user-pin" inputmode="numeric" maxlength="4" placeholder="New PIN" />
+          <input id="userNewPin2" class="user-pin" inputmode="numeric" maxlength="4" placeholder="Repeat new PIN" />
+        </div>
+
+        <div class="btns" style="margin-top:10px; justify-content:flex-end;">
+          <button id="userSavePin" class="primary" type="button">Save new PIN</button>
+        </div>
+
+        <div class="err" id="userPinErr">Error.</div>
+        <div class="subtitle" id="userPinOk" style="display:none; margin-top:8px; color:#0b6b2b; font-weight:700;">
+          PIN updated.
+        </div>
       </div>
-    </div>
 
-    <div class="btns" style="margin-top:12px;">
-      <button id="userLogout" type="button">Log out</button>
-      <button id="userClose" type="button">Close</button>
+      <!-- BOTTOM BUTTONS -->
+      <div class="btns" style="margin-top:12px;">
+        <button id="userLogout" type="button">Log out</button>
+        <button id="userClose" type="button">Close</button>
+      </div>
+
     </div>
   </div>
-</div>
 
 
   <script>
@@ -1725,6 +1905,9 @@ const userNewPin2 = document.getElementById("userNewPin2");
 const userSavePin = document.getElementById("userSavePin");
 const userPinErr = document.getElementById("userPinErr");
 const userPinOk = document.getElementById("userPinOk");
+const userLangEn = document.getElementById("userLangEn");
+const userLangEs = document.getElementById("userLangEs");
+
 
 
     // Shift modal refs
@@ -1870,6 +2053,9 @@ function openUserModal(){
   userPinErr.style.display = "none";
   userPinOk.style.display = "none";
 
+
+paintLangButtons();
+
   document.body.classList.add("modal-open");
   userModal.style.display = "flex";
   userModal.setAttribute("aria-hidden", "false");
@@ -1904,7 +2090,6 @@ function logout(){
 }
 
 // Wire badge click
-loginBadge.style.cursor = "pointer";
 loginBadge.addEventListener("click", () => {
   if (!currentUser) return;        // don’t open it when not logged in
   openUserModal();
@@ -1916,6 +2101,33 @@ userLogoutBtn?.addEventListener("click", logout);
 userModal?.addEventListener("click", (e) => {
   if (e.target === userModal) closeUserModal();
 });
+
+async function setMyLanguage(lang){
+  if (!currentUser) return;
+
+  try {
+    const pin = getSessionPinOrThrow();
+
+    const { data, error } = await supabaseClient.rpc("set_user_language", {
+      p_user_id: currentUser.id,
+      p_pin: pin,
+      p_lang: lang
+    });
+
+    if (error) throw error;
+
+    currentUser.preferred_lang = data || lang;
+    paintLangButtons();
+
+  } catch (e) {
+    console.error(e);
+    alert("Failed to update language. Check console.");
+  }
+}
+
+userLangEn?.addEventListener("click", () => setMyLanguage("en"));
+userLangEs?.addEventListener("click", () => setMyLanguage("es"));
+
 
 // Save PIN
 userSavePin?.addEventListener("click", async () => {
@@ -1967,6 +2179,13 @@ userSavePin?.addEventListener("click", async () => {
     userSavePin.disabled = false;
   }
 });
+
+function paintLangButtons(){
+  const lang = (currentUser?.preferred_lang || "en");
+
+  userLangEn?.classList.toggle("is-active", lang === "en");
+  userLangEs?.classList.toggle("is-active", lang === "es");
+}
 
 function showUserPinErr(msg){
   userPinErr.textContent = msg;
@@ -2997,19 +3216,20 @@ updateCloseLabel(activePeriodObj);
       }
     });
 function updateBadges(){
-  if(!currentUser){
-    loginBadge.textContent = "Not logged in";
-    loginBadge.style.cursor = "default";
-    adminBadge.style.display = "none";
-    sessionPin = null;
-    if (adminTabUsers) adminTabUsers.style.display = "none";
+  const txt = loginBadge?.querySelector(".acc-txt");
+
+  if (!currentUser){
+    if (txt) txt.textContent = "Not logged in";
+    else if (loginBadge) loginBadge.textContent = "Not logged in";
+    if (adminBadge) adminBadge.style.display = "none";
     return;
   }
 
-  loginBadge.textContent = `Logged in: ${currentUser.name}`;
-  loginBadge.style.cursor = "pointer";
-  adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
-  if (adminTabUsers) adminTabUsers.style.display = currentUser.is_admin ? "" : "none";
+  // Show "Account: Name" so staff realise it's a feature
+  if (txt) txt.textContent = `Account: ${currentUser.name}`;
+  else if (loginBadge) loginBadge.textContent = `Account: ${currentUser.name}`;
+
+  if (adminBadge) adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
 }
 
   // DO NOT touch adminViewUsers here.
@@ -3268,8 +3488,8 @@ async function loadRota() {
   // 7A) Load users
   // -----------------------------
   const { data: users, error: userError } = await supabaseClient
-    .from("users")
-    .select("id, name, role_id, is_admin, is_active, roles(name)")
+.from("users")
+.select("id, name, role_id, is_admin, is_active, preferred_lang, roles(name)")
     .order("created_at", { ascending: true })
 
   if (userError) {

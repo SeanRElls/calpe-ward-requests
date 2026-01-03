@@ -1157,6 +1157,47 @@ button.badge{
   white-space: nowrap;
 }
 
+/* Shift modal title bar */
+.shift-titlebar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  margin: 0 0 6px 0;
+}
+
+.help-badge{
+  /* override your global button flex/min-width */
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  width: 34px;                 /* small pill button */
+  height: 30px;
+  padding: 0;
+
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--grid);
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.help-badge:hover{
+  background: var(--accent-weak);
+  border-color: rgba(37,99,235,0.28);
+}
+
+.help-badge:active{
+  transform: scale(0.96);
+}
+
+
   </style>
 </head>
 
@@ -1220,8 +1261,25 @@ button.badge{
        ========================= -->
   <div class="modal-backdrop" id="shiftModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shiftTitle">
-      <h2 id="shiftTitle">Select shift</h2>
-      <p id="shiftDesc">Choose a request for this day.</p>
+      
+<div class="shift-titlebar">
+  <h2 id="shiftTitle">Select shift</h2>
+
+  <button
+    id="shiftHelpBtn"
+    type="button"
+    class="badge help-badge"
+    aria-label="Help"
+    title="Shift request guidelines"
+  >
+    ?
+  </button>
+</div>
+
+
+      <p id="shiftDesc">
+  Choose a <strong>preference</strong> for this day.
+</p>
 
 
       <div class="shift-grid">
@@ -1399,6 +1457,85 @@ button.badge{
 </div>
     <div class="btns" style="margin-top:12px;">
       <button id="adminClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================
+     SHIFT RULES / HELP MODAL
+     ========================= -->
+<div class="modal-backdrop" id="shiftHelpModal" aria-hidden="true" style="display:none;">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shiftHelpTitle">
+
+<div style="margin-bottom:10px;">
+  <h2 id="shiftHelpTitle" style="margin:0 0 4px 0;">Shift request guidelines</h2>
+<p class="subtitle" id="shiftHelpSubtitle" style="margin:0;">
+  How preferences are considered
+</p>
+</div>
+
+
+    <!-- EN -->
+    <div id="shiftHelpContentEn" class="card" style="padding:12px;">
+      <div style="font-weight:900; margin-bottom:8px;">Shift request guidelines</div>
+
+      <ul style="margin:0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
+        <li>You can enter <strong>up to 5</strong> request entries per week (you do not need to use all of these).</li>
+        <li><strong>O*</strong> is a <strong>strong preference</strong> and is prioritised as <strong>O¹ then O²</strong>.</li>
+        <li>You can only have <strong>two</strong> strong preferences (<strong>O¹</strong> and <strong>O²</strong>) per week.</li>
+        <li><strong>Only O¹ is guaranteed</strong> at ward level.</li>
+<li>
+  All other requests are <strong>preferences only</strong>. They are noted at ward level but are not guaranteed.
+  <br>
+  <strong>Choosing between days and nights (LD/8-8/N)</strong> is also a preference only. Night shifts in particular are
+  more difficult to allocate and cannot always be accommodated.
+</li>
+
+        <li><strong>Use comments</strong> to explain your preferences more clearly (context, patterns, flexibility) so we can understand your requests and accommodate where possible.</li>
+        <li>Guidelines may change and all preferences can be <strong>overridden by management</strong> when shifts are published.</li>
+      </ul>
+
+      <div style="margin-top:12px; font-weight:900;">Shift key (preferences)</div>
+      <ul style="margin:6px 0 0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
+        <li><strong>LD</strong> – Long Day (08:00–20:30)</li>
+        <li><strong>8–8</strong> – Day shift (08:00–20:00)</li>
+        <li><strong>W</strong> – Happy to work days or nights</li>
+        <li><strong>N</strong> – Preference to work nights</li>
+      </ul>
+    </div>
+
+    <!-- ES -->
+    <div id="shiftHelpContentEs" class="card" style="padding:12px; display:none;">
+      <div style="font-weight:900; margin-bottom:8px;">Guía de solicitudes de turnos</div>
+
+      <ul style="margin:0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
+        <li>Puedes introducir <strong>hasta 5</strong> solicitudes por semana (no es necesario usarlas todas).</li>
+        <li><strong>O*</strong> es una <strong>preferencia fuerte</strong> y se prioriza como <strong>O¹ y después O²</strong>.</li>
+        <li>Solo puedes tener <strong>dos</strong> preferencias fuertes (<strong>O¹</strong> y <strong>O²</strong>) por semana.</li>
+        <li><strong>Solo O¹ está garantizado</strong> a nivel de la unidad.</li>
+      <li>
+  El resto de solicitudes son <strong>preferencias</strong>. Se tendrán en cuenta, pero no están garantizadas.
+  <br>
+  <strong>Elegir entre días y noches (W / N)</strong> es solo una preferencia. Los turnos de noche, en particular,
+  son más difíciles de asignar y no siempre pueden acomodarse.
+</li>
+
+        <li><strong>Usa los comentarios</strong> para explicar mejor tus preferencias (contexto, patrones, flexibilidad) para que podamos entender tus solicitudes y acomodarlas cuando sea posible.</li>
+        <li>Las guías pueden cambiar y todas las preferencias pueden ser <strong>modificadas por la dirección</strong> cuando se publiquen los turnos.</li>
+      </ul>
+
+      <div style="margin-top:12px; font-weight:900;">Leyenda (preferencias)</div>
+      <ul style="margin:6px 0 0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
+        <li><strong>LD</strong> – Turno largo (08:00–20:30)</li>
+        <li><strong>8–8</strong> – Turno de día (08:00–20:00)</li>
+        <li><strong>W</strong> – Disponible para días o noches</li>
+        <li><strong>N</strong> – Preferencia por noches</li>
+      </ul>
+    </div>
+
+    <div class="user-footer" style="margin-top:12px;">
+      <button id="shiftHelpClose" type="button">Close</button>
+      <button id="shiftHelpClose2" class="primary" type="button">OK</button>
     </div>
   </div>
 </div>
@@ -1922,6 +2059,14 @@ const userLangEs = document.getElementById("userLangEs");
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
 
+// Shift Help modal refs
+const shiftHelpModal = document.getElementById("shiftHelpModal");
+const shiftHelpBtn = document.getElementById("shiftHelpBtn");
+const shiftHelpClose = document.getElementById("shiftHelpClose");
+const shiftHelpClose2 = document.getElementById("shiftHelpClose2");
+
+const shiftHelpContentEn = document.getElementById("shiftHelpContentEn");
+const shiftHelpContentEs = document.getElementById("shiftHelpContentEs");
 
     
 // Week comment modal refs
@@ -1971,6 +2116,63 @@ function renderAdminCloseTime(periodId){
 
     
   let closeCountdownTimer = null;
+function setShiftHelpLanguage(lang){
+  const isEn = (lang !== "es");
+
+  shiftHelpContentEn.style.display = isEn ? "block" : "none";
+  shiftHelpContentEs.style.display = isEn ? "none" : "block";
+
+  const title = document.getElementById("shiftHelpTitle");
+  const sub = document.getElementById("shiftHelpSubtitle");
+  if (title) title.textContent = isEn ? "Shift request guidelines" : "Guía de solicitudes de turnos";
+  if (sub) sub.textContent = isEn
+  ? "How preferences are considered"
+  : "Cómo se consideran las preferencias";
+
+  if (shiftHelpClose) shiftHelpClose.textContent = isEn ? "Close" : "Cerrar";
+  if (shiftHelpClose2) shiftHelpClose2.textContent = isEn ? "OK" : "Vale";
+}
+
+function openShiftHelpModal(){
+  // Respect saved preference if available
+  const lang = currentUser?.preferred_lang || "en";
+  setShiftHelpLanguage(lang);
+
+  document.body.classList.add("modal-open");
+  shiftHelpModal.style.display = "flex";
+  shiftHelpModal.setAttribute("aria-hidden", "false");
+}
+
+function closeShiftHelpModal(){
+  shiftHelpModal.style.display = "none";
+  shiftHelpModal.setAttribute("aria-hidden", "true");
+
+  // IMPORTANT: do NOT remove modal-open if shiftModal is still open
+  const anyOpen =
+    (shiftModal && shiftModal.style.display === "flex") ||
+    (modal && modal.style.display === "flex") ||
+    (weekCommentModal && weekCommentModal.style.display === "flex") ||
+    (adminModal && adminModal.style.display === "flex") ||
+    (userModal && userModal.style.display === "flex");
+
+  if (!anyOpen) document.body.classList.remove("modal-open");
+}
+
+shiftHelpBtn?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  openShiftHelpModal();
+});
+
+shiftHelpClose?.addEventListener("click", closeShiftHelpModal);
+shiftHelpClose2?.addEventListener("click", closeShiftHelpModal);
+
+shiftHelpModal?.addEventListener("click", (e) => {
+  if (e.target === shiftHelpModal) closeShiftHelpModal();
+});
+
+
+
 
 function formatTimeLeft(ms){
   if (ms <= 0) return "0m";
@@ -3282,11 +3484,12 @@ if (shiftModal) {
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
 
+  if (shiftHelpModal && shiftHelpModal.style.display === "flex") closeShiftHelpModal();
   if (shiftModal && shiftModal.style.display === "flex") closeShiftModal();
   if (modal && modal.style.display === "flex") closePinModal();
   if (weekCommentModal && weekCommentModal.style.display === "flex") closeWeekCommentModal();
   if (adminModal && adminModal.style.display === "flex") closeAdminConsole();
-  if (userModal && userModal.style.display === "flex") closeUserModal(); // ← THIS
+  if (userModal && userModal.style.display === "flex") closeUserModal();
 });
 
 

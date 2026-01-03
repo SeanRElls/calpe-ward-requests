@@ -702,11 +702,13 @@ tbody td{
 }
 
 /* card block */
-#userModal .modal > div{
+/* Only make actual “cards” look like cards */
+#userModal .card{
   border: 1px solid var(--line);
   border-radius: 14px;
   background: #fff;
 }
+
 
 /* stack the 3 inputs */
 #userModal .row{
@@ -876,7 +878,12 @@ tbody td{
   opacity: 0.7;
 }
 
-
+#userModal .user-footer{
+  display:flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
 
      /* =========================
    MOBILE HEADER LAYOUT (FINAL)
@@ -1124,6 +1131,8 @@ border-color: rgba(37,99,235,0.22);
   border-top: 1px solid #eef2f7;
 }
 
+
+
 /* Account badge: make the badge a real button without button ugliness */
 button.badge{
   appearance: none;
@@ -1220,7 +1229,8 @@ button.badge{
         <button class="shift-btn" data-shift="8-8" type="button">8–8</button>
         <button class="shift-btn" data-shift="N" type="button">N</button>
         <button class="shift-btn" data-shift="W" type="button">W</button>
-        <button class="shift-btn off" data-shift="O" type="button">O</button>
+       <button class="shift-btn" data-shift="O" type="button">O</button>
+<button class="shift-btn off" data-shift="O*" type="button">O*</button>
         <button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>
       </div>
 
@@ -1402,7 +1412,7 @@ button.badge{
       <!-- HEADER: title left, language right -->
       <div class="user-head">
         <div class="user-head-left">
-          <h2 id="userTitle">Your account</h2>
+          <h2 id="userTitle">Edit your account</h2>
           <p class="subtitle" id="userMeta">—</p>
         </div>
 
@@ -1420,7 +1430,7 @@ button.badge{
       </div>
 
       <!-- CHANGE PIN CARD -->
-      <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin:10px 0;">
+     <div class="card" style="padding:10px; margin:10px 0;">
         <div style="font-weight:800; margin-bottom:6px;">Change PIN</div>
 
         <div class="row" style="gap:8px;">
@@ -1440,7 +1450,7 @@ button.badge{
       </div>
 
       <!-- BOTTOM BUTTONS -->
-      <div class="btns" style="margin-top:12px;">
+      <div class="user-footer">
         <button id="userLogout" type="button">Log out</button>
         <button id="userClose" type="button">Close</button>
       </div>
@@ -1621,24 +1631,22 @@ function getSessionPinOrThrow(){
 }
     
 function nextOffPrioritySmart(currentRank, taken){
-  // Cycle intent: null -> 1 -> 2 -> 3 -> null
+  // Cycle intent: null → 1 → 2 → BLOCK
   let desired =
     (currentRank == null) ? 1 :
     (currentRank === 1) ? 2 :
-    (currentRank === 2) ? 3 :
     null;
 
-  // If desired is taken elsewhere, pick the next available in order 1,2,3.
+  // If desired is taken, try the other one
   if (desired != null && taken.has(desired)) {
     if (!taken.has(1)) desired = 1;
     else if (!taken.has(2)) desired = 2;
-    else if (!taken.has(3)) desired = 3;
-    else desired = null; // all used, must be normal O
+    else desired = null; // both O1 and O2 used → block
   }
 
   return desired;
 }
-    
+
 function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
   const ws = getWeekStart(dateStr);
   const taken = new Set();
@@ -1649,9 +1657,9 @@ function getTakenOffRanksThisWeek(userId, dateStr, excludeKey){
     if (r.user_id !== userId) continue;
     if (getWeekStart(r.date) !== ws) continue;
     if (r.value !== "O") continue;
-    if (r.important_rank === 1 || r.important_rank === 2 || r.important_rank === 3) {
-      taken.add(r.important_rank);
-    }
+ if (r.important_rank === 1 || r.important_rank === 2) {
+  taken.add(r.important_rank);
+}
   }
 
   // include pending edits
@@ -3294,10 +3302,10 @@ const shift = btn.dataset.shift;
 const key = `${userId}_${date}`;
 const existing = requestsCache.get(key);
 
-// Special handling for OFF: cycle priority
+// Special handling for O*: cycle strong preference ranks (O¹ / O²)
 let rankToSave = null;
 
-if (shift === "O") {
+if (shift === "O*") {
   const pe = pendingEdits[key];
   const existing = requestsCache.get(key);
 
@@ -3308,7 +3316,16 @@ if (shift === "O") {
 
   const taken = getTakenOffRanksThisWeek(userId, date, key);
   rankToSave = nextOffPrioritySmart(currentRank, taken);
+
+  // 🚫 HARD BLOCK after O¹ + O²
+  if (rankToSave === null && (taken.has(1) && taken.has(2))) {
+    alert("No more strong preferences available.\nUse O or add a comment if needed.");
+    closeShiftModal();
+    return;
+  }
 }
+
+
  
 
     /* -----------------------------
@@ -3333,12 +3350,19 @@ if (shift === "O") {
   td.textContent = "";
   delete pendingEdits[key];
 } else if (shift === "O") {
-  if (rankToSave === 1) td.textContent = "O¹";
-else if (rankToSave === 2) td.textContent = "O²";
-else if (rankToSave === 3) td.textContent = "O³";
-else td.textContent = "O";
+  // plain OFF, no priority
+  td.textContent = "O";
+  pendingEdits[key] = { userId, date, shift: "O", important_rank: null };
 
-  pendingEdits[key] = { userId, date, shift, important_rank: rankToSave };
+} else if (shift === "O*") {
+  // strong OFF, cycles rank
+  if (rankToSave === 1) td.textContent = "O¹";
+  else if (rankToSave === 2) td.textContent = "O²";
+  else td.textContent = "O"; // fallback (shouldn’t happen if cycling works)
+
+  // note: we save as value "O" with important_rank 1/2
+  pendingEdits[key] = { userId, date, shift: "O", important_rank: rankToSave };
+
 } else {
   td.textContent = shift;
   pendingEdits[key] = { userId, date, shift, important_rank: null };
@@ -3355,12 +3379,14 @@ try {
     delete pendingEdits[key];
     toast(`Cleared + saved (${key})`);
   } else {
-    const saved = await upsertRequestCell(
-      userId,
-      date,
-      shift,
-      rankToSave
-    );
+const valueToSave = (shift === "O*") ? "O" : shift;
+
+const saved = await upsertRequestCell(
+  userId,
+  date,
+  valueToSave,
+  rankToSave
+);
 
     requestsCache.set(key, saved);
     delete pendingEdits[key];
@@ -3398,12 +3424,11 @@ if (row?.value === "O") {
     return;
   }
 
-  if ((msg || "").toLowerCase().includes("priority") ||
-      (msg || "").toLowerCase().includes("max 2")) {
-    alert("You can only have 2 priority OFF requests per week.");
-    return;
-  }
-
+if ((msg || "").toLowerCase().includes("priority") ||
+    (msg || "").toLowerCase().includes("max 2")) {
+  alert("No more strong preferences available.\nUse O or add a comment.");
+  return;
+}
   alert("Save failed. Check console.");
 }
   });
@@ -3794,7 +3819,6 @@ if (pe.shift === "O") {
   if (r?.value === "O") {
     if (r.important_rank === 1) td.textContent = "O¹";
     else if (r.important_rank === 2) td.textContent = "O²";
-    else if (r.important_rank === 3) td.textContent = "O³";
     else td.textContent = "O";
   } else {
     td.textContent = r?.value || "";

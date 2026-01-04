@@ -1260,16 +1260,30 @@ button.badge{
 <div class="shift-titlebar">
   <h2 id="shiftTitle">Select shift</h2>
 
-  <button
-    id="shiftHelpBtn"
-    type="button"
-    class="badge help-badge"
-    aria-label="Help"
-    title="Shift request guidelines"
-  >
-    ?
-  </button>
+  <div style="display:flex; gap:8px; align-items:center;">
+    <button
+      id="shiftLockBtn"
+      type="button"
+      class="badge help-badge"
+      aria-label="Lock"
+      title="Lock this cell"
+      style="display:none;"
+    >
+      🔒
+    </button>
+
+    <button
+      id="shiftHelpBtn"
+      type="button"
+      class="badge help-badge"
+      aria-label="Help"
+      title="Shift request guidelines"
+    >
+      ?
+    </button>
+  </div>
 </div>
+
 
 
       <p id="shiftDesc">
@@ -2206,6 +2220,7 @@ let activeCell = null;           // { td, userId, date }
 const pendingEdits = {};         // key -> { userId, date, shift }
 const requestsCache = new Map(); // key -> { id, user_id, date, value, important_rank }
  let periodsCache = [];
+ const locksCache = new Map(); // key -> { user_id, date, reason_en, reason_es, locked_by, locked_at }
 let activePeriodId = null;
     let activePeriodObj = null; // ← the actual period object
     let closeTriggeredReload = false;
@@ -2285,6 +2300,8 @@ const userLangEs = document.getElementById("userLangEs");
     // Shift modal refs
     const shiftModal = document.getElementById("shiftModal");
     const shiftCancelBtn = document.getElementById("shiftCancel");
+    const shiftLockBtn = document.getElementById("shiftLockBtn");
+
 
 // Shift Help modal refs
 const shiftHelpModal = document.getElementById("shiftHelpModal");
@@ -2395,6 +2412,79 @@ shiftHelpBtn?.addEventListener("click", (e) => {
   e.stopPropagation();
   openShiftHelpModal();
 });
+shiftHelpBtn.addEventListener("click", () => {
+  openShiftHelpModal();
+});
+
+/* =========================
+   ADMIN LOCK TOGGLE (5B)
+   ========================= */
+shiftLockBtn?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (!currentUser?.is_admin) return;
+  if (!activeCell) return;
+
+  const pin = getSessionPinOrThrow();
+  const targetUserId = activeCell.userId;
+  const date = activeCell.date;
+  const key = `${targetUserId}_${date}`;
+
+  const existing = locksCache.get(key);
+
+  try {
+    if (existing) {
+      // 🔓 UNLOCK
+      const { error } = await supabaseClient.rpc(
+        "admin_unlock_request_cell",
+        {
+          p_admin_id: currentUser.id,
+          p_pin: pin,
+          p_target_user_id: targetUserId,
+          p_date: date
+        }
+      );
+      if (error) throw error;
+
+      locksCache.delete(key);
+      shiftLockBtn.textContent = "🔓";
+
+    } else {
+      // 🔒 LOCK (optional reason)
+      const reason = prompt(
+        currentLang === "es"
+          ? "Motivo (opcional). El usuario lo verá al pulsar este día:"
+          : "Reason (optional). Staff will see this if they click this day:"
+      );
+
+      if (reason === null) return;
+
+      const { data, error } = await supabaseClient.rpc(
+        "admin_lock_request_cell",
+        {
+          p_admin_id: currentUser.id,
+          p_pin: pin,
+          p_target_user_id: targetUserId,
+          p_date: date,
+          p_reason_en: currentLang === "es" ? null : reason,
+          p_reason_es: currentLang === "es" ? reason : null
+        }
+      );
+      if (error) throw error;
+
+      locksCache.set(key, data);
+      shiftLockBtn.textContent = "🔒";
+    }
+
+    await loadRota(); // keep UI honest
+
+  } catch (err) {
+    console.error(err);
+    alert("Lock action failed.");
+  }
+});
+
 
 shiftHelpClose?.addEventListener("click", closeShiftHelpModal);
 shiftHelpClose2?.addEventListener("click", closeShiftHelpModal);
@@ -3702,8 +3792,20 @@ if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
 function openShiftModal(){
   if (!activeCell) return;
 
-  document.body.classList.add("modal-open");   // ✅ lock background scroll
+  // Admin-only: show lock button and paint state
+  if (shiftLockBtn) {
+    const isAdmin = !!currentUser?.is_admin;
+    shiftLockBtn.style.display = isAdmin ? "inline-flex" : "none";
 
+    if (isAdmin) {
+      const key = `${activeCell.userId}_${activeCell.date}`;
+      const locked = locksCache.has(key);
+      shiftLockBtn.textContent = locked ? "🔒" : "🔓";
+      shiftLockBtn.title = locked ? "Unlock this cell" : "Lock this cell";
+    }
+  }
+
+  document.body.classList.add("modal-open");
   shiftModal.style.display = "flex";
   shiftModal.setAttribute("aria-hidden", "false");
 }
@@ -4078,6 +4180,28 @@ if (start && end) {
 }
 
 // -----------------------------
+// 7D.6) Load locks for this period (so UI blocks staff edits + shows reason)
+// -----------------------------
+locksCache.clear();
+
+if (start && end) {
+  const { data: locks, error: lockErr } = await supabaseClient
+    .from("request_cell_locks")
+    .select("user_id, date, reason_en, reason_es, locked_by, locked_at")
+    .gte("date", start)
+    .lte("date", end);
+
+  if (lockErr) {
+    console.error("Locks load error:", lockErr);
+    // Do NOT hard-fail the whole app if locks fetch fails
+  } else {
+    for (const L of (locks || [])) {
+      locksCache.set(`${L.user_id}_${L.date}`, L);
+    }
+  }
+}
+
+// -----------------------------
 // 7E) Render table (weeks + users)
 // -----------------------------
 const weeks = groupDatesIntoWeeks(dates);
@@ -4332,17 +4456,27 @@ function applyUnlockState(){
 
       if (!td.dataset.bound) {
         td.dataset.bound = "1";
-        td.addEventListener("click", () => {
-          if (!td.classList.contains("editable")) return;
+ td.addEventListener("click", () => {
+  if (!td.classList.contains("editable")) return;
 
-          activeCell = {
-            td,
-            userId: td.dataset.userId,
-            date: td.dataset.date
-          };
+  const userId = td.dataset.userId;
+  const date = td.dataset.date;
+  const lock = locksCache.get(`${userId}_${date}`);
 
-          openShiftModal();
-        });
+  // 🚫 Staff: locked cell blocks editing, shows reason
+  if (lock && !currentUser?.is_admin) {
+    const reason =
+      (currentLang === "es" ? lock.reason_es : lock.reason_en) ||
+      lock.reason_en ||
+      (currentLang === "es" ? "Este día está bloqueado por administración." : "This day is locked by management.");
+
+    alert(reason);
+    return;
+  }
+
+  activeCell = { td, userId, date };
+  openShiftModal();
+});
       }
     });
   });

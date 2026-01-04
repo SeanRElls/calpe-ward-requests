@@ -295,12 +295,7 @@ tbody td{
 }
 
     
-    thead .name-col{
-      background: var(--header);
-      z-index: 10;
-      font-weight: 750;
-      cursor: default;
-    }
+
     
 @media (max-width: 480px){
   .name-col{
@@ -1309,7 +1304,7 @@ button.badge{
          style="display:none; max-height:260px; overflow:auto; border:1px solid #ddd; border-radius:8px; padding:8px; margin-bottom:10px;">
     </div>
 
-    <label style="display:block; font-weight:600; margin:8px 0 6px;">Your comment</label>
+<label id="weekCommentYourLabel" style="display:block; font-weight:600; margin:8px 0 6px;">Your comment</label>
     <textarea id="weekCommentInput" rows="4" style="width:100%;"></textarea>
 
     <div class="btns" style="margin-top:10px;">
@@ -1460,20 +1455,18 @@ button.badge{
     </div>
   </div>
 </div>
-
 <!-- =========================
      SHIFT RULES / HELP MODAL
      ========================= -->
 <div class="modal-backdrop" id="shiftHelpModal" aria-hidden="true" style="display:none;">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shiftHelpTitle">
 
-<div style="margin-bottom:10px;">
-  <h2 id="shiftHelpTitle" style="margin:0 0 4px 0;">Shift request guidelines</h2>
-<p class="subtitle" id="shiftHelpSubtitle" style="margin:0;">
-  How preferences are considered
-</p>
-</div>
-
+    <div style="margin-bottom:10px;">
+      <h2 id="shiftHelpTitle" style="margin:0 0 4px 0;">Shift request guidelines</h2>
+      <p class="subtitle" id="shiftHelpSubtitle" style="margin:0;">
+        How preferences are considered
+      </p>
+    </div>
 
     <!-- EN -->
     <div id="shiftHelpContentEn" class="card" style="padding:12px;">
@@ -1481,18 +1474,39 @@ button.badge{
 
       <ul style="margin:0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
         <li>You can enter <strong>up to 5</strong> request entries per week (you do not need to use all of these).</li>
-        <li><strong>O*</strong> is a <strong>strong preference</strong> and is prioritised as <strong>O¹ then O²</strong>.</li>
-        <li>You can only have <strong>two</strong> strong preferences (<strong>O¹</strong> and <strong>O²</strong>) per week.</li>
-        <li><strong>Only O¹ is guaranteed</strong> at ward level.</li>
-<li>
-  All other requests are <strong>preferences only</strong>. They are noted at ward level but are not guaranteed.
-  <br>
-  <strong>Choosing between days and nights (LD/8-8/N)</strong> is also a preference only. Night shifts in particular are
-  more difficult to allocate and cannot always be accommodated.
-</li>
 
-        <li><strong>Use comments</strong> to explain your preferences more clearly (context, patterns, flexibility) so we can understand your requests and accommodate where possible.</li>
-        <li>Guidelines may change and all preferences can be <strong>overridden by management</strong> when shifts are published.</li>
+        <li>
+          <strong>O*</strong> is a <strong>strong preference</strong> and is prioritised as
+          <strong>O¹ first</strong> and then <strong>O²</strong>.
+        </li>
+
+        <li>
+          You can only have <strong>two strong preferences</strong>
+          (<strong>O¹</strong> and <strong>O²</strong>) per week.
+        </li>
+
+        <li>
+          <strong>Only O¹ is guaranteed</strong> at ward level.
+        </li>
+
+        <li>
+          All other requests are <strong>preferences only</strong>. They are considered at ward level
+          but are <strong>not guaranteed</strong>.
+          <br>
+          <strong>Choosing between days and nights (LD / 8–8 / N)</strong> is also a preference only.
+          Night shifts, in particular, are more difficult to allocate and cannot always be accommodated.
+        </li>
+
+        <li>
+          <strong>Use comments</strong> to explain your preferences more clearly
+          (for example: context, patterns, flexibility). This helps us understand
+          your requests and accommodate them where possible.
+        </li>
+
+        <li>
+          Guidelines may change, and <strong>all preferences may be overridden by management</strong>
+          when shifts are published.
+        </li>
       </ul>
 
       <div style="margin-top:12px; font-weight:900;">Shift key (preferences)</div>
@@ -1509,19 +1523,44 @@ button.badge{
       <div style="font-weight:900; margin-bottom:8px;">Guía de solicitudes de turnos</div>
 
       <ul style="margin:0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
-        <li>Puedes introducir <strong>hasta 5</strong> solicitudes por semana (no es necesario usarlas todas).</li>
-        <li><strong>O*</strong> es una <strong>preferencia fuerte</strong> y se prioriza como <strong>O¹ y después O²</strong>.</li>
-        <li>Solo puedes tener <strong>dos</strong> preferencias fuertes (<strong>O¹</strong> y <strong>O²</strong>) por semana.</li>
-        <li><strong>Solo O¹ está garantizado</strong> a nivel de la unidad.</li>
-      <li>
-  El resto de solicitudes son <strong>preferencias</strong>. Se tendrán en cuenta, pero no están garantizadas.
-  <br>
-  <strong>Elegir entre días y noches (W / N)</strong> es solo una preferencia. Los turnos de noche, en particular,
-  son más difíciles de asignar y no siempre pueden acomodarse.
-</li>
+        <li>
+          Puedes introducir <strong>hasta 5</strong> solicitudes por semana
+          (no es necesario usarlas todas).
+        </li>
 
-        <li><strong>Usa los comentarios</strong> para explicar mejor tus preferencias (contexto, patrones, flexibilidad) para que podamos entender tus solicitudes y acomodarlas cuando sea posible.</li>
-        <li>Las guías pueden cambiar y todas las preferencias pueden ser <strong>modificadas por la dirección</strong> cuando se publiquen los turnos.</li>
+        <li>
+          <strong>O*</strong> es una <strong>preferencia fuerte</strong> y se prioriza como
+          <strong>O¹ primero</strong> y después <strong>O²</strong>.
+        </li>
+
+        <li>
+          Solo puedes tener <strong>dos preferencias fuertes</strong>
+          (<strong>O¹</strong> y <strong>O²</strong>) por semana.
+        </li>
+
+        <li>
+          <strong>Solo O¹ está garantizado</strong> a nivel de la unidad.
+        </li>
+
+        <li>
+          El resto de solicitudes son <strong>preferencias</strong>. Se tendrán en cuenta,
+          pero <strong>no están garantizadas</strong>.
+          <br>
+          <strong>Elegir entre turnos de día y noche (LD / 8–8 / N)</strong> también es solo
+          una preferencia. Los turnos de noche, en particular, son más difíciles de asignar
+          y no siempre pueden acomodarse.
+        </li>
+
+        <li>
+          <strong>Usa los comentarios</strong> para explicar mejor tus preferencias
+          (por ejemplo: contexto, patrones o flexibilidad). Esto nos ayuda a entender
+          tus solicitudes y tenerlas en cuenta cuando sea posible.
+        </li>
+
+        <li>
+          Las guías pueden cambiar y <strong>todas las preferencias pueden ser modificadas
+          por la dirección</strong> cuando se publiquen los turnos.
+        </li>
       </ul>
 
       <div style="margin-top:12px; font-weight:900;">Leyenda (preferencias)</div>
@@ -1537,8 +1576,10 @@ button.badge{
       <button id="shiftHelpClose" type="button">Close</button>
       <button id="shiftHelpClose2" class="primary" type="button">OK</button>
     </div>
+
   </div>
 </div>
+
 
    <!-- =========================
      USER MENU MODAL (Account)
@@ -1610,7 +1651,141 @@ button.badge{
        2) HELPERS (dates, formatting)
        ========================================================= */
     const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+    // =========================
+// i18n (single source of truth)
+// =========================
+const I18N = {
+  en: {
+    // Generic
+    close: "Close",
+    cancel: "Cancel",
+    ok: "OK",
+    save: "Save",
+    loadingUsers: "Loading users…",
+    failedLoadUsers: "Failed to load users.",
+    notLoggedIn: "Not logged in",
+    loginFirst: "Log in first to add comments.",
+
+    // PIN modal
+    pinTitle: (name) => `PIN for ${name}`,
+    pinDesc: "Enter your 4-digit PIN to unlock editing.",
+    pinErrWrong: "Wrong PIN.",
+    pinErrFormat: "PIN must be 4 digits.",
+    unlock: "Unlock",
+
+    // Shift modal
+    shiftTitle: "Select shift",
+    shiftDesc: "Choose a preference for this day.",
+    shiftHelpTitle: "Shift request guidelines",
+    shiftHelpSub: "How preferences are considered",
+
+    // User modal
+    accountEditTitle: "Edit your account",
+    changePin: "Change PIN",
+    currentPin: "Current PIN",
+    newPin: "New PIN",
+    repeatNewPin: "Repeat new PIN",
+    saveNewPin: "Save new PIN",
+    logout: "Log out",
+    language: "Language",
+    pinUpdated: "PIN updated.",
+
+    // Requests close pill
+    reqOpen: "Requests are open",
+    reqCloseSoon: "Requests close soon",
+    reqClose: "Requests close",
+    reqClosed: "Requests closed",
+    closedAt: (dt) => `Closed at ${dt}`,
+    left: (t) => `${t} left`,
+
+// Week comments
+weekCommentsTitle: "Week comments",
+yourCommentLabel: "Your comment",
+noCommentsYet: "No comments yet.",
+saveComment: "Save",
+closeComment: "Close",
+failedLoadWeekComments: "Failed to load week comments. Check console.",
+failedSaveWeekComment: "Failed to save comment. Check console.",
+
     
+  },
+
+  es: {
+    close: "Cerrar",
+    cancel: "Cancelar",
+    ok: "Vale",
+    save: "Guardar",
+    loadingUsers: "Cargando usuarios…",
+    failedLoadUsers: "No se pudieron cargar los usuarios.",
+    notLoggedIn: "Sin sesión",
+    loginFirst: "Inicia sesión para añadir comentarios.",
+
+    pinTitle: (name) => `PIN de ${name}`,
+    pinDesc: "Introduce tu PIN de 4 dígitos para desbloquear la edición.",
+    pinErrWrong: "PIN incorrecto.",
+    pinErrFormat: "El PIN debe tener 4 dígitos.",
+    unlock: "Desbloquear",
+
+    shiftTitle: "Selecciona turno",
+    shiftDesc: "Elige una preferencia para este día.",
+    shiftHelpTitle: "Guía de solicitudes de turnos",
+    shiftHelpSub: "Cómo se consideran las preferencias",
+
+    accountEditTitle: "Editar tu cuenta",
+    changePin: "Cambiar PIN",
+    currentPin: "PIN actual",
+    newPin: "Nuevo PIN",
+    repeatNewPin: "Repite el nuevo PIN",
+    saveNewPin: "Guardar nuevo PIN",
+    logout: "Cerrar sesión",
+    language: "Idioma",
+    pinUpdated: "PIN actualizado.",
+
+    reqOpen: "Solicitudes abiertas",
+    reqCloseSoon: "Cierre pronto",
+    reqClose: "Cierre de solicitudes",
+    reqClosed: "Solicitudes cerradas",
+    closedAt: (dt) => `Cerrado el ${dt}`,
+    left: (t) => `Quedan ${t}`,
+
+    // Week comments
+weekCommentsTitle: "Comentarios de la semana",
+yourCommentLabel: "Tu comentario",
+noCommentsYet: "Aún no hay comentarios.",
+saveComment: "Guardar",
+closeComment: "Cerrar",
+failedLoadWeekComments: "No se pudieron cargar los comentarios. Revisa la consola.",
+failedSaveWeekComment: "No se pudo guardar el comentario. Revisa la consola.",
+
+  }
+};
+
+let currentLang = "en";
+
+function t(key, ...args){
+  const pack = I18N[currentLang] || I18N.en;
+  const val = pack[key] ?? I18N.en[key] ?? key;
+  return (typeof val === "function") ? val(...args) : val;
+}
+
+// Use this anywhere you want to switch language
+function setLang(lang){
+  currentLang = (lang === "es") ? "es" : "en";
+  applyLanguage();
+}
+function updateBodyModalOpen(){
+  const anyOpen =
+    (shiftModal && shiftModal.style.display === "flex") ||
+    (modal && modal.style.display === "flex") ||
+    (weekCommentModal && weekCommentModal.style.display === "flex") ||
+    (adminModal && adminModal.style.display === "flex") ||
+    (userModal && userModal.style.display === "flex") ||
+    (shiftHelpModal && shiftHelpModal.style.display === "flex");
+
+  document.body.classList.toggle("modal-open", !!anyOpen);
+}
+
    function isoDate(d){
   const x = new Date(d);
   x.setHours(12,0,0,0); // pin to midday to avoid timezone rollover
@@ -1625,6 +1800,58 @@ function effectiveOpenForWeek(w){
   return isPeriodClosed(activePeriodObj)
     ? !!w.openAfterClose
     : !!w.open;
+}
+
+function applyLanguage(){
+  // PIN modal
+  const pinConfirm = document.getElementById("pinConfirm");
+  const pinCancel  = document.getElementById("pinCancel");
+  if (pinConfirm) pinConfirm.textContent = t("unlock");
+  if (pinCancel)  pinCancel.textContent  = t("cancel");
+
+  // Shift modal
+  const shiftTitle = document.getElementById("shiftTitle");
+  const shiftDesc  = document.getElementById("shiftDesc");
+  const shiftCancel = document.getElementById("shiftCancel");
+  if (shiftTitle) shiftTitle.textContent = t("shiftTitle");
+if (shiftDesc) shiftDesc.innerHTML =
+  currentLang === "en"
+    ? 'Choose a <strong>preference</strong> for this day.'
+    : 'Elige una <strong>preferencia</strong> para este día.';
+
+  // ^ if you want markup, handle it intentionally like this, or just use textContent.
+
+  if (shiftCancel) shiftCancel.textContent = t("cancel");
+
+  // Shift help modal buttons (you already have setShiftHelpLanguage, you can keep it or unify it)
+  if (shiftHelpClose)  shiftHelpClose.textContent  = t("close");
+  if (shiftHelpClose2) shiftHelpClose2.textContent = t("ok");
+
+  // User modal
+  const userTitle = document.getElementById("userTitle");
+  const savePinBtn = document.getElementById("userSavePin");
+  const logoutBtn = document.getElementById("userLogout");
+  const userClose = document.getElementById("userClose");
+  const flagsLabel = document.querySelector("#userModal .flags-label");
+  if (userTitle) userTitle.textContent = t("accountEditTitle");
+  if (savePinBtn) savePinBtn.textContent = t("saveNewPin");
+  if (logoutBtn) logoutBtn.textContent = t("logout");
+  if (userClose) userClose.textContent = t("close");
+  if (flagsLabel) flagsLabel.textContent = t("language");
+
+    // Week comment modal
+  const weekTitle = document.getElementById("weekCommentTitle");
+  if (weekTitle) weekTitle.textContent = t("weekCommentsTitle");
+
+  if (weekCommentYourLabel) weekCommentYourLabel.textContent = t("yourCommentLabel");
+  if (weekCommentCancel) weekCommentCancel.textContent = t("closeComment");
+  if (weekCommentSave) weekCommentSave.textContent = t("saveComment");
+
+
+  // Placeholders
+  if (userOldPin) userOldPin.placeholder = t("currentPin");
+  if (userNewPin) userNewPin.placeholder = t("newPin");
+  if (userNewPin2) userNewPin2.placeholder = t("repeatNewPin");
 }
 
     function startOfWeekSunday(dateObj){
@@ -2075,6 +2302,11 @@ const weekCommentCancel = document.getElementById("weekCommentCancel");
 const weekCommentSave = document.getElementById("weekCommentSave");
 const weekCommentInput = document.getElementById("weekCommentInput");
 const weekCommentAdminList = document.getElementById("weekCommentAdminList");
+const weekCommentYourLabel = document.getElementById("weekCommentYourLabel");
+
+
+
+applyLanguage();
 
 let activeWeekIdForComment = null;
     function toDatetimeLocalValue(dateObj){
@@ -2201,12 +2433,12 @@ function updateCloseLabel(period){
   const closeAt = getPeriodCloseDate(period);
 
 if (!closeAt){
-  closeLabel.innerHTML = `
-    <span class="close-pill">
-      <span class="dot"></span>
-      <span class="msg">Requests are open</span>
-    </span>
-  `;
+closeLabel.innerHTML = `
+  <span class="close-pill">
+    <span class="dot"></span>
+    <span class="msg">${t("reqOpen")}</span>
+  </span>
+`;
   return;
 }
 
@@ -2215,13 +2447,14 @@ const renderCloseLabel = () => {
   const msLeft = closeAt - now;
 
 if (msLeft <= 0){
-  closeLabel.innerHTML = `
-    <span class="close-pill is-closed">
-      <span class="dot"></span>
-      <span class="msg">Requests closed</span>
-      <span class="mini">Closed at ${closeAt.toLocaleString("en-GB")}</span>
-    </span>
-  `;
+closeLabel.innerHTML = `
+  <span class="close-pill is-closed">
+    <span class="dot"></span>
+    <span class="msg">${t("reqClosed")}</span>
+    <span class="mini">${t("closedAt", closeAt.toLocaleString("en-GB"))}</span>
+  </span>
+`;
+
 
   clearInterval(closeCountdownTimer);
   closeCountdownTimer = null;
@@ -2237,14 +2470,15 @@ if (msLeft <= 0){
 
   const soon = msLeft <= 24 * 60 * 60 * 1000;
 
-  closeLabel.innerHTML = `
-    <span class="close-pill ${soon ? "is-soon" : ""}">
-      <span class="dot"></span>
-      <span class="msg">Requests close${soon ? " soon" : ""}</span>
-      <span class="mini">${closeAt.toLocaleString("en-GB")}</span>
-      <span class="timeleft">${formatTimeLeft(msLeft)} left</span>
-    </span>
-  `;
+closeLabel.innerHTML = `
+  <span class="close-pill ${soon ? "is-soon" : ""}">
+    <span class="dot"></span>
+    <span class="msg">${soon ? t("reqCloseSoon") : t("reqClose")}</span>
+    <span class="mini">${closeAt.toLocaleString("en-GB")}</span>
+    <span class="timeleft">${t("left", formatTimeLeft(msLeft))}</span>
+  </span>
+`;
+
 };
 
 
@@ -2276,8 +2510,9 @@ paintLangButtons();
 function closeUserModal(){
   userModal.style.display = "none";
   userModal.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("modal-open");
+  updateBodyModalOpen();
 }
+
 
 function logout(){
   if (!currentUser) return;
@@ -2411,15 +2646,16 @@ function openWeekCommentModal(){
 }
 
 function closeWeekCommentModal(){
-  document.body.classList.remove("modal-open"); // ✅
   weekCommentModal.style.display = "none";
   weekCommentModal.setAttribute("aria-hidden","true");
+
   activeWeekIdForComment = null;
   weekCommentInput.value = "";
   weekCommentAdminList.innerHTML = "";
   weekCommentAdminList.style.display = "none";
-}
 
+  updateBodyModalOpen();
+}
 weekCommentCancel.addEventListener("click", closeWeekCommentModal);
 weekCommentModal.addEventListener("click", (e) => {
   if (e.target === weekCommentModal) closeWeekCommentModal();
@@ -2448,7 +2684,8 @@ document.addEventListener("click", async (e) => {
   }
 
   if (!currentUser) {
-    alert("Log in first to add comments.");
+alert(t("loginFirst"));
+
     return;
   }
 
@@ -2467,7 +2704,8 @@ document.addEventListener("click", async (e) => {
       weekCommentAdminList.style.display = "block";
 
       if (!rows || rows.length === 0) {
-        weekCommentAdminList.innerHTML = `<div class="subtitle">No comments yet.</div>`;
+      weekCommentAdminList.innerHTML = `<div class="subtitle">${escapeHtml(t("noCommentsYet"))}</div>`;
+
       } else {
         weekCommentAdminList.innerHTML = rows.map(r => {
           const uid = String(r.user_id);
@@ -2492,10 +2730,13 @@ document.addEventListener("click", async (e) => {
     // ---- Bubble indicator: mark if ANY comment exists
     btn.classList.toggle("has-comment", (rows || []).length > 0);
 
-    openWeekCommentModal();
+applyLanguage();
+openWeekCommentModal();
+
   } catch (err) {
     console.error("Week comment load failed:", err);
-    alert("Failed to load week comments. Check console.");
+alert(t("failedLoadWeekComments"));
+
   }
 });
 
@@ -2524,7 +2765,8 @@ weekCommentSave.addEventListener("click", async () => {
     if (currentUser.is_admin) {
       weekCommentAdminList.style.display = "block";
       if (!rows || rows.length === 0) {
-        weekCommentAdminList.innerHTML = `<div class="subtitle">No comments yet.</div>`;
+       weekCommentAdminList.innerHTML = `<div class="subtitle">${escapeHtml(t("noCommentsYet"))}</div>`;
+
       } else {
         weekCommentAdminList.innerHTML = rows.map(r => {
           const uid = String(r.user_id);
@@ -2545,7 +2787,8 @@ weekCommentSave.addEventListener("click", async () => {
     closeWeekCommentModal();
   } catch (err) {
     console.error("Week comment save failed:", err);
-    alert("Failed to save comment. Check console.");
+ alert(t("failedSaveWeekComment"));
+
   }
 });
     
@@ -3339,16 +3582,18 @@ await resetWeeksOpen(adminSelectedPeriodId);
 function openPinModal(user){
   selectedUser = user;
 
-  pinTitle.textContent = `PIN for ${user.name}`;
-  pinDesc.textContent = "Enter your 4-digit PIN to unlock editing.";
+  // pick language based on the person you're logging in as
+  setLang(user.preferred_lang || "en");
+
+  pinTitle.textContent = t("pinTitle", user.name);
+  pinDesc.textContent  = t("pinDesc");
+
   pinErr.style.display = "none";
   pinInput.value = "";
 
-  document.body.classList.add("modal-open");   // ✅ lock background scroll
-
+  document.body.classList.add("modal-open");
   modal.style.display = "flex";
   modal.setAttribute("aria-hidden", "false");
-
   setTimeout(() => pinInput.focus(), 50);
 }
 
@@ -3379,11 +3624,11 @@ pinInput.addEventListener("keydown", (e) => {
       const pin = pinInput.value.trim();
       if(!selectedUser) return;
 
-      if(!/^\d{4}$/.test(pin)){
-        pinErr.textContent = "PIN must be 4 digits.";
-        pinErr.style.display = "block";
-        return;
-      }
+ if(!/^\d{4}$/.test(pin)){
+  pinErr.textContent = t("pinErrFormat");
+  pinErr.style.display = "block";
+  return;
+}
 
       pinConfirmBtn.disabled = true;
       pinErr.style.display = "none";
@@ -3402,21 +3647,23 @@ pinInput.addEventListener("keydown", (e) => {
           return;
         }
 
-        if(ok !== true){
-          pinErr.textContent = "Wrong PIN.";
-          pinErr.style.display = "block";
-          pinConfirmBtn.disabled = false;
-          return;
-        }
+if(ok !== true){
+  pinErr.textContent = t("pinErrWrong");
+  pinErr.style.display = "block";
+  pinConfirmBtn.disabled = false;
+  return;
+}
 
   currentUser = selectedUser;
 setSessionPin(selectedUser.id, pin); // ✅ critical (used for saving requests)
 localStorage.setItem(STORAGE_KEY, currentUser.id);
 
 closePinModal();
+applyLanguage();
 applyUnlockState();
 updateBadges();
 updateCloseLabel(activePeriodObj);
+
 
       }catch(err){
         console.error("Login exception:", err);
@@ -3429,14 +3676,16 @@ function updateBadges(){
   const txt = loginBadge?.querySelector(".acc-txt");
 
   if (!currentUser){
-    if (txt) txt.textContent = "Not logged in";
+ if (txt) txt.textContent = t("notLoggedIn");
+
     else if (loginBadge) loginBadge.textContent = "Not logged in";
     if (adminBadge) adminBadge.style.display = "none";
     return;
   }
 
   // Show "Account: Name" so staff realise it's a feature
-  if (txt) txt.textContent = `Account: ${currentUser.name}`;
+if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
+
   else if (loginBadge) loginBadge.textContent = `Account: ${currentUser.name}`;
 
   if (adminBadge) adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
@@ -3460,12 +3709,13 @@ function openShiftModal(){
 }
 
 function closeShiftModal(){
-  document.activeElement?.blur?.(); // ✅ helps on mobile + prevents stuck focus
+  document.activeElement?.blur?.();
   shiftModal.style.display = "none";
   shiftModal.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("modal-open");
   activeCell = null;
+  updateBodyModalOpen();
 }
+
 // ===============================
 // FIX 1: Shift modal close actions
 // ===============================

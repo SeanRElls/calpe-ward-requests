@@ -608,6 +608,37 @@ tbody td{
   align-items:center;
   justify-content:space-between;
   gap: 10px;
+  cursor: grab;
+}
+
+.user-row:active {
+  cursor: grabbing;
+}
+
+.user-row.dragging {
+  opacity: 0.5;
+}
+
+.user-row.drag-over {
+  border-top: 2px solid #4A90E2;
+}
+
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+  font-size: 14px;
+  color: #ccc;
+  padding: 2px 4px;
+  margin-left: -4px;
+  margin-right: 4px;
+}
+
+.drag-handle:hover {
+  color: #999;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .user-meta{ min-width:0; }              /* allows name to shrink */
@@ -1314,6 +1345,199 @@ button.badge{
   background: #fff;
 }
 
+/* =========================================================================
+   PRINT STYLES
+   ========================================================================= */
+
+/**
+ * Print-specific styles for landscape A4 printing
+ * Optimized for fitting 5-week rota on a single page
+ */
+@media print {
+  /* Hide all UI chrome - only show the rota table and print header */
+  .titlebar, 
+  .rightbits, 
+  select, 
+  button, 
+  .modal-backdrop, 
+  .badge, 
+  .subtitle,
+  .nav-arrows,
+  #printBtn,
+  #noticeBell,
+  #loginBadge,
+  #adminBadge,
+  #periodSelect,
+  .scroll-btn,
+  .week-sep { 
+    display: none !important; 
+  }
+  
+  /* Page setup for landscape A4 */
+  @page { 
+    size: landscape; 
+    margin: 4mm 6mm; 
+  }
+  
+  /* Reset body and container */
+  body { 
+    margin: 0; 
+    padding: 0; 
+    background: #fff; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  
+  .wrap { 
+    width: 100%; 
+    max-width: none; 
+    margin: 0; 
+    padding: 0; 
+    box-shadow: none; 
+    border-radius: 0;
+    background: #fff;
+  }
+  
+  /* Show the rota table without scroll container constraints */
+  .rota-scroll { 
+    overflow: visible !important; 
+    max-height: none !important; 
+    height: auto !important; 
+  }
+  
+  /* Rota table formatting */
+  #rota { 
+    width: 100%; 
+    font-size: 5pt; 
+    page-break-inside: avoid;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+  
+  /* Header cells - remove sticky positioning for print */
+  #rota thead th { 
+    position: static !important; 
+    background: #e8e8e8 !important; 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact;
+    font-size: 5pt;
+    padding: 1px;
+    font-weight: 700;
+    border: 0.5pt solid #666 !important;
+  }
+  
+  /* All borders */
+  #rota, 
+  #rota th, 
+  #rota td { 
+    border: 0.5pt solid #666 !important; 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact; 
+  }
+  
+  /* Section headers - preserve role colors */
+  .section-row td { 
+    font-size: 5pt;
+    font-weight: 800;
+    padding: 1px 2px;
+  }
+  
+  .section-cn { 
+    background: #E3F2FD !important; 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact;
+  }
+  
+  .section-sn { 
+    background: #F3E5F5 !important; 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact;
+  }
+  
+  .section-na { 
+    background: #FFF3E0 !important; 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact;
+  }
+  
+  /* Cell content */
+  .cell { 
+    min-height: 10px; 
+    font-size: 5pt;
+    padding: 1px;
+    text-align: center;
+  }
+  
+  /* Name column */
+  #rota tbody th {
+    font-size: 5pt;
+    padding: 1px 2px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
+  .name-col {
+    font-size: 5pt;
+    white-space: nowrap;
+  }
+  
+  .name-col {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Week labels */
+  .week-label {
+    font-size: 4.5pt;
+    font-weight: 700;
+  }
+  
+  /* Day column headers */
+  .day-header {
+    font-size: 4.5pt;
+    font-weight: 700;
+  }
+  
+  /* Print header that gets injected by JavaScript */
+  .print-header { 
+    display: block !important; 
+    margin-bottom: 6px; 
+    padding-bottom: 4px; 
+    border-bottom: 1pt solid #333; 
+  }
+  
+  .print-header h1 { 
+    font-size: 12pt; 
+    margin: 0 0 2px 0; 
+    font-weight: 700;
+    color: #000;
+  }
+  
+  .print-header .print-meta { 
+    font-size: 7pt; 
+    color: #555; 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact;
+  }
+  
+  /* Ensure proper spacing and no page breaks within table */
+  tr { 
+    page-break-inside: avoid; 
+  }
+  
+  /* Compact table cells for better fit */
+  #rota td {
+    padding: 1px;
+  }
+  
+  /* Ensure table uses full page width */
+  #rota {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
   </style>
 </head>
 
@@ -1339,15 +1563,20 @@ button.badge{
 <div class="rightbits">
   <select id="periodSelect"></select>
 
-  <!-- 🔔 Bell is its own button (NOT inside loginBadge) -->
-<button class="badge" id="noticeBell" type="button" title="Notices">
-    🔔 <span id="noticeBellDot" style="display:none;">•</span>
-  </button>
-
   <!-- 👤 Account badge -->
   <button class="badge account-badge" id="loginBadge" type="button">
     <span class="acc-ic">👤</span>
     <span class="acc-txt">Not logged in</span>
+  </button>
+
+  <!-- 🖨️ Print/Export button (only for Sean Ells) -->
+  <button class="badge" id="printBtn" type="button" title="Print & Export" style="display:none;">
+    🖨️
+  </button>
+
+  <!-- 🔔 Bell is its own button -->
+  <button class="badge" id="noticeBell" type="button" title="Notices">
+    🔔 <span id="noticeBellDot" style="display:none;">•</span>
   </button>
 
   <div class="badge admin" id="adminBadge" style="display:none;">ADMIN</div>
@@ -1424,8 +1653,9 @@ button.badge{
         <button class="shift-btn" data-shift="8-8" type="button">8–8</button>
         <button class="shift-btn" data-shift="N" type="button">N</button>
         <button class="shift-btn" data-shift="W" type="button">W</button>
-       <button class="shift-btn" data-shift="O" type="button">O</button>
-<button class="shift-btn off" data-shift="O*" type="button">O*</button>
+        <button class="shift-btn" data-shift="O" type="button">O</button>
+        <button class="shift-btn off" data-shift="O*" type="button">O*</button>
+        <button class="shift-btn admin-only" id="shiftBtnL" data-shift="L" type="button" style="display:none; background:#e3f2fd; border-color:#90caf9;">L</button>
         <button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>
       </div>
 
@@ -1561,7 +1791,7 @@ button.badge{
     <div id="adminUsersList" style="margin-top:10px;"></div>
   </div>
 
-  <div style="border:1px solid #ddd; border-radius:10px; padding:10px;">
+  <div id="adminUserEditSection" style="border:1px solid #ddd; border-radius:10px; padding:10px;">
     <div style="font-weight:800; margin-bottom:6px;">Add / Edit</div>
 
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1896,6 +2126,64 @@ button.badge{
   </div>
 
 
+  <!-- =========================
+       PRINT & EXPORT MODAL
+       ========================= -->
+  <div class="modal-backdrop" id="printModal" aria-hidden="true" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="printTitle">
+      <h2 id="printTitle">Print & Export</h2>
+      <p class="subtitle">Generate printouts and reports</p>
+
+      <!-- STAFF OPTIONS -->
+      <div id="printStaffOptions" style="display:none;">
+        <div class="card" style="padding:12px; margin-top:12px;">
+          <div style="font-weight:800; margin-bottom:8px;">Print options</div>
+          
+          <button id="printAllRequests" class="primary" type="button" style="width:100%; margin-bottom:8px;">
+            Print all requests
+          </button>
+          
+          <div style="font-weight:600; margin:12px 0 6px;">Print by group:</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="printGroupCN" type="button" style="flex:1;">Charge Nurses</button>
+            <button id="printGroupSN" type="button" style="flex:1;">Staff Nurses</button>
+            <button id="printGroupNA" type="button" style="flex:1;">Nursing Assistants</button>
+          </div>
+          
+          <button id="printOwnRow" type="button" style="width:100%; margin-top:8px;">
+            Print my requests only
+          </button>
+        </div>
+      </div>
+
+      <!-- ADMIN OPTIONS -->
+      <div id="printAdminOptions" style="display:none;">
+        <div class="card" style="padding:12px; margin-top:12px;">
+          <div style="font-weight:800; margin-bottom:8px;">Admin: Export & Reports</div>
+          
+          <button id="exportExcel" class="primary" type="button" style="width:100%; margin-bottom:8px;">
+            Export all to Excel (CSV)
+          </button>
+          
+          <div style="font-weight:600; margin:12px 0 6px;">Generate reports:</div>
+          
+          <button id="reportRequestsUsage" type="button" style="width:100%; margin-bottom:8px;">
+            Requests usage (5-week period)
+          </button>
+          
+          <button id="reportComments" type="button" style="width:100%;">
+            Comments report (all staff)
+          </button>
+        </div>
+      </div>
+
+      <div class="btns" style="margin-top:12px;">
+        <button id="printClose" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+
   <script>
     /* =========================================================
        1) CONFIG
@@ -2139,6 +2427,7 @@ function escapeHtml(s){
       return d;
     }
     function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+    function daysInWeek(weekStartDate){ return Array.from({length:7}, (_,i) => addDays(new Date(weekStartDate), i)); }
 
 function groupDatesIntoWeeks(dates){
   const map = new Map();
@@ -2461,6 +2750,7 @@ function isPeriodClosed(period){
 let currentUser = null;      // user object when logged in (by PIN)
 let selectedUser = null;     // user you clicked before PIN entry
     let usersById = new Map();
+    let allUsers = [];           // all users array (for print/export features)
 let sessionPin = null; // store PIN in memory only (not localStorage)
 
 
@@ -4121,8 +4411,10 @@ async function loadAdminUsers(){
 
   const { data, error } = await supabaseClient
     .from("users")
-    .select("id, name, role_id, is_admin, is_active, roles(name)")
-  .order("created_at", { ascending: true })
+    .select("id, name, role_id, is_admin, is_active, display_order, roles(name)")
+    .order("role_id", { ascending: true })
+    .order("display_order", { ascending: true })
+    .order("created_at", { ascending: true })
 
   if (error) {
     console.error(error);
@@ -4165,7 +4457,8 @@ function renderAdminUsers(){
 
     html.push(members.map(u => {
       return `
-        <div class="user-row">
+        <div class="user-row" draggable="true" data-user-id="${u.id}" data-role-id="${g.role_id}">
+          <div class="drag-handle" title="Drag to reorder">↕</div>
           <div class="user-meta">
             <div class="user-name">
               ${escapeHtml(u.name || "")}
@@ -4204,6 +4497,12 @@ function startEditUser(userId){
   adminEditUserRole.value = String(u.role_id || 2);
   adminEditUserPin.value = "";
   adminUserEditHelp.textContent = "Leave PIN blank to keep current PIN.";
+  
+  // Scroll to the edit form
+  const editSection = document.getElementById("adminUserEditSection");
+  if (editSection) {
+    editSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
 }
 
 async function toggleUserActive(userId){
@@ -4231,6 +4530,113 @@ async function toggleUserActive(userId){
 
   await loadRota();
   await loadAdminUsers();
+}
+
+// Drag-and-drop functionality for user reordering
+let draggedElement = null;
+let draggedUserId = null;
+let draggedRoleId = null;
+
+adminUsersList?.addEventListener('dragstart', (e) => {
+  const userRow = e.target.closest('.user-row[draggable="true"]');
+  if (!userRow) return;
+  
+  draggedElement = userRow;
+  draggedUserId = userRow.dataset.userId;
+  draggedRoleId = userRow.dataset.roleId;
+  userRow.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+});
+
+adminUsersList?.addEventListener('dragend', (e) => {
+  const userRow = e.target.closest('.user-row');
+  if (userRow) {
+    userRow.classList.remove('dragging');
+  }
+  document.querySelectorAll('.user-row').forEach(row => row.classList.remove('drag-over'));
+  draggedElement = null;
+  draggedUserId = null;
+  draggedRoleId = null;
+});
+
+adminUsersList?.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  const userRow = e.target.closest('.user-row[draggable="true"]');
+  if (!userRow || !draggedElement) return;
+  
+  // Only allow dropping within the same role group
+  if (userRow.dataset.roleId !== draggedRoleId) return;
+  if (userRow === draggedElement) return;
+  
+  e.dataTransfer.dropEffect = 'move';
+  
+  // Remove drag-over from all rows
+  document.querySelectorAll('.user-row').forEach(row => row.classList.remove('drag-over'));
+  userRow.classList.add('drag-over');
+});
+
+adminUsersList?.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const targetRow = e.target.closest('.user-row[draggable="true"]');
+  if (!targetRow || !draggedElement) return;
+  
+  // Only allow dropping within the same role group
+  if (targetRow.dataset.roleId !== draggedRoleId) return;
+  if (targetRow === draggedElement) return;
+  
+  targetRow.classList.remove('drag-over');
+  
+  // Get all user rows in this role group
+  const allRows = Array.from(adminUsersList.querySelectorAll(`.user-row[data-role-id="${draggedRoleId}"]`));
+  const draggedIndex = allRows.indexOf(draggedElement);
+  const targetIndex = allRows.indexOf(targetRow);
+  
+  if (draggedIndex < targetIndex) {
+    targetRow.parentNode.insertBefore(draggedElement, targetRow.nextSibling);
+  } else {
+    targetRow.parentNode.insertBefore(draggedElement, targetRow);
+  }
+  
+  // Update display_order in database
+  await updateUserDisplayOrder(draggedRoleId);
+});
+
+async function updateUserDisplayOrder(roleId) {
+  try {
+    // Get all user rows for this role in current DOM order
+    const rows = Array.from(adminUsersList.querySelectorAll(`.user-row[data-role-id="${roleId}"]`));
+    
+    console.log('Updating order for role:', roleId);
+    console.log('Found rows:', rows.length);
+    
+    // Update each user's display_order
+    for (let i = 0; i < rows.length; i++) {
+      const userId = rows[i].dataset.userId;
+      console.log(`Updating user ${userId} to display_order ${i + 1}`);
+      
+      const { data, error } = await supabaseClient
+        .from('users')
+        .update({ display_order: i + 1 })
+        .eq('id', userId)
+        .select();
+      
+      if (error) {
+        console.error('Failed to update display_order:', error);
+        alert(`Failed to save new order: ${error.message}`);
+        return;
+      }
+      console.log('Update result:', data);
+    }
+    
+    console.log('All updates successful, reloading...');
+    
+    // Reload to show new order
+    await loadAdminUsers();
+    await loadRota();
+  } catch (error) {
+    console.error('Error updating user order:', error);
+    alert(`Failed to save new order: ${error.message}`);
+  }
 }
 
 
@@ -5074,6 +5480,7 @@ function updateBadges(){
 
     else if (loginBadge) loginBadge.textContent = "Not logged in";
     if (adminBadge) adminBadge.style.display = "none";
+    if (printBtn) printBtn.style.display = "none";
     return;
   }
 
@@ -5083,6 +5490,9 @@ if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
   else if (loginBadge) loginBadge.textContent = `Account: ${currentUser.name}`;
 
   if (adminBadge) adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
+
+  // Show print button only for Sean Ells
+  if (printBtn) printBtn.style.display = currentUser.name === "Sean Ells" ? "inline-block" : "none";
 
   // Toggle a body-level class so we can scope admin-only UI affordances (e.g. locked-cell highlight)
   try {
@@ -5114,6 +5524,12 @@ function openShiftModal(){
       shiftLockBtn.textContent = locked ? "🔒" : "🔓";
       shiftLockBtn.title = locked ? "Unlock this cell" : "Lock this cell";
     }
+  }
+
+  // Admin-only: show L button
+  const shiftBtnL = document.getElementById('shiftBtnL');
+  if (shiftBtnL) {
+    shiftBtnL.style.display = currentUser?.is_admin ? "block" : "none";
   }
 
   document.body.classList.add("modal-open");
@@ -5195,9 +5611,9 @@ if (shift === "O*") {
  
 
     /* -----------------------------
-       STEP 1: Max 5 per week guard
+       STEP 1: Max 5 per week guard (except for Leave)
        ----------------------------- */
-    if (shift !== "CLEAR") {
+    if (shift !== "CLEAR" && shift !== "L") {
       const currentCount = countUserRequestsThisWeek(userId, date);
       const alreadyExists = requestsCache.has(key);
 
@@ -5380,8 +5796,9 @@ async function loadRota() {
   // -----------------------------
   const { data: users, error: userError } = await supabaseClient
 .from("users")
-.select("id, name, role_id, is_admin, is_active, preferred_lang, roles(name)")
-    .order("created_at", { ascending: true })
+.select("id, name, role_id, is_admin, is_active, preferred_lang, display_order, roles(name)")
+    .order("role_id", { ascending: true })
+    .order("display_order", { ascending: true })
 
   if (userError) {
     console.error("Users load error:", userError);
@@ -5389,7 +5806,8 @@ async function loadRota() {
     return;
   }
 
-  // Build helper map
+  // Build helper map + store all users for print/export
+  allUsers = users || [];
   usersById = new Map((users || []).map(u => [u.id, u.name]));
 
   // 🔐 Restore logged-in user from localStorage (ONE TIME LOGIN)
@@ -5652,6 +6070,9 @@ r1.appendChild(th);
     // section header row
     const sectionTr = document.createElement("tr");
     sectionTr.className = "section-row";
+    // Store role_id for print filtering
+    const roleId = g.className === 'section-cn' ? 1 : g.className === 'section-sn' ? 2 : 3;
+    sectionTr.dataset.roleId = roleId;
 
     const sectionTd = document.createElement("td");
     sectionTd.className = `name-col ${g.className}`;
@@ -5805,7 +6226,248 @@ td.classList.toggle("editable", canEdit);
 }
 
 
+    
     /* =========================================================
+       PRINT & EXPORT SYSTEM
+       ========================================================= */
+    const printBtn = document.getElementById("printBtn");
+    const printModal = document.getElementById("printModal");
+    const printClose = document.getElementById("printClose");
+    const printStaffOptions = document.getElementById("printStaffOptions");
+    const printAdminOptions = document.getElementById("printAdminOptions");
+    const printAllRequests = document.getElementById("printAllRequests");
+    const printGroupCN = document.getElementById("printGroupCN");
+    const printGroupSN = document.getElementById("printGroupSN");
+    const printGroupNA = document.getElementById("printGroupNA");
+    const printOwnRow = document.getElementById("printOwnRow");
+    const exportExcel = document.getElementById("exportExcel");
+    const reportRequestsUsage = document.getElementById("reportRequestsUsage");
+    const reportComments = document.getElementById("reportComments");
+    
+    function openPrintModal(){
+        if(!currentUser){alert(t("loginFirst")||"Please log in first.");return}
+        printStaffOptions.style.display="block";
+        printAdminOptions.style.display=currentUser.is_admin?"block":"none";
+        printModal.setAttribute("aria-hidden","false");
+        printModal.style.display="flex"
+    }
+    
+    function closePrintModal(){
+        printModal.setAttribute("aria-hidden","true");
+        printModal.style.display="none"
+    }
+    
+    function addPrintHeader(title,subtitle=""){
+        const existing=document.querySelector(".print-header");
+        if(existing)existing.remove();
+        const header=document.createElement("div");
+        header.className="print-header";
+        header.style.display="none";
+        header.innerHTML=`<h1>Calpe Ward Requests - ${escapeHtml(title)}</h1><div class="print-meta">${escapeHtml(subtitle)}<br>Period: ${escapeHtml(activePeriodObj?.name||"")} | Printed: ${new Date().toLocaleDateString("en-GB")} ${new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</div>`;
+        document.body.insertBefore(header,document.body.firstChild)
+    }
+    
+    function printAll(){
+        addPrintHeader("All Requests","Complete 5-week rota");
+        closePrintModal();
+        setTimeout(()=>window.print(),100)
+    }
+    
+    function printByGroup(roleId,roleName){
+        addPrintHeader(`${roleName} Requests`,`Group: ${roleName}`);
+        // Hide section headers for other roles
+        const allSections=document.querySelectorAll("#rota tbody tr.section-row");
+        allSections.forEach(section=>{
+            const sectionRoleId=parseInt(section.dataset.roleId);
+            if(sectionRoleId!==roleId)section.style.display="none"
+        });
+        // Hide user rows for other roles
+        const allRows=document.querySelectorAll("#rota tbody tr:not(.section-row)");
+        allRows.forEach(row=>{
+            const userIdStr=row.dataset.userId;
+            const user=allUsers.find(u=>String(u.id)===userIdStr || u.id===userIdStr);
+            if(user&&user.role_id!==roleId)row.style.display="none"
+        });
+        closePrintModal();
+        setTimeout(()=>{
+            window.print();
+            // Restore all hidden rows after print dialog closes
+            setTimeout(()=>{
+                allSections.forEach(section=>section.style.display="");
+                allRows.forEach(row=>row.style.display="")
+            },1000)
+        },100)
+    }
+    
+    function printOwnRowFunc(){
+        if(!currentUser)return;
+        addPrintHeader("My Requests",`User: ${currentUser.name}`);
+        // Hide all user rows except current user's
+        const allRows=document.querySelectorAll("#rota tbody tr:not(.section-row)");
+        allRows.forEach(row=>{
+            const userIdStr=row.dataset.userId;
+            if(String(currentUser.id)!==userIdStr)row.style.display="none"
+        });
+        // Hide section headers that don't match current user's role
+        const sectionRows=document.querySelectorAll("#rota tbody tr.section-row");
+        sectionRows.forEach(sectionRow=>{
+            const sectionRoleId=parseInt(sectionRow.dataset.roleId);
+            if(sectionRoleId!==currentUser.role_id)sectionRow.style.display="none"
+        });
+        closePrintModal();
+        setTimeout(()=>{
+            window.print();
+            setTimeout(()=>{
+                allRows.forEach(row=>row.style.display="");
+                sectionRows.forEach(row=>row.style.display="")
+            },1000)
+        },100)
+    }
+    
+    async function exportToExcel(){
+        try{
+            const weeks=allWeeks.slice(weekWindowStart,weekWindowStart+5);
+            let csv="Name,Role";
+            weeks.forEach(w=>{
+                const days=daysInWeek(w.weekStart);
+                days.forEach(d=>csv+=`,${fmt(d)}`)
+            });
+            csv+="\n";
+            allUsers.forEach(user=>{
+                const roleName=user.role_id===1?"CN":user.role_id===2?"SN":"NA";
+                csv+=`"${user.name}",${roleName}`;
+                weeks.forEach(w=>{
+                    const days=daysInWeek(w.weekStart);
+                    days.forEach(d=>{
+                        const dateStr=isoDate(d);
+                        const req=requestsCache.get(`${user.id}_${dateStr}`);
+                        csv+=`,${req?.value||""}`
+                    })
+                });
+                csv+="\n"
+            });
+            const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+            const link=document.createElement("a");
+            const url=URL.createObjectURL(blob);
+            link.setAttribute("href",url);
+            link.setAttribute("download",`calpe-ward-requests-${activePeriodObj?.name||"export"}.csv`);
+            link.style.display="none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            closePrintModal();
+            alert("Excel file exported successfully!")
+        }catch(err){
+            console.error("Export failed:",err);
+            alert("Failed to export. Check console.")
+        }
+    }
+    
+    async function generateRequestsUsageReport(){
+        try{
+            const weeks=allWeeks.slice(weekWindowStart,weekWindowStart+5);
+            const stats=allUsers.map(user=>{
+                let totalRequests=0,offDutyCount=0,priorityOffDuty=0;
+                weeks.forEach(w=>{
+                    const days=daysInWeek(w.weekStart);
+                    days.forEach(d=>{
+                        const dateStr=isoDate(d);
+                        const req=requestsCache.get(`${user.id}_${dateStr}`);
+                        if(req?.value){
+                            totalRequests++;
+                            if(req.value==="O"||req.value==="O*"){
+                                offDutyCount++;
+                                if(req.value==="O*")priorityOffDuty++
+                            }
+                        }
+                    })
+                });
+                return{
+                    name:user.name,
+                    role:user.role_id===1?"CN":user.role_id===2?"SN":"NA",
+                    totalRequests,
+                    offDutyCount,
+                    priorityOffDuty,
+                    percentUsed:Math.round((totalRequests/(weeks.length*7))*100)
+                }
+            });
+            let csv="Name,Role,Total Requests,Off Duty Requests,Priority Off Duty,% Used\n";
+            stats.forEach(s=>csv+=`"${s.name}",${s.role},${s.totalRequests},${s.offDutyCount},${s.priorityOffDuty},${s.percentUsed}%\n`);
+            const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+            const link=document.createElement("a");
+            const url=URL.createObjectURL(blob);
+            link.setAttribute("href",url);
+            link.setAttribute("download",`requests-usage-report-${activePeriodObj?.name||"report"}.csv`);
+            link.style.display="none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            closePrintModal();
+            alert("Requests usage report generated!")
+        }catch(err){
+            console.error("Report generation failed:",err);
+            alert("Failed to generate report. Check console.")
+        }
+    }
+    
+    async function generateCommentsReport(){
+        try{
+            if(!activePeriodId){
+                alert("No active period selected.");
+                return
+            }
+            const{data:comments,error}=await supabaseClient
+                .from("week_comments")
+                .select("*, users(name)")
+                .eq("period_id",activePeriodId)
+                .order("week_start",{ascending:true})
+                .order("created_at",{ascending:true});
+            if(error)throw error;
+            if(!comments||comments.length===0){
+                alert("No comments found for this period.");
+                return
+            }
+            let csv="Week Start,User,Comment,Posted\n";
+            comments.forEach(c=>{
+                const weekDate=new Date(c.week_start).toLocaleDateString("en-GB");
+                const userName=c.users?.name||"Unknown";
+                const comment=(c.comment||"").replace(/"/g,'""');
+                const posted=new Date(c.created_at).toLocaleString("en-GB");
+                csv+=`"${weekDate}","${userName}","${comment}","${posted}"\n`
+            });
+            const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+            const link=document.createElement("a");
+            const url=URL.createObjectURL(blob);
+            link.setAttribute("href",url);
+            link.setAttribute("download",`comments-report-${activePeriodObj?.name||"report"}.csv`);
+            link.style.display="none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            closePrintModal();
+            alert(`Comments report generated! ${comments.length} comments exported.`)
+        }catch(err){
+            console.error("Comments report failed:",err);
+            alert("Failed to generate comments report. Check console.")
+        }
+    }
+    
+    printBtn?.addEventListener("click",openPrintModal);
+    printClose?.addEventListener("click",closePrintModal);
+    printAllRequests?.addEventListener("click",printAll);
+    printGroupCN?.addEventListener("click",()=>printByGroup(1,"Charge Nurses"));
+    printGroupSN?.addEventListener("click",()=>printByGroup(2,"Staff Nurses"));
+    printGroupNA?.addEventListener("click",()=>printByGroup(3,"Nursing Assistants"));
+    printOwnRow?.addEventListener("click",printOwnRowFunc);
+    exportExcel?.addEventListener("click",exportToExcel);
+    reportRequestsUsage?.addEventListener("click",generateRequestsUsageReport);
+    reportComments?.addEventListener("click",generateCommentsReport);
+    printModal?.addEventListener("click",(e)=>{if(e.target===printModal)closePrintModal()});
+
+/* =========================================================
        10) BOOT
        ========================================================= */
     loadRota();

@@ -1097,9 +1097,7 @@ border-color: rgba(37,99,235,0.22);
     
 /* Cards inside admin: softer */
 #adminViewUsers > div,
-#adminViewPeriods > div,
-#adminViewGenerate > div,
-#adminViewNotices > div{
+#adminViewGenerate > div{
   border: 1px solid var(--line) !important;
   border-radius: 14px !important;
   background: #fff;
@@ -1162,7 +1160,7 @@ border-color: rgba(37,99,235,0.22);
 
 #adminModal h2{
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.2px;
 }
 
@@ -1173,7 +1171,7 @@ border-color: rgba(37,99,235,0.22);
   
     .user-group-title{
   padding: 10px 12px;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 12px;
   color: #64748b;
   background: #f8fafc;
@@ -1253,6 +1251,13 @@ button.badge{
   background: #fff;
   margin-bottom: 10px;
 }
+
+/* No border on empty state messages */
+#adminNoticesList > .subtitle {
+  border: none !important;
+  padding: 10px 0 !important;
+}
+
 .notice-title{ font-weight: 900; margin-bottom: 6px; }
 .notice-meta{ font-size: 11px; color: #667085; margin-bottom: 8px; }
 .notice-body{ white-space: pre-wrap; line-height: 1.45; font-size: 13px; color: #334155; }
@@ -1476,15 +1481,15 @@ button.badge{
 <div id="adminViewPeriods">
 
   <!-- Period picker -->
-  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
-    <div style="font-weight:800;">Rota period</div>
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; padding-bottom: 10px; border-bottom: 1px solid var(--line, #e6e8ee);">
+    <div style="font-weight:700; font-size: 14px; color: var(--ink);">Rota period</div>
     <select id="adminPeriodSelect" style="padding:8px 10px; border-radius:999px; border:1px solid #ccc; font-size:12px; min-width:220px;"></select>
     <div class="subtitle" id="adminPeriodMeta"></div>
   </div>
 
   <!-- Requests close time -->
-  <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
-    <div style="font-weight:800; margin-bottom:6px;">Requests closing time</div>
+  <div style="padding:10px 0; margin-bottom:10px; padding-bottom: 10px; border-bottom: 1px solid var(--line, #e6e8ee);">
+    <div style="font-weight:700; margin-bottom:6px; font-size: 14px; color: var(--ink);">Requests closing time</div>
 
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
       <input id="adminClosesAtInput" type="datetime-local"
@@ -1507,7 +1512,7 @@ button.badge{
   </div>
 
   <!-- Period controls -->
-  <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
+  <div style="padding:10px 0; margin-bottom:10px; padding-bottom: 10px; border-bottom: 1px solid var(--line, #e6e8ee);">
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
       <button id="adminSetActiveBtn" type="button" style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Set active</button>
       <button id="adminToggleHiddenBtn" type="button" style="min-width:auto; padding:8px 10px; border-radius:999px; font-size:12px;">Toggle hidden</button>
@@ -1515,8 +1520,8 @@ button.badge{
   </div>
 
   <!-- Weeks list -->
-  <div style="border:1px solid #ddd; border-radius:10px; padding:10px;">
-    <div style="font-weight:800; margin-bottom:6px;">Weeks</div>
+  <div style="padding:10px 0;">
+    <div style="font-weight:700; margin-bottom:6px; font-size: 14px; color: var(--ink); padding-bottom: 10px; border-bottom: 1px solid var(--line, #e6e8ee);">Weeks</div>
     <div id="adminWeeksList" class="subtitle">Pick a period…</div>
   </div>
 
@@ -1524,7 +1529,7 @@ button.badge{
 
     <!-- TAB: GENERATE -->
     <div id="adminViewGenerate" style="display:none;">
-      <div style="border:1px solid #ddd; border-radius:10px; padding:10px;">
+      <div style="padding:10px;">
         <div style="font-weight:700; margin-bottom:6px;">Generate next 5-week period</div>
         <div class="subtitle" id="adminGeneratePreview">Preview will appear here.</div>
 
@@ -1540,7 +1545,7 @@ button.badge{
 
   <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:10px;">
     <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-      <div style="font-weight:800;">Users</div>
+      <div style="font-weight:700; font-size: 14px; color: var(--ink);">Users</div>
 
       <label class="subtitle" style="display:flex; gap:6px; align-items:center;">
         <input type="checkbox" id="adminShowInactiveUsers" />
@@ -1562,9 +1567,9 @@ button.badge{
   </div>
 
   <div style="border:1px solid #ddd; border-radius:10px; padding:10px;">
-    <div style="font-weight:800; margin-bottom:6px;">Add / Edit</div>
+    <div style="font-weight:700; margin-bottom:6px; font-size: 14px; color: var(--ink); padding-bottom: 10px; border-bottom: 1px solid var(--line, #e6e8ee);">Add / Edit</div>
 
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top: 10px;">
       <input id="adminEditUserName" placeholder="Name"
         style="flex:1; min-width:180px; padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;" />
 
@@ -1601,8 +1606,8 @@ button.badge{
      ========================= -->
 <div id="adminViewNotices" style="display:none;">
 
-  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
-    <div style="font-weight:800;">Notices</div>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; padding-bottom: 10px; border-bottom: 1px solid var(--line, #e6e8ee);">
+    <div style="font-weight:700; font-size: 14px; color: var(--ink);">Notices</div>
 
     <button
       id="adminAddNoticeBtn"
@@ -1629,7 +1634,7 @@ button.badge{
 
   <div
     id="adminNoticesList"
-    style="border:1px solid #ddd; border-radius:10px; overflow:hidden;">
+    style="border: 1px solid var(--line, #e6e8ee); border-radius: 12px; overflow:hidden;">
     <!-- notices injected here -->
   </div>
 
@@ -1677,36 +1682,36 @@ button.badge{
      ADMIN NOTICE EDITOR
      ========================= -->
 <div class="modal-backdrop" id="adminNoticeModal" aria-hidden="true" style="display:none;">
-  <div class="modal" role="dialog" aria-modal="true">
-    <h2 id="adminNoticeTitle">New notice</h2>
-    <p class="subtitle">Editing this notice will require staff to acknowledge it again.</p>
+  <div class="modal" role="dialog" aria-modal="true" style="padding: 14px; border-radius: 16px; background: var(--card); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: var(--ink);">
+    <h2 id="adminNoticeTitle" style="font-size: 15px; font-weight: 800; letter-spacing: 0.2px;">New notice</h2>
+    <p class="subtitle" style="font-size: 12px; color: #667085;">Editing this notice will require staff to acknowledge it again.</p>
 
-    <div class="card" style="padding:10px; margin-top:10px;">
-      <div style="font-weight:800; margin-bottom:6px;">Title</div>
+    <div style="padding:10px; border-bottom: 1px solid var(--line, #e6e8ee); margin-top: 10px;">
+      <div style="font-weight:800; margin-bottom:6px; font-size: 13px;">Title</div>
       <input id="adminNoticeTitleInput"
-             style="width:100%; padding:8px 10px; border-radius:10px; border:1px solid #ccc;" />
+             style="width:100%; padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size: 12px;" />
     </div>
 
-    <div class="card" style="padding:10px; margin-top:10px;">
-      <div style="font-weight:800; margin-bottom:6px;">Body (English)</div>
-      <textarea id="adminNoticeBodyEn" rows="6" style="width:100%;"></textarea>
+    <div style="padding:10px; border-bottom: 1px solid var(--line, #e6e8ee);">
+      <div style="font-weight:800; margin-bottom:6px; font-size: 13px;">Body (English)</div>
+      <textarea id="adminNoticeBodyEn" rows="6" style="width:100%; border-radius: 10px; border: 1px solid #ccc; padding: 8px 10px; font-size: 12px;"></textarea>
     </div>
 
-    <div class="card" style="padding:10px; margin-top:10px;">
-      <div style="font-weight:800; margin-bottom:6px;">Body (Spanish – optional)</div>
-      <textarea id="adminNoticeBodyEs" rows="6" style="width:100%;"></textarea>
+    <div style="padding:10px; border-bottom: 1px solid var(--line, #e6e8ee);">
+      <div style="font-weight:800; margin-bottom:6px; font-size: 13px;">Body (Spanish – optional)</div>
+      <textarea id="adminNoticeBodyEs" rows="6" style="width:100%; border-radius: 10px; border: 1px solid #ccc; padding: 8px 10px; font-size: 12px;"></textarea>
     </div>
 
-    <div class="card" style="padding:10px; margin-top:10px;">
-      <div style="font-weight:800; margin-bottom:6px;">Target audience</div>
+    <div style="padding:10px;">
+      <div style="font-weight:800; margin-bottom:6px; font-size: 13px;">Target audience</div>
 
-      <label><input type="checkbox" id="noticeTargetAll" /> All users</label><br>
-      <label><input type="checkbox" value="1" class="noticeRoleChk" /> Charge Nurses</label><br>
-      <label><input type="checkbox" value="2" class="noticeRoleChk" /> Staff Nurses</label><br>
-      <label><input type="checkbox" value="3" class="noticeRoleChk" /> Nursing Assistants</label>
+      <label style="font-size: 12px; display: block; margin: 4px 0;"><input type="checkbox" id="noticeTargetAll" /> All users</label>
+      <label style="font-size: 12px; display: block; margin: 4px 0;"><input type="checkbox" value="1" class="noticeRoleChk" /> Charge Nurses</label>
+      <label style="font-size: 12px; display: block; margin: 4px 0;"><input type="checkbox" value="2" class="noticeRoleChk" /> Staff Nurses</label>
+      <label style="font-size: 12px; display: block; margin: 4px 0;"><input type="checkbox" value="3" class="noticeRoleChk" /> Nursing Assistants</label>
     </div>
 
-    <div class="btns" style="margin-top:12px;">
+    <div class="btns" style="margin-top:12px; justify-content: flex-end;">
       <button id="adminNoticeCancel" type="button">Cancel</button>
       <button id="adminNoticeSave" class="primary" type="button">Save notice</button>
     </div>
@@ -4642,7 +4647,7 @@ ${periodClosed ? "(after close time)" : "(before close time)"}
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #eee;">
         <div>
-          <div style="font-weight:800;">${s} – ${e}</div>
+          <div style="font-weight:700; font-size: 14px; color: var(--ink);">${s} – ${e}</div>
           <div style="margin-top:4px;">${pill}</div>
           ${lockNote}
         </div>

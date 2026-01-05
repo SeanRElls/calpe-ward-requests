@@ -2720,7 +2720,6 @@ shiftLockBtn?.addEventListener("click", async (e) => {
   const key = `${targetUserId}_${date}`;
 
   const existing = locksCache.get(key);
-
   try {
     if (existing) {
       // 🔓 UNLOCK
@@ -2737,7 +2736,8 @@ shiftLockBtn?.addEventListener("click", async (e) => {
 
       locksCache.delete(key);
       shiftLockBtn.textContent = "🔓";
-
+      // Force reflow for iOS
+      void shiftLockBtn.offsetWidth;
     } else {
       // 🔒 LOCK (optional reason)
       const reason = prompt(
@@ -2763,13 +2763,21 @@ shiftLockBtn?.addEventListener("click", async (e) => {
 
       locksCache.set(key, data);
       shiftLockBtn.textContent = "🔒";
+      // Force reflow for iOS
+      void shiftLockBtn.offsetWidth;
     }
 
     await loadRota(); // keep UI honest
 
+    // If the modal is still open, re-open to refresh icon state (iOS fix)
+    if (shiftModal && shiftModal.style.display === "flex") {
+      setTimeout(() => openShiftModal(), 0);
+    }
+
   } catch (err) {
     console.error(err);
     alert("Lock action failed.");
+  }
   }
 });
 

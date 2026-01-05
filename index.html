@@ -2767,6 +2767,11 @@ shiftLockBtn?.addEventListener("click", async (e) => {
 
     await loadRota(); // keep UI honest
 
+    // Re-open the modal to show the updated lock icon (iOS fix)
+    if (activeCell) {
+      openShiftModal();
+    }
+
   } catch (err) {
     console.error(err);
     alert("Lock action failed.");

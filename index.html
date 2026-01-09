@@ -2254,7 +2254,7 @@ button.badge{
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="printTitle">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <h2 id="printTitle" style="margin:0;">Print & Export</h2>
-        <button id="printClose" type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
+        <button id="printCloseX" type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
       </div>
       <p class="subtitle">Generate printouts and reports</p>
 
@@ -5641,8 +5641,8 @@ if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
 
   if (adminBadge) adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
 
-  // Show print button only for Sean Ells
-  if (printBtn) printBtn.style.display = currentUser.name === "Sean Ells" ? "inline-block" : "none";
+  // Show print button only for admins
+  if (printBtn) printBtn.style.display = currentUser.is_admin ? "inline-block" : "none";
 
   // Toggle a body-level class so we can scope admin-only UI affordances (e.g. locked-cell highlight)
   try {
@@ -6387,6 +6387,7 @@ td.classList.toggle("editable", canEdit);
     const printBtn = document.getElementById("printBtn");
     const printModal = document.getElementById("printModal");
     const printClose = document.getElementById("printClose");
+    const printCloseX = document.getElementById("printCloseX");
     const printStaffOptions = document.getElementById("printStaffOptions");
     const printAdminOptions = document.getElementById("printAdminOptions");
     const printAllRequests = document.getElementById("printAllRequests");
@@ -7381,6 +7382,7 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
     
     printBtn?.addEventListener("click",openPrintModal);
     printClose?.addEventListener("click",closePrintModal);
+    printCloseX?.addEventListener("click",closePrintModal);
     printAllRequests?.addEventListener("click",printAll);
     printGroupCN?.addEventListener("click",()=>printByGroup(1,"Charge Nurses"));
     printGroupSN?.addEventListener("click",()=>printByGroup(2,"Staff Nurses"));

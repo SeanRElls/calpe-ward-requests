@@ -10,6 +10,7 @@
 --
 -- NOTE: Return table columns are prefixed with "out_" to avoid ambiguous
 --       column reference errors (e.g., out_id, out_user_id, etc.)
+-- NOTE: important_rank uses SMALLINT to match the database column type
 --
 -- INSTRUCTIONS:
 -- 1. Open Supabase Dashboard → SQL Editor
@@ -20,6 +21,8 @@
 -- Drop the old functions first (required due to return type changes)
 DROP FUNCTION IF EXISTS set_request_cell(uuid, text, date, text, integer);
 DROP FUNCTION IF EXISTS admin_set_request_cell(uuid, text, uuid, date, text, integer);
+DROP FUNCTION IF EXISTS set_request_cell(uuid, text, date, text, smallint);
+DROP FUNCTION IF EXISTS admin_set_request_cell(uuid, text, uuid, date, text, smallint);
 
 -- =========================================================================
 -- FUNCTION: set_request_cell
@@ -30,8 +33,8 @@ CREATE OR REPLACE FUNCTION set_request_cell(
   p_pin TEXT,
   p_date DATE,
   p_value TEXT,
-  p_important_rank INT DEFAULT NULL
-) RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank INT) AS $$
+  p_important_rank SMALLINT DEFAULT NULL
+) RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank SMALLINT) AS $$
 DECLARE
   v_pin_hash TEXT;
   v_count INT;
@@ -87,8 +90,8 @@ CREATE OR REPLACE FUNCTION admin_set_request_cell(
   p_target_user_id UUID,
   p_date DATE,
   p_value TEXT,
-  p_important_rank INT DEFAULT NULL
-) RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank INT) AS $$
+  p_important_rank SMALLINT DEFAULT NULL
+) RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank SMALLINT) AS $$
 DECLARE
   v_pin_hash TEXT;
   v_is_admin BOOLEAN;
@@ -145,12 +148,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- GRANT PERMISSIONS
 -- Allow the functions to be called by authenticated and anonymous users
 -- =========================================================================
-GRANT EXECUTE ON FUNCTION set_request_cell(uuid, text, date, text, integer) TO authenticated;
-GRANT EXECUTE ON FUNCTION admin_set_request_cell(uuid, text, uuid, date, text, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION set_request_cell(uuid, text, date, text, smallint) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_set_request_cell(uuid, text, uuid, date, text, smallint) TO authenticated;
 
 -- Also grant to anon role (if your app uses it)
-GRANT EXECUTE ON FUNCTION set_request_cell(uuid, text, date, text, integer) TO anon;
-GRANT EXECUTE ON FUNCTION admin_set_request_cell(uuid, text, uuid, date, text, integer) TO anon;
+GRANT EXECUTE ON FUNCTION set_request_cell(uuid, text, date, text, smallint) TO anon;
+GRANT EXECUTE ON FUNCTION admin_set_request_cell(uuid, text, uuid, date, text, smallint) TO anon;
 
 
 -- =========================================================================

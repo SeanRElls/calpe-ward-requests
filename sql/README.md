@@ -32,9 +32,11 @@ END IF;
 
 Changed return table column names to avoid ambiguity:
 ```sql
-RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank INT)
+RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank SMALLINT)
 ```
 This prevents "column reference is ambiguous" errors when PostgreSQL resolves column names.
+
+Changed `important_rank` type from INT to SMALLINT to match the database schema and prevent "structure of query does not match function result type" errors.
 
 **How to Apply**:
 1. Open your Supabase Dashboard

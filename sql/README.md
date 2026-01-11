@@ -2,6 +2,36 @@
 
 This directory contains SQL scripts to fix database-side issues in the Calpe Ward Requests application.
 
+## ⚠️ IMPORTANT: Two Fixes Required
+
+The "Max 5 requests per week" error when editing requires **BOTH** fixes to be applied. See [APPLY_BOTH_FIXES.md](APPLY_BOTH_FIXES.md) for complete instructions.
+
+### Quick Summary
+
+1. **fix_trigger_function.sql** - Fixes the database trigger that blocks edits
+2. **fix_request_edit_bug.sql** - Fixes the RPC functions to handle edits correctly
+
+Both must be applied in order for editing to work properly.
+
+---
+
+## fix_trigger_function.sql
+
+**Problem**: The database trigger `trg_max_5_requests` fires BEFORE INSERT and blocks edits because it doesn't distinguish between new inserts and updates from ON CONFLICT clauses.
+
+**Symptoms**:
+- User has 5 shift requests for a week
+- User tries to change one (e.g., "O" → "W") 
+- Gets error: "Max 5 requests per week" even though it's an edit
+
+**Root Cause**:
+The trigger function `enforce_max_5_requests_per_week()` counts ALL requests in the week, including the one being edited. When the RPC function tries to INSERT with ON CONFLICT DO UPDATE, the trigger fires first and blocks the operation.
+
+**Fix**:
+Modified the trigger function to exclude the current date from the count and check if the date already exists (indicating an edit vs a new request).
+
+---
+
 ## fix_request_edit_bug.sql
 
 **Problem**: Users get "Max 5 requests per week" error when trying to edit an existing shift request.

@@ -30,6 +30,12 @@ IF v_count >= 5 AND NOT EXISTS (
 END IF;
 ```
 
+Changed return table column names to avoid ambiguity:
+```sql
+RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank INT)
+```
+This prevents "column reference is ambiguous" errors when PostgreSQL resolves column names.
+
 **How to Apply**:
 1. Open your Supabase Dashboard
 2. Navigate to SQL Editor

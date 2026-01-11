@@ -8,6 +8,9 @@
 --
 -- FIX: Exclude the current date when counting weekly requests
 --
+-- NOTE: Return table columns are prefixed with "out_" to avoid ambiguous
+--       column reference errors (e.g., out_id, out_user_id, etc.)
+--
 -- INSTRUCTIONS:
 -- 1. Open Supabase Dashboard → SQL Editor
 -- 2. Copy and paste this entire file
@@ -28,7 +31,7 @@ CREATE OR REPLACE FUNCTION set_request_cell(
   p_date DATE,
   p_value TEXT,
   p_important_rank INT DEFAULT NULL
-) RETURNS TABLE(id UUID, user_id UUID, date DATE, value TEXT, important_rank INT) AS $$
+) RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank INT) AS $$
 DECLARE
   v_pin_hash TEXT;
   v_count INT;
@@ -85,7 +88,7 @@ CREATE OR REPLACE FUNCTION admin_set_request_cell(
   p_date DATE,
   p_value TEXT,
   p_important_rank INT DEFAULT NULL
-) RETURNS TABLE(id UUID, user_id UUID, date DATE, value TEXT, important_rank INT) AS $$
+) RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_important_rank INT) AS $$
 DECLARE
   v_pin_hash TEXT;
   v_is_admin BOOLEAN;

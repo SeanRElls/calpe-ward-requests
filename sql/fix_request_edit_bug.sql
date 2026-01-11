@@ -11,6 +11,7 @@
 -- NOTE: Return table columns are prefixed with "out_" to avoid ambiguous
 --       column reference errors (e.g., out_id, out_user_id, etc.)
 -- NOTE: important_rank uses SMALLINT to match the database column type
+-- NOTE: RETURNING clause uses AS aliases to match the out_* column names
 --
 -- INSTRUCTIONS:
 -- 1. Open Supabase Dashboard → SQL Editor
@@ -75,7 +76,12 @@ BEGIN
     value = EXCLUDED.value,
     important_rank = EXCLUDED.important_rank,
     updated_at = NOW()
-  RETURNING requests.id, requests.user_id, requests.date, requests.value, requests.important_rank;
+  RETURNING 
+    requests.id AS out_id,
+    requests.user_id AS out_user_id,
+    requests.date AS out_date,
+    requests.value AS out_value,
+    requests.important_rank AS out_important_rank;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -139,7 +145,12 @@ BEGIN
     value = EXCLUDED.value,
     important_rank = EXCLUDED.important_rank,
     updated_at = NOW()
-  RETURNING requests.id, requests.user_id, requests.date, requests.value, requests.important_rank;
+  RETURNING 
+    requests.id AS out_id,
+    requests.user_id AS out_user_id,
+    requests.date AS out_date,
+    requests.value AS out_value,
+    requests.important_rank AS out_important_rank;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

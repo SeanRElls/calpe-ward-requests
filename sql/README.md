@@ -36,6 +36,14 @@ RETURNS TABLE(out_id UUID, out_user_id UUID, out_date DATE, out_value TEXT, out_
 ```
 This prevents "column reference is ambiguous" errors when PostgreSQL resolves column names.
 
+The RETURNING clause explicitly aliases columns to match the output names:
+```sql
+RETURNING 
+  requests.id AS out_id,
+  requests.user_id AS out_user_id,
+  ...
+```
+
 Changed `important_rank` type from INT to SMALLINT to match the database schema and prevent "structure of query does not match function result type" errors.
 
 **How to Apply**:

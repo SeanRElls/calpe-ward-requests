@@ -1,0 +1,768 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Calpe Ward Admin Console</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --ink: #0f172a;
+      --muted: #6b7387;
+      --line: #e7ebf3;
+      --soft: #f7f9fc;
+      --panel: #ffffff;
+      --accent: #5b7cfa;
+      --accent-soft: rgba(91,124,250,0.12);
+    }
+
+    *{ box-sizing: border-box; }
+
+    body{
+      margin: 0;
+      font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--soft);
+    }
+
+    .layout{
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar{
+      background: #f4f6fb;
+      border-right: 1px solid var(--line);
+      padding: 20px 16px;
+    }
+
+    .brand{
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .subbrand{
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .nav{
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nav a{
+      text-decoration: none;
+      color: var(--ink);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+
+    .nav a:hover{
+      background: #eef1f8;
+      border-color: #e3e8f2;
+    }
+
+    .nav a.is-active{
+      background: var(--accent-soft);
+      border-color: rgba(91,124,250,0.2);
+      color: var(--accent);
+    }
+
+    .main{
+      padding: 24px;
+    }
+
+    .page-title{
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+    }
+
+    .page-subtitle{
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 18px 0;
+    }
+
+    .grid{
+      display: grid;
+      gap: 16px;
+    }
+
+    .section{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .section h2{
+      font-size: 15px;
+      margin: 0 0 10px 0;
+      font-weight: 700;
+    }
+
+    .section p{
+      margin: 0 0 12px 0;
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    details.accordion{
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 10px 12px;
+    }
+
+    details.accordion + details.accordion{
+      margin-top: 10px;
+    }
+
+    details.accordion[open]{
+      box-shadow: 0 6px 16px rgba(15,23,42,0.06);
+    }
+
+    summary.accordion-title{
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      padding: 4px 2px;
+    }
+
+    summary.accordion-title::-webkit-details-marker{ display:none; }
+
+    .accordion-sub{
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .row{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field{
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #ffffff;
+    }
+
+    .field h3{
+      margin: 0 0 6px 0;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .field p{
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .actions{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .subtabs{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .subtab{
+      color: var(--muted);
+      padding: 6px 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .subtab.is-active{
+      color: var(--ink);
+      border-color: #e3e8f2;
+      background: #f5f7fb;
+    }
+
+    .control{
+      width: 100%;
+      height: 32px;
+      padding: 4px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      font-size: 12.5px;
+      color: var(--ink);
+    }
+
+    .control:focus{
+      outline: none;
+      border-color: rgba(91,124,250,0.4);
+      box-shadow: 0 0 0 3px rgba(91,124,250,0.12);
+    }
+
+    .btn{
+      height: 32px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid #e5eaf3;
+      background: #ffffff;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .btn.primary{
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .user-group-title{
+      padding: 8px 10px;
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--muted);
+      background: #f4f6fb;
+      border-top: 1px solid var(--line);
+    }
+
+    .user-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      cursor: default;
+    }
+
+    .user-row:last-child{
+      border-bottom: none;
+    }
+
+    .user-row.dragging{
+      opacity: 0.5;
+    }
+
+    .user-row.drag-over{
+      border-top: 2px solid var(--accent);
+    }
+
+    .drag-handle{
+      cursor: grab;
+      user-select: none;
+      font-size: 14px;
+      color: #c1c7d6;
+      padding: 2px 4px;
+      margin-right: 6px;
+    }
+
+    .user-meta{ min-width:0; }
+    .user-name{
+      font-weight: 600;
+      font-size: 13px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .user-actions{
+      display:flex;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+
+    .user-tag{
+      display:inline-block;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid #e5eaf3;
+      background: #f7f8fc;
+      color: #4b5565;
+    }
+
+    .user-tag.admin{
+      background: var(--accent-soft);
+      border-color: rgba(91,124,250,0.25);
+      color: var(--accent);
+    }
+
+    .user-tag.inactive{
+      background: #f3f4f7;
+      color: #6b7280;
+    }
+
+    .reorder-list .user-row{
+      cursor: grab;
+    }
+
+    .table{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    .table th,
+    .table td{
+      text-align: left;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .table th{
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .permissions-block{
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .permissions-title{
+      font-size: 13px;
+      font-weight: 700;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .permissions-row{
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 10px;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .permissions-row:last-child{
+      border-bottom: none;
+    }
+
+    .perm-label{
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .perm-desc{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .perm-key{
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .perm-accordion{
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .perm-accordion + .perm-accordion{
+      margin-top: 12px;
+    }
+
+    .perm-accordion summary{
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--ink);
+      background: #f7f9ff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .perm-accordion summary::-webkit-details-marker{ display:none; }
+
+    .perm-meta{
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .perm-chevron{
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      background: #ffffff;
+    }
+
+    .perm-body{
+      padding: 10px 14px 12px;
+    }
+
+    .status-chip{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .status-dot{
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #cbd5f5;
+    }
+
+    .status-chip.is-active{
+      color: var(--ink);
+      border-color: rgba(91,124,250,0.25);
+      background: rgba(91,124,250,0.08);
+    }
+
+    .status-chip.is-active .status-dot{
+      background: var(--accent);
+    }
+
+    @media (max-width: 900px){
+      .layout{ grid-template-columns: 1fr; }
+      .sidebar{
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .nav{
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .row{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">Admin Console</div>
+      <div class="subbrand">Calpe Ward - Control Panel</div>
+      <div id="adminUserStatus" class="status-chip">
+        <span class="status-dot"></span>
+        <span>Not signed in</span>
+      </div>
+
+      <nav class="nav">
+        <a class="is-active" data-panel="overview" href="#overview">Status</a>
+        <a data-panel="users" href="#users">Users</a>
+        <a data-panel="permissions" href="#permissions">Permissions</a>
+        <a data-panel="rota-periods" href="#rota-periods">Rota Periods</a>
+        <a data-panel="drafting" href="#drafting">Draft Controls</a>
+        <a data-panel="notices" href="#notices">Notices</a>
+        <a data-panel="shift-catalogue" href="#shift-catalogue">Shift Catalogue</a>
+        <a data-panel="available-shifts" href="#available-shifts">Available Shifts</a>
+        <a data-panel="reports" href="#reports">Reports</a>
+        <a data-panel="audit" href="#audit">Audit</a>
+        <a data-panel="system" href="#system">System Settings</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <h1 class="page-title">Admin Control Panel</h1>
+      <p class="page-subtitle">Structured, audit-safe administration for rota and requests.</p>
+
+      <div class="grid">
+        <section id="overview" class="section panel">
+          <h2>Status</h2>
+          <p>Snapshot of the current period, publishing, and activity.</p>
+          <div class="row">
+            <div class="field">
+              <h3>Current Period</h3>
+              <p>Active: 25 Jan - 28 Feb 2026</p>
+            </div>
+            <div class="field">
+              <h3>Draft Status</h3>
+              <p>Draft open - not published</p>
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px;">
+            <div class="field">
+              <h3>Requests Window</h3>
+              <p>Closes: 09/01/2026, 23:59</p>
+            </div>
+            <div class="field">
+              <h3>Recent Activity</h3>
+              <p>2 notices updated, 1 week re-opened</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="users" class="section panel" style="display:none;">
+          <h2>User Management</h2>
+          <p>Manage staff users, status, patterns, and permission groups.</p>
+
+          <div id="adminUserAuthNotice" class="field" style="display:none; margin-bottom:12px;">
+            <h3>Admin access required</h3>
+            <p>Log in via the requests app first so we can read your admin session.</p>
+          </div>
+
+          <div class="subtabs" role="tablist" aria-label="User management pages">
+            <button class="subtab is-active" data-users-page="view" type="button">View users</button>
+            <button class="subtab" data-users-page="add" type="button">Add user</button>
+            <button class="subtab" data-users-page="edit" type="button">Edit user</button>
+          </div>
+
+          <div id="usersPageView" class="users-page">
+            <div class="accordion-sub">Search and review staff within groups.</div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-top:10px;">
+              <div style="font-weight:700;">Users</div>
+              <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; color:var(--muted);">
+                <input type="checkbox" id="adminShowInactiveUsers" />
+                Show inactive
+              </label>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+              <input id="adminUserSearch" class="control" placeholder="Search nameâ€¦" />
+              <button id="adminAddUserBtn" class="btn primary" type="button">Add user</button>
+            </div>
+            <div id="adminUsersList" style="margin-top:12px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff;"></div>
+          </div>
+
+          <div id="usersPageAdd" class="users-page" style="display:none;">
+            <div class="accordion-sub">Create a new user record.</div>
+            <div id="adminUserAddSection" class="field" style="margin-top:10px;">
+              <h3>New user</h3>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <input id="adminAddUserName" class="control" placeholder="Name" style="flex:1; min-width:180px;" />
+                <select id="adminAddUserRole" class="control" style="min-width:160px;">
+                  <option value="1">Charge Nurse</option>
+                  <option value="2">Staff Nurse</option>
+                  <option value="3">Nursing Assistant</option>
+                </select>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <input id="adminAddUserPin" class="control" placeholder="PIN (4 digits)" inputmode="numeric" maxlength="4" style="flex:1; min-width:180px;" />
+                <button id="adminCreateUserBtn" class="btn primary" type="button">Create</button>
+                <button id="adminAddUserCancelBtn" class="btn" type="button">Clear</button>
+              </div>
+              <div id="adminUserAddHelp" class="page-subtitle" style="margin-top:8px;"></div>
+            </div>
+          </div>
+
+          <div id="usersPageEdit" class="users-page" style="display:none;">
+            <div class="accordion-sub">Update user details, PINs, patterns, and groups.</div>
+            <details class="accordion" open>
+              <summary class="accordion-title">Select user</summary>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <input id="adminEditUserSearch" class="control" placeholder="Search userâ€¦" style="flex:1; min-width:180px;" />
+                <select id="adminEditUserSelect" class="control" style="min-width:200px;">
+                  <option value="">Select userâ€¦</option>
+                </select>
+              </div>
+            </details>
+
+            <details class="accordion" open>
+              <summary class="accordion-title">Identity & PIN</summary>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <input id="adminEditUserName" class="control" placeholder="Name" style="flex:1; min-width:180px;" />
+                <select id="adminEditUserRole" class="control" style="min-width:160px;">
+                  <option value="1">Charge Nurse</option>
+                  <option value="2">Staff Nurse</option>
+                  <option value="3">Nursing Assistant</option>
+                </select>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <input id="adminEditUserPin" class="control" placeholder="New PIN (4 digits)" inputmode="numeric" maxlength="4" style="flex:1; min-width:180px;" />
+                <button id="adminSaveUserBtn" class="btn primary" type="button">Save</button>
+                <button id="adminCancelUserEditBtn" class="btn" type="button">Cancel</button>
+              </div>
+              <div id="adminUserEditHelp" class="page-subtitle" style="margin-top:8px;"></div>
+            </details>
+
+            <details class="accordion">
+              <summary class="accordion-title">Pattern assignment</summary>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <select id="adminUserPattern" class="control" style="min-width:200px;">
+                  <option value="">No fixed pattern</option>
+                  <option value="3-3-4">3 / 3 / 4</option>
+                  <option value="2-2-3">2 / 2 / 3</option>
+                  <option value="2-per-week">2 per week</option>
+                </select>
+                <select id="adminUserAnchorWeek" class="control" style="min-width:160px;">
+                  <option value="">Anchor weekâ€¦</option>
+                  <option value="1">Week 1</option>
+                  <option value="2">Week 2</option>
+                  <option value="3">Week 3</option>
+                  <option value="4">Week 4</option>
+                  <option value="5">Week 5</option>
+                </select>
+              </div>
+              <div class="page-subtitle" style="margin-top:8px;">
+                Pattern data is displayed here; persistence will be wired to the patterns system.
+              </div>
+            </details>
+
+          <details class="accordion">
+            <summary class="accordion-title">Permission groups</summary>
+            <div id="adminUserPermissionGroups" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;"></div>
+            <div class="page-subtitle" style="margin-top:8px;">
+                Permission groups are editable here once groups are loaded.
+            </div>
+          </details>
+          </div>
+        </section>
+
+        <section id="reorder" class="section panel" style="display:none;">
+          <h2>Reorder rota</h2>
+          <p>Drag users within each group to set the display order for rota views.</p>
+          <div id="adminUsersReorderList" class="reorder-list" style="margin-top:12px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff;"></div>
+        </section>
+
+        <section id="permissions" class="section panel" style="display:none;">
+          <h2>Permissions</h2>
+          <p>Define permission groups and attach capabilities (superadmin bypass via is_admin).</p>
+          <div class="field" style="margin-bottom:12px;">
+            <h3>Permission groups</h3>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+              <select id="permissionGroupSelect" class="control" style="max-width:240px;">
+                <option value="">Select groupâ€¦</option>
+              </select>
+              <input id="permissionGroupName" class="control" placeholder="New group nameâ€¦" style="max-width:240px;" />
+              <button id="createPermissionGroupBtn" class="btn" type="button">Create group</button>
+            </div>
+            <div id="permissionGroupHelp" class="page-subtitle" style="margin-top:8px;">
+              Admin group can be assigned by admins, but only superadmin can edit its permissions.
+            </div>
+          </div>
+          <div id="permissionsMatrix"></div>
+        </section>
+
+        <section id="rota-periods" class="section panel" style="display:none;">
+          <h2>Rota Periods</h2>
+          <p>Create, activate, close, or hide periods.</p>
+          <div class="actions">
+            <button class="btn primary" type="button">Create Period</button>
+            <button class="btn" type="button">Set Active</button>
+            <button class="btn" type="button">Toggle Hidden</button>
+          </div>
+        </section>
+
+        <section id="drafting" class="section panel" style="display:none;">
+          <h2>Draft Controls</h2>
+          <p>Unlock editing, publish, and approve weeks (annotation only).</p>
+          <div class="actions">
+            <button class="btn" type="button">Unlock Editing</button>
+            <button class="btn primary" type="button">Publish Period</button>
+            <button class="btn" type="button">Annotate CNM Approval</button>
+          </div>
+        </section>
+
+        <section id="notices" class="section panel" style="display:none;">
+          <h2>Notices</h2>
+          <p>Staff-facing notices with acknowledgements.</p>
+          <div class="actions">
+            <button class="btn primary" type="button">New Notice</button>
+            <button class="btn" type="button">View Acknowledgements</button>
+          </div>
+        </section>
+
+        <section id="shift-catalogue" class="section panel" style="display:none;">
+          <h2>Shift Catalogue</h2>
+          <p>Single source of truth for all shifts and picker scopes.</p>
+          <div class="actions">
+            <button class="btn primary" type="button">Add Shift</button>
+            <button class="btn" type="button">Import Catalogue</button>
+          </div>
+        </section>
+
+        <section id="available-shifts" class="section panel" style="display:none;">
+          <h2>Available Shifts</h2>
+          <p>Post-publish shortage marketplace (admin approves, nothing auto-inserts).</p>
+          <div class="actions">
+            <button class="btn primary" type="button">Create Available Shift</button>
+            <button class="btn" type="button">Review Bids</button>
+          </div>
+        </section>
+
+        <section id="reports" class="section panel" style="display:none;">
+          <h2>Reports</h2>
+          <p>Draft-only snapshots: distribution, request deviations, compliance.</p>
+          <div class="actions">
+            <button class="btn primary" type="button">Generate Report</button>
+            <button class="btn" type="button">View History</button>
+          </div>
+        </section>
+
+        <section id="audit" class="section panel" style="display:none;">
+          <h2>Audit</h2>
+          <p>Publish, overrides, approvals, post-publish edits.</p>
+          <div class="actions">
+            <button class="btn" type="button">View Audit Trail</button>
+            <button class="btn" type="button">Export Logs</button>
+          </div>
+        </section>
+
+        <section id="system" class="section panel" style="display:none;">
+          <h2>System Settings</h2>
+          <p>Global configuration (bank holidays, limits, visibility rules).</p>
+          <div class="actions">
+            <button class="btn" type="button">Manage Bank Holidays</button>
+            <button class="btn" type="button">Set Limits</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

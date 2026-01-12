@@ -1,0 +1,76 @@
+{
+  "groups": ["Admin", "Mentor", "Staff", "Audit Viewer"],
+  "categories": [
+    {
+      "id": "user_management",
+      "title": "User management",
+      "items": [
+        { "key": "users.view", "label": "View users", "desc": "View user list, roles, and status." },
+        { "key": "users.create", "label": "Add users", "desc": "Create new user records." },
+        { "key": "users.edit", "label": "Edit users", "desc": "Edit name and role." },
+        { "key": "users.set_pin", "label": "Change PIN", "desc": "Set or reset user PINs." },
+        { "key": "users.toggle_active", "label": "Activate/deactivate users", "desc": "Change active status." },
+        { "key": "users.reorder", "label": "Reorder rota", "desc": "Change display order." }
+      ]
+    },
+    {
+      "id": "requests",
+      "title": "Requests",
+      "items": [
+        { "key": "requests.view_all", "label": "View all requests", "desc": "See requests for all users." },
+        { "key": "requests.edit_all", "label": "Edit all requests", "desc": "Edit other users' requests." },
+        { "key": "requests.lock_cells", "label": "Lock/unlock requests", "desc": "Lock or unlock request cells." },
+        { "key": "requests.view_comments", "label": "View all comments", "desc": "View all week comments." }
+      ]
+    },
+    {
+      "id": "rota",
+      "title": "Rota / Draft",
+      "items": [
+        { "key": "rota.view_draft", "label": "View draft", "desc": "View draft rota." },
+        { "key": "rota.edit_draft", "label": "Edit draft", "desc": "Edit draft rota cells." },
+        { "key": "rota.publish", "label": "Publish period", "desc": "Publish a period." },
+        { "key": "rota.approve", "label": "Annotate approval", "desc": "Add CNM approval annotation." }
+      ]
+    },
+    {
+      "id": "periods",
+      "title": "Rota periods & weeks",
+      "items": [
+        { "key": "periods.create", "label": "Create period", "desc": "Create a new 5-week period." },
+        { "key": "periods.set_active", "label": "Set active period", "desc": "Set active period." },
+        { "key": "periods.toggle_hidden", "label": "Hide/unhide period", "desc": "Toggle hidden periods." },
+        { "key": "periods.set_close_time", "label": "Set close time", "desc": "Set or clear closes_at." },
+        { "key": "weeks.set_open_flags", "label": "Open/close weeks", "desc": "Update week open flags." }
+      ]
+    },
+    {
+      "id": "notices",
+      "title": "Notices",
+      "items": [
+        { "key": "notices.view_admin", "label": "View notices (admin)", "desc": "View admin notice list." },
+        { "key": "notices.create", "label": "Create notices", "desc": "Create notices." },
+        { "key": "notices.edit", "label": "Edit notices", "desc": "Edit notices." },
+        { "key": "notices.toggle_active", "label": "Hide/unhide notices", "desc": "Toggle notice visibility." },
+        { "key": "notices.delete", "label": "Delete notices", "desc": "Delete notices." },
+        { "key": "notices.view_ack_counts", "label": "View ack counts", "desc": "View acknowledgement counts." },
+        { "key": "notices.view_ack_lists", "label": "View ack lists", "desc": "View acknowledgement lists." }
+      ]
+    },
+    {
+      "id": "print_export",
+      "title": "Print & export",
+      "items": [
+        { "key": "print.open_admin", "label": "Open admin print", "desc": "Open admin print config." },
+        { "key": "print.export_csv", "label": "Export CSV", "desc": "Export CSV data." }
+      ]
+    },
+    {
+      "id": "system",
+      "title": "System",
+      "items": [
+        { "key": "system.admin_panel", "label": "Admin panel access", "desc": "Access admin console." }
+      ]
+    }
+  ]
+}

@@ -1,76 +1,16 @@
-/**
- * =========================================================================
- * CALPE WARD REQUESTS - MAIN APPLICATION LOGIC
- * =========================================================================
- * 
- * A Progressive Web App (PWA) for managing hospital shift requests
- * Version: 2.0
- * Last updated: January 2026
- * 
- * ARCHITECTURE:
- * This application manages nurse shift requests with PIN-based authentication,
- * multi-language support (English/Spanish), and admin controls.
- * 
- * KEY FEATURES:
- * - PIN-based user authentication (no passwords)
- * - Shift request management (LD, 8-8, N, W, O/O*)
- * - Priority system for off-duty requests (O, O*)
- * - Week-based commenting system
- * - Admin panel for user/period/notice management
- * - Notice/announcement system with acknowledgments
- * - Bilingual interface (EN/ES)
- * - Request deadline management with countdown
- * - Cell-level locking for admins
- * 
- * STRUCTURE OVERVIEW:
- * 1. Internationalization (i18n) - Language strings and translation system
- * 2. Helper Functions - Date formatting, HTML escaping, data grouping
- * 3. State Management - User session, requests cache, periods, locks
- * 4. DOM References - All UI element references
- * 5. Data Fetching - Supabase RPC calls and data loading
- * 6. UI Rendering - Building the rota table and modal content
- * 7. Modal Management - PIN login, shift picker, user settings
- * 8. Event Handlers - User interactions and form submissions
- * 9. Request Management - Creating/updating/deleting shift requests
- * 10. Admin Functions - Period management, user CRUD, notices
- * 11. Notice System - Blocking notices, acknowledgments, admin panel
- * 12. Week Comments - Per-week commenting for users
- * 13. Language Switching - Dynamic UI translation
- * 14. Initialization - App startup and initial data load
- * 
- * DATABASE:
- * Uses Supabase (PostgreSQL) with Row Level Security policies.
- * All mutations go through RPC functions for security.
- * 
- * SECURITY:
- * - PIN verification happens server-side via RPC
- * - Session pins stored in sessionStorage (cleared on logout/close)
- * - Row Level Security policies enforce data access
- * - Admin actions require admin flag + PIN verification
- * 
- * NOTE: Configuration constants (SUPABASE_URL, etc.) are in config.js
- * NOTE: Styling is in css/styles.css
- * 
- * =========================================================================
- */
+﻿/* =========================================================
+       1) CONFIG
+       ========================================================= */
+    const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const STORAGE_KEY = "calpeward.loggedInUserId";
+    const MAX_REQUESTS_PER_WEEK = 5;
 
-
-/* =========================================================================
-   CONFIGURATION
-   ========================================================================= */
-// Configuration constants are imported from config.js (loaded before this file)
-// Available: SUPABASE_URL, SUPABASE_ANON, supabaseClient, STORAGE_KEY, 
-//            MAX_REQUESTS_PER_WEEK, WINDOW_WEEKS
-
-
-/* =========================================================================
-   HELPER FUNCTIONS
-   ========================================================================= */
-
-/**
- * Format date as "day month" (e.g., "5 Jan")
- */
-const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    /* =========================================================
+       2) HELPERS (dates, formatting)
+       ========================================================= */
+    const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
     // =========================
 // i18n (single source of truth)
@@ -82,7 +22,7 @@ const I18N = {
     cancel: "Cancel",
     ok: "OK",
     save: "Save",
-    loadingUsers: "Loading users…",
+    loadingUsers: "Loading usersâ€¦",
     failedLoadUsers: "Failed to load users.",
     notLoggedIn: "Not logged in",
     loginFirst: "Log in first to add comments.",
@@ -136,21 +76,21 @@ failedSaveWeekComment: "Failed to save comment. Check console.",
     cancel: "Cancelar",
     ok: "Vale",
     save: "Guardar",
-    loadingUsers: "Cargando usuarios…",
+    loadingUsers: "Cargando usuariosâ€¦",
     failedLoadUsers: "No se pudieron cargar los usuarios.",
-    notLoggedIn: "Sin sesión",
-    loginFirst: "Inicia sesión para añadir comentarios.",
+    notLoggedIn: "Sin sesiÃ³n",
+    loginFirst: "Inicia sesiÃ³n para aÃ±adir comentarios.",
 
     pinTitle: (name) => `PIN de ${name}`,
-    pinDesc: "Introduce tu PIN de 4 dígitos para desbloquear la edición.",
+    pinDesc: "Introduce tu PIN de 4 dÃ­gitos para desbloquear la ediciÃ³n.",
     pinErrWrong: "PIN incorrecto.",
-    pinErrFormat: "El PIN debe tener 4 dígitos.",
+    pinErrFormat: "El PIN debe tener 4 dÃ­gitos.",
     unlock: "Desbloquear",
 
     shiftTitle: "Selecciona turno",
-    shiftDesc: "Elige una preferencia para este día.",
-    shiftHelpTitle: "Guía de solicitudes de turnos",
-    shiftHelpSub: "Cómo se consideran las preferencias",
+    shiftDesc: "Elige una preferencia para este dÃ­a.",
+    shiftHelpTitle: "GuÃ­a de solicitudes de turnos",
+    shiftHelpSub: "CÃ³mo se consideran las preferencias",
 
     accountEditTitle: "Editar tu cuenta",
     changePin: "Cambiar PIN",
@@ -158,7 +98,7 @@ failedSaveWeekComment: "Failed to save comment. Check console.",
     newPin: "Nuevo PIN",
     repeatNewPin: "Repite el nuevo PIN",
     saveNewPin: "Guardar nuevo PIN",
-    logout: "Cerrar sesión",
+    logout: "Cerrar sesiÃ³n",
     language: "Idioma",
     pinUpdated: "PIN actualizado.",
 
@@ -172,7 +112,7 @@ failedSaveWeekComment: "Failed to save comment. Check console.",
     // Week comments
 weekCommentsTitle: "Comentarios de la semana",
 yourCommentLabel: "Tu comentario",
-noCommentsYet: "Aún no hay comentarios.",
+noCommentsYet: "AÃºn no hay comentarios.",
 saveComment: "Guardar",
 closeComment: "Cerrar",
 failedLoadWeekComments: "No se pudieron cargar los comentarios. Revisa la consola.",
@@ -246,7 +186,7 @@ function applyLanguage(){
 if (shiftDesc) shiftDesc.innerHTML =
   currentLang === "en"
     ? 'Choose a <strong>preference</strong> for this day.'
-    : 'Elige una <strong>preferencia</strong> para este día.';
+    : 'Elige una <strong>preferencia</strong> para este dÃ­a.';
 
   // ^ if you want markup, handle it intentionally like this, or just use textContent.
 
@@ -300,6 +240,7 @@ function escapeHtml(s){
       return d;
     }
     function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+    function daysInWeek(weekStartDate){ return Array.from({length:7}, (_,i) => addDays(new Date(weekStartDate), i)); }
 
 function groupDatesIntoWeeks(dates){
   const map = new Map();
@@ -433,7 +374,7 @@ function getSessionPinOrThrow(){
 }
     
 function nextOffPrioritySmart(currentRank, taken){
-  // Cycle intent: null → 1 → 2 → BLOCK
+  // Cycle intent: null â†’ 1 â†’ 2 â†’ BLOCK
   let desired =
     (currentRank == null) ? 1 :
     (currentRank === 1) ? 2 :
@@ -443,7 +384,7 @@ function nextOffPrioritySmart(currentRank, taken){
   if (desired != null && taken.has(desired)) {
     if (!taken.has(1)) desired = 1;
     else if (!taken.has(2)) desired = 2;
-    else desired = null; // both O1 and O2 used → block
+    else desired = null; // both O1 and O2 used â†’ block
   }
 
   return desired;
@@ -590,13 +531,13 @@ function populatePeriodDropdown(periods){
     const e = new Date(p.end_date);
 
     const hiddenTag = (currentUser?.is_admin && p.is_hidden) ? " (hidden)" : "";
-    const activeTag = p.is_active ? " ★" : "";
+    const activeTag = p.is_active ? " â˜…" : "";
 
-    opt.textContent = `${fmt(s)} – ${fmt(e)}${activeTag}${hiddenTag}`;
+    opt.textContent = `${fmt(s)} â€“ ${fmt(e)}${activeTag}${hiddenTag}`;
     periodSelect.appendChild(opt);
   }
 
-  // ✅ ensure dropdown always reflects activePeriodId
+  // âœ… ensure dropdown always reflects activePeriodId
   if (activePeriodId != null) {
     periodSelect.value = String(activePeriodId);
   }
@@ -622,6 +563,7 @@ function isPeriodClosed(period){
 let currentUser = null;      // user object when logged in (by PIN)
 let selectedUser = null;     // user you clicked before PIN entry
     let usersById = new Map();
+    let allUsers = [];           // all users array (for print/export features)
 let sessionPin = null; // store PIN in memory only (not localStorage)
 
 
@@ -636,6 +578,43 @@ function clearSessionPin(userId){
   sessionPin = null;
   if (userId) sessionStorage.removeItem(pinKey(userId));
 }
+
+async function loadUserPermissions(){
+  userPermissions = new Set();
+  if (!currentUser) return;
+  if (currentUser.is_admin) return;
+
+  try {
+    const { data: groups, error: gErr } = await supabaseClient
+      .from("user_permission_groups")
+      .select("group_id")
+      .eq("user_id", currentUser.id);
+    if (gErr) throw gErr;
+    const groupIds = (groups || []).map(g => g.group_id).filter(Boolean);
+    if (!groupIds.length) return;
+
+    const { data: perms, error: pErr } = await supabaseClient
+      .from("permission_group_permissions")
+      .select("permission_key")
+      .in("group_id", groupIds);
+    if (pErr) throw pErr;
+    (perms || []).forEach(p => userPermissions.add(p.permission_key));
+  } catch (e) {
+    console.warn("Failed to load permissions", e);
+  }
+}
+
+function hasPermission(key){
+  if (!currentUser) return false;
+  if (currentUser.is_admin) return true;
+  return userPermissions.has(key);
+}
+
+function requirePermission(key, msg){
+  if (hasPermission(key)) return true;
+  alert(msg || "Permission required.");
+  return false;
+}
     
 /* =========================================================
    3b) STATE (editing + requests)
@@ -646,11 +625,11 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
  let periodsCache = [];
  const locksCache = new Map(); // key -> { user_id, date, reason_en, reason_es, locked_by, locked_at }
 let activePeriodId = null;
-    let activePeriodObj = null; // ← the actual period object
+    let activePeriodObj = null; // â† the actual period object
     let closeTriggeredReload = false;
     
 // ===== 5-week window navigation =====
-// WINDOW_WEEKS is defined in config.js
+const WINDOW_WEEKS = 5;
 let allWeeks = [];
 let weekWindowStart = 0; // index into allWeeks
 
@@ -781,6 +760,35 @@ const noticeAllModal = document.getElementById("noticeAllModal");
 const noticeAllList = document.getElementById("noticeAllList");
 const noticeAllClose = document.getElementById("noticeAllClose");
 
+// Initialize Quill editors for notices
+let quillEnglish, quillSpanish;
+document.addEventListener("DOMContentLoaded", function() {
+  quillEnglish = new Quill("#adminNoticeBodyEn", {
+    theme: "snow",
+    modules: {
+      toolbar: [
+        "bold", "italic", "underline",
+        { list: "ordered" }, { list: "bullet" },
+        "blockquote",
+        "clean"
+      ]
+    },
+    placeholder: "Enter notice content..."
+  });
+
+  quillSpanish = new Quill("#adminNoticeBodyEs", {
+    theme: "snow",
+    modules: {
+      toolbar: [
+        "bold", "italic", "underline",
+        { list: "ordered" }, { list: "bullet" },
+        "blockquote",
+        "clean"
+      ]
+    },
+    placeholder: "Enter notice content..."
+  });
+});
 
 applyLanguage();
 
@@ -832,10 +840,10 @@ function setShiftHelpLanguage(lang){
 
   const title = document.getElementById("shiftHelpTitle");
   const sub = document.getElementById("shiftHelpSubtitle");
-  if (title) title.textContent = isEn ? "Shift request guidelines" : "Guía de solicitudes de turnos";
+  if (title) title.textContent = isEn ? "Shift request guidelines" : "GuÃ­a de solicitudes de turnos";
   if (sub) sub.textContent = isEn
   ? "How preferences are considered"
-  : "Cómo se consideran las preferencias";
+  : "CÃ³mo se consideran las preferencias";
 
   if (shiftHelpClose) shiftHelpClose.textContent = isEn ? "Close" : "Cerrar";
   if (shiftHelpClose2) shiftHelpClose2.textContent = isEn ? "OK" : "Vale";
@@ -884,7 +892,7 @@ shiftLockBtn?.addEventListener("click", async (e) => {
 
   try {
     if (existing) {
-      // 🔓 UNLOCK
+      // ðŸ”“ UNLOCK
       const { error } = await supabaseClient.rpc(
         "admin_unlock_request_cell",
         {
@@ -897,13 +905,13 @@ shiftLockBtn?.addEventListener("click", async (e) => {
       if (error) throw error;
 
       locksCache.delete(key);
-      shiftLockBtn.textContent = "🔓";
+      shiftLockBtn.textContent = "ðŸ”“";
 
     } else {
-      // 🔒 LOCK (optional reason)
+      // ðŸ”’ LOCK (optional reason)
       const reason = prompt(
         currentLang === "es"
-          ? "Motivo (opcional). El usuario lo verá al pulsar este día:"
+          ? "Motivo (opcional). El usuario lo verÃ¡ al pulsar este dÃ­a:"
           : "Reason (optional). Staff will see this if they click this day:"
       );
 
@@ -923,7 +931,7 @@ shiftLockBtn?.addEventListener("click", async (e) => {
       if (error) throw error;
 
       locksCache.set(key, data);
-      shiftLockBtn.textContent = "🔒";
+      shiftLockBtn.textContent = "ðŸ”’";
     }
 
     await loadRota(); // keep UI honest
@@ -1003,7 +1011,7 @@ closeLabel.innerHTML = `
   clearInterval(closeCountdownTimer);
   closeCountdownTimer = null;
 
-  // ✅ FIX 3: force UI to re-render locked state once
+  // âœ… FIX 3: force UI to re-render locked state once
   if (!closeTriggeredReload) {
     closeTriggeredReload = true;
     loadRota(); // re-fetch + redraw so cells become locked
@@ -1080,7 +1088,7 @@ function logout(){
 
 // Wire badge click
 loginBadge.addEventListener("click", () => {
-  if (!currentUser) return;        // don’t open it when not logged in
+  if (!currentUser) return;        // donâ€™t open it when not logged in
   openUserModal();
 });
 
@@ -1184,7 +1192,7 @@ function showUserPinErr(msg){
     
 function openWeekCommentModal(){
   if (!activeWeekIdForComment) return;
-  document.body.classList.add("modal-open");  // ✅
+  document.body.classList.add("modal-open");  // âœ…
   weekCommentModal.style.display = "flex";
   weekCommentModal.setAttribute("aria-hidden","false");
 }
@@ -1213,7 +1221,7 @@ if (adminBadge) {
 }
  
 
-// Click handler for 💬 buttons (event delegation)
+// Click handler for ðŸ’¬ buttons (event delegation)
 document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".week-comment-btn");
   if (!btn) return;
@@ -1258,10 +1266,10 @@ alert(t("loginFirst"));
           const commentSafe = escapeHtml(r.comment || "");
 
           return `
-            <div style="padding:6px 0; border-bottom:1px solid #eee;">
-              <div style="font-weight:700;">${escapeHtml(name)}</div>
-              <div style="font-size:11px; color:#777;">${when}</div>
-              <div style="white-space:pre-wrap;">${commentSafe}</div>
+            <div class="week-comment-row">
+              <div class="week-comment-name">${escapeHtml(name)}</div>
+              <div class="week-comment-meta">${when}</div>
+              <div class="week-comment-text">${commentSafe}</div>
             </div>
           `;
         }).join("");
@@ -1342,7 +1350,7 @@ weekCommentSave.addEventListener("click", async () => {
    ========================================================= */
 if (periodSelect) {
   periodSelect.addEventListener("change", async () => {
-    closeTriggeredReload = false; // ✅ reset for new period
+    closeTriggeredReload = false; // âœ… reset for new period
     activePeriodId = periodSelect.value;
 
     const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
@@ -1598,15 +1606,15 @@ const unread = (noticesCache || []).filter(n => n.is_active !== false && !isNoti
   }
 
   noticeUnreadList.innerHTML = unread.map(n => {
-    const body = escapeHtml(getNoticeBody(n)).replace(/\n/g, "<br>");
+    const body = getNoticeBody(n); // Already formatted as HTML from Quill
     const when = n.updated_at ? new Date(n.updated_at).toLocaleString("en-GB") : "";
-    const who = escapeHtml(n.created_by_name || "—");
+    const who = escapeHtml(n.created_by_name || "â€”");
 
     return `
       <div class="notice-card">
         <div class="notice-title">${escapeHtml(n.title || "Notice")}</div>
-        <div class="notice-meta">By ${who} · ${when} <span class="notice-pill unread" style="margin-left:6px;">NEW</span></div>
-        <div class="notice-body">${body}</div>
+        <div class="notice-meta">By ${who} Â· ${when} <span class="notice-pill unread" style="margin-left:6px;">NEW</span></div>
+        <div class="notice-body" style="line-height: 1.6;">${body}</div>
       </div>
     `;
   }).join("");
@@ -1680,7 +1688,7 @@ function renderAllNoticesList(){
 
   noticeAllList.innerHTML = visible.map(n => {
     const acked = isNoticeAcked(n);
-    const body  = escapeHtml(getNoticeBody(n)).replace(/\n/g, "<br>");
+    const body  = getNoticeBody(n); // Already formatted as HTML from Quill
     const when  = n.updated_at ? new Date(n.updated_at).toLocaleString("en-GB") : "";
     const who   = escapeHtml(n.created_by_name || "Unknown");
 
@@ -1693,12 +1701,12 @@ function renderAllNoticesList(){
         <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
           <div style="min-width:0;">
             <div class="notice-title">${escapeHtml(n.title || "Notice")}</div>
-            <div class="notice-meta">By ${who}${when ? " · " + when : ""}</div>
+            <div class="notice-meta">By ${who}${when ? " Â· " + when : ""}</div>
           </div>
           <div>${pill}</div>
         </div>
 
-        <div class="notice-body" style="margin-top:8px;">${body}</div>
+        <div class="notice-body" style="margin-top:8px; line-height: 1.6;">${body}</div>
 
         ${acked ? "" : `
           <div style="display:flex; justify-content:flex-end; margin-top:10px;">
@@ -2084,8 +2092,8 @@ function clearNoticeEditor(){
 
   if (adminNoticeTitle) adminNoticeTitle.textContent = "New notice";
   if (adminNoticeTitleInput) adminNoticeTitleInput.value = "";
-  if (adminNoticeBodyEn) adminNoticeBodyEn.value = "";
-  if (adminNoticeBodyEs) adminNoticeBodyEs.value = "";
+  if (quillEnglish) quillEnglish.setContents([]);
+  if (quillSpanish) quillSpanish.setContents([]);
 
   if (noticeTargetAll) noticeTargetAll.checked = true;
   noticeRoleChks.forEach(chk => chk.checked = false);
@@ -2130,8 +2138,10 @@ function openAdminNoticeEditor(notice){
 
   if (adminNoticeTitle) adminNoticeTitle.textContent = "Edit notice";
   if (adminNoticeTitleInput) adminNoticeTitleInput.value = notice.title || "";
-  if (adminNoticeBodyEn) adminNoticeBodyEn.value = notice.body_en || "";
-  if (adminNoticeBodyEs) adminNoticeBodyEs.value = notice.body_es || "";
+  
+  // Load HTML into Quill editors
+  if (quillEnglish) quillEnglish.root.innerHTML = notice.body_en || "";
+  if (quillSpanish) quillSpanish.root.innerHTML = notice.body_es || "";
 
   hydrateNoticeTargetsFromNotice(notice);
 
@@ -2174,8 +2184,8 @@ function renderAdminNotices(){
 
             <div style="font-size:11px; color:#667085; margin-top:4px;">
               v${n.version}
-              · ${createdBy}
-              · ${when}
+              Â· ${createdBy}
+              Â· ${when}
               ${!n.is_active
                 ? `<span class="notice-pill" style="margin-left:6px;">Inactive</span>`
                 : ``}
@@ -2196,16 +2206,16 @@ function renderAdminNotices(){
                   data-ack-toggle="${n.id}"
                   style="padding:6px 10px; border-radius:999px; font-size:12px;">
             Acknowledged:
-            <span data-ack-count="${n.id}">${ackCount ?? "—"}</span>
+            <span data-ack-count="${n.id}">${ackCount ?? "â€”"}</span>
             <span class="muted"> / </span>
-            <span data-ack-total="${n.id}">${ackTotal ?? "—"}</span>
-            <span class="muted"> · View</span>
+            <span data-ack-total="${n.id}">${ackTotal ?? "â€”"}</span>
+            <span class="muted"> Â· View</span>
           </button>
 
           <div id="ack-list-${n.id}"
                class="ack-list"
                style="display:none; margin-top:8px; padding:10px; border:1px solid #e5e7eb; border-radius:12px;">
-            <div class="subtitle">Loading…</div>
+            <div class="subtitle">Loadingâ€¦</div>
           </div>
         </div>
 
@@ -2278,12 +2288,14 @@ async function deleteAdminNotice(notice){
 async function loadAdminUsers(){
   if (!adminUsersList) return;
 
-  adminUsersList.textContent = "Loading users…";
+  adminUsersList.textContent = "Loading usersâ€¦";
 
   const { data, error } = await supabaseClient
     .from("users")
-    .select("id, name, role_id, is_admin, is_active, roles(name)")
-  .order("created_at", { ascending: true })
+    .select("id, name, role_id, is_admin, is_active, display_order, roles(name)")
+    .order("role_id", { ascending: true })
+    .order("display_order", { ascending: true })
+    .order("created_at", { ascending: true })
 
   if (error) {
     console.error(error);
@@ -2326,7 +2338,8 @@ function renderAdminUsers(){
 
     html.push(members.map(u => {
       return `
-        <div class="user-row">
+        <div class="user-row" draggable="true" data-user-id="${u.id}" data-role-id="${g.role_id}">
+          <div class="drag-handle" title="Drag to reorder">â†•</div>
           <div class="user-meta">
             <div class="user-name">
               ${escapeHtml(u.name || "")}
@@ -2365,6 +2378,12 @@ function startEditUser(userId){
   adminEditUserRole.value = String(u.role_id || 2);
   adminEditUserPin.value = "";
   adminUserEditHelp.textContent = "Leave PIN blank to keep current PIN.";
+  
+  // Scroll to the edit form
+  const editSection = document.getElementById("adminUserEditSection");
+  if (editSection) {
+    editSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
 }
 
 async function toggleUserActive(userId){
@@ -2375,7 +2394,7 @@ async function toggleUserActive(userId){
   const ok = confirm(`${next ? "Reactivate" : "Deactivate"} ${u.name}?`);
   if (!ok) return;
 
-  const pin = getSessionPinOrThrow(); // 🔑 THIS WAS MISSING
+  const pin = getSessionPinOrThrow(); // ðŸ”‘ THIS WAS MISSING
 
   const { error } = await supabaseClient.rpc("set_user_active", {
     p_admin_id: currentUser.id,
@@ -2392,6 +2411,113 @@ async function toggleUserActive(userId){
 
   await loadRota();
   await loadAdminUsers();
+}
+
+// Drag-and-drop functionality for user reordering
+let draggedElement = null;
+let draggedUserId = null;
+let draggedRoleId = null;
+
+adminUsersList?.addEventListener('dragstart', (e) => {
+  const userRow = e.target.closest('.user-row[draggable="true"]');
+  if (!userRow) return;
+  
+  draggedElement = userRow;
+  draggedUserId = userRow.dataset.userId;
+  draggedRoleId = userRow.dataset.roleId;
+  userRow.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+});
+
+adminUsersList?.addEventListener('dragend', (e) => {
+  const userRow = e.target.closest('.user-row');
+  if (userRow) {
+    userRow.classList.remove('dragging');
+  }
+  document.querySelectorAll('.user-row').forEach(row => row.classList.remove('drag-over'));
+  draggedElement = null;
+  draggedUserId = null;
+  draggedRoleId = null;
+});
+
+adminUsersList?.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  const userRow = e.target.closest('.user-row[draggable="true"]');
+  if (!userRow || !draggedElement) return;
+  
+  // Only allow dropping within the same role group
+  if (userRow.dataset.roleId !== draggedRoleId) return;
+  if (userRow === draggedElement) return;
+  
+  e.dataTransfer.dropEffect = 'move';
+  
+  // Remove drag-over from all rows
+  document.querySelectorAll('.user-row').forEach(row => row.classList.remove('drag-over'));
+  userRow.classList.add('drag-over');
+});
+
+adminUsersList?.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const targetRow = e.target.closest('.user-row[draggable="true"]');
+  if (!targetRow || !draggedElement) return;
+  
+  // Only allow dropping within the same role group
+  if (targetRow.dataset.roleId !== draggedRoleId) return;
+  if (targetRow === draggedElement) return;
+  
+  targetRow.classList.remove('drag-over');
+  
+  // Get all user rows in this role group
+  const allRows = Array.from(adminUsersList.querySelectorAll(`.user-row[data-role-id="${draggedRoleId}"]`));
+  const draggedIndex = allRows.indexOf(draggedElement);
+  const targetIndex = allRows.indexOf(targetRow);
+  
+  if (draggedIndex < targetIndex) {
+    targetRow.parentNode.insertBefore(draggedElement, targetRow.nextSibling);
+  } else {
+    targetRow.parentNode.insertBefore(draggedElement, targetRow);
+  }
+  
+  // Update display_order in database
+  await updateUserDisplayOrder(draggedRoleId);
+});
+
+async function updateUserDisplayOrder(roleId) {
+  try {
+    // Get all user rows for this role in current DOM order
+    const rows = Array.from(adminUsersList.querySelectorAll(`.user-row[data-role-id="${roleId}"]`));
+    
+    console.log('Updating order for role:', roleId);
+    console.log('Found rows:', rows.length);
+    
+    // Update each user's display_order
+    for (let i = 0; i < rows.length; i++) {
+      const userId = rows[i].dataset.userId;
+      console.log(`Updating user ${userId} to display_order ${i + 1}`);
+      
+      const { data, error } = await supabaseClient
+        .from('users')
+        .update({ display_order: i + 1 })
+        .eq('id', userId)
+        .select();
+      
+      if (error) {
+        console.error('Failed to update display_order:', error);
+        alert(`Failed to save new order: ${error.message}`);
+        return;
+      }
+      console.log('Update result:', data);
+    }
+    
+    console.log('All updates successful, reloading...');
+    
+    // Reload to show new order
+    await loadAdminUsers();
+    await loadRota();
+  } catch (error) {
+    console.error('Error updating user order:', error);
+    alert(`Failed to save new order: ${error.message}`);
+  }
 }
 
 
@@ -2437,7 +2563,7 @@ adminNoticesList?.addEventListener("click", async (e) => {
     // already loaded once
     if (box.dataset.loaded === "1") return;
 
-    box.innerHTML = `<div class="subtitle">Loading…</div>`;
+    box.innerHTML = `<div class="subtitle">Loadingâ€¦</div>`;
 
     try {
       const rows = await fetchNoticeAcksForAdmin(noticeId);
@@ -2516,8 +2642,8 @@ adminNoticeSave?.addEventListener("click", async () => {
   if (!currentUser?.is_admin) return;
 
   const title = (adminNoticeTitleInput?.value || "").trim();
-  const bodyEn = (adminNoticeBodyEn?.value || "").trim();
-  const bodyEs = (adminNoticeBodyEs?.value || "").trim();
+  const bodyEn = (quillEnglish?.root.innerHTML || "").trim();
+  const bodyEs = (quillSpanish?.root.innerHTML || "").trim();
   
 
   if (!title) return alert("Title is required.");
@@ -2668,8 +2794,8 @@ if (adminToggleHiddenBtn) {
 async function loadAdminPeriodsForDropdown(){
   if (!adminPeriodSelect) return;
 
-  adminPeriodMeta.textContent = "Loading…";
-  adminWeeksList.textContent = "Loading…";
+  adminPeriodMeta.textContent = "Loadingâ€¦";
+  adminWeeksList.textContent = "Loadingâ€¦";
 
   let periods;
   try {
@@ -2690,7 +2816,7 @@ async function loadAdminPeriodsForDropdown(){
     opt.value = p.id;
     const s = fmt(new Date(p.start_date));
     const e = fmt(new Date(p.end_date));
-    opt.textContent = `${s} – ${e}${p.is_active ? " ★" : ""}${p.is_hidden ? " (hidden)" : ""}`;
+    opt.textContent = `${s} â€“ ${e}${p.is_active ? " â˜…" : ""}${p.is_hidden ? " (hidden)" : ""}`;
     adminPeriodSelect.appendChild(opt);
   }
 
@@ -2715,13 +2841,13 @@ function renderAdminPeriodMeta(periodId){
   }
 
   const bits = [];
-  if (p.is_active) bits.push("✅ Active");
-  if (p.is_hidden) bits.push("🙈 Hidden");
-  adminPeriodMeta.textContent = bits.join(" · ") || "—";
+  if (p.is_active) bits.push("âœ… Active");
+  if (p.is_hidden) bits.push("ðŸ™ˆ Hidden");
+  adminPeriodMeta.textContent = bits.join(" Â· ") || "â€”";
 }
 
 async function loadAdminWeeks(periodId){
-  adminWeeksList.textContent = "Loading weeks…";
+  adminWeeksList.textContent = "Loading weeksâ€¦";
 
   // Pull all dates for the period, but we only need them to discover the weeks + open state
   const { data, error } = await supabaseClient
@@ -2803,7 +2929,7 @@ ${periodClosed ? "(after close time)" : "(before close time)"}
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #eee;">
         <div>
-          <div style="font-weight:800;">${s} – ${e}</div>
+          <div style="font-weight:800;">${s} â€“ ${e}</div>
           <div style="margin-top:4px;">${pill}</div>
           ${lockNote}
         </div>
@@ -2833,7 +2959,7 @@ adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
     const openAfterClose = btn.dataset.openAfterClose === "1";
     const periodClosed = btn.dataset.periodClosed === "1";
 
-// ✅ Toggle the correct flag depending on whether period is closed
+// âœ… Toggle the correct flag depending on whether period is closed
 let nextOpen = open;
 let nextOpenAfterClose = openAfterClose;
 
@@ -2901,9 +3027,9 @@ async function generateNextFiveWeekPeriod(){
 
   const startStr = isoDate(r.start);
   const endStr   = isoDate(r.end);
-  const periodName = `${fmt(r.start)} – ${fmt(r.end)}`;
+  const periodName = `${fmt(r.start)} â€“ ${fmt(r.end)}`;
 
-  // 1️⃣ create period + weeks + dates server-side
+  // 1ï¸âƒ£ create period + weeks + dates server-side
   const { data: periodId, error } = await supabaseClient.rpc(
     "admin_create_five_week_period",
     {
@@ -2917,7 +3043,7 @@ async function generateNextFiveWeekPeriod(){
 
   if (error) throw error;
 
-  // ✅ return UUID only
+  // âœ… return UUID only
   return periodId;
 }
 
@@ -2952,7 +3078,7 @@ function refreshGeneratePreview(){
   }
 
   adminGeneratePreview.textContent =
-    `Next period: ${fmt(r.start)} – ${fmt(r.end)} (5 weeks, Sun–Sat).`;
+    `Next period: ${fmt(r.start)} â€“ ${fmt(r.end)} (5 weeks, Sunâ€“Sat).`;
 }
 
 if (adminGenerateBtn) {
@@ -2964,13 +3090,13 @@ if (adminGenerateBtn) {
         return;
       }
 
-      const ok = confirm(`Generate new 5-week period:\n${fmt(r.start)} – ${fmt(r.end)} ?`);
+      const ok = confirm(`Generate new 5-week period:\n${fmt(r.start)} â€“ ${fmt(r.end)} ?`);
       if (!ok) return;
 
       adminGenerateBtn.disabled = true;
-      adminGeneratePreview.textContent = "Generating…";
+      adminGeneratePreview.textContent = "Generatingâ€¦";
 
-      // ✅ RPC returns a UUID (string), not a period object
+      // âœ… RPC returns a UUID (string), not a period object
       const newPeriodId = await generateNextFiveWeekPeriod();
 
       // Refresh caches + UI
@@ -2985,7 +3111,7 @@ if (adminGenerateBtn) {
       // Optional: auto-set active so staff see it immediately
   // await setActivePeriod(newPeriodId); // only activate when ready
 
-      // Refresh again so ★ active + dropdown state update
+      // Refresh again so â˜… active + dropdown state update
       await loadRota();
       await loadAdminPeriodsForDropdown();
 
@@ -3095,7 +3221,7 @@ if (adminClosesAtSaveBtn) {
 
       await setPeriodCloseTime(adminSelectedPeriodId, iso);
 
-      // ✅ close time should slam all 5 weeks shut by default
+      // âœ… close time should slam all 5 weeks shut by default
       await resetWeeksAfterClose(adminSelectedPeriodId);
 
       await loadRota(); // refresh main
@@ -3209,10 +3335,11 @@ if(ok !== true){
 }
 
   currentUser = selectedUser;
-setSessionPin(selectedUser.id, pin); // ✅ critical (used for saving requests)
+setSessionPin(selectedUser.id, pin); // âœ… critical (used for saving requests)
 localStorage.setItem(STORAGE_KEY, currentUser.id);
 
 closePinModal();
+await loadUserPermissions();
 applyLanguage();
 applyUnlockState();
 updateBadges();
@@ -3235,6 +3362,7 @@ function updateBadges(){
 
     else if (loginBadge) loginBadge.textContent = "Not logged in";
     if (adminBadge) adminBadge.style.display = "none";
+    if (printBtn) printBtn.style.display = "none";
     return;
   }
 
@@ -3244,6 +3372,9 @@ if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
   else if (loginBadge) loginBadge.textContent = `Account: ${currentUser.name}`;
 
   if (adminBadge) adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
+
+  // Show print button only for admins
+  if (printBtn) printBtn.style.display = currentUser.is_admin ? "inline-block" : "none";
 
   // Toggle a body-level class so we can scope admin-only UI affordances (e.g. locked-cell highlight)
   try {
@@ -3261,6 +3392,159 @@ if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
    PATCH 2) SHIFT PICKER LOGIC (with OFF priority)
    ========================================================= */
 
+async function populateShiftGrid(){
+  try {
+    const { data: shifts, error: shiftsErr } = await supabaseClient
+      .from("shifts")
+      .select("id, code, label, metadata")
+      .order("sort_order", { ascending: true });
+    
+    if (shiftsErr) throw shiftsErr;
+    
+    const { data: scopes, error: scopesErr } = await supabaseClient
+      .from("shift_scopes")
+      .select("shift_id")
+      .eq("scope", "requests");
+    
+    if (scopesErr) throw scopesErr;
+    
+    const scopeSet = new Set((scopes || []).map(s => s.shift_id));
+    const requestShifts = (shifts || []).filter(s => scopeSet.has(s.id));
+    
+    const container = document.getElementById("shiftGridContainer");
+    if (!container) return;
+    
+    let html = "";
+    requestShifts.forEach(shift => {
+      const meta = shift.metadata || {};
+      const fillColor = meta.fill_color || "#f7f7f7";
+      const textColor = meta.text_color || "#000";
+      const borderColor = meta.border_color || "#ccc";
+      const fontWeight = meta.bold ? "bold" : "700";
+      const fontStyle = meta.italics ? "italic" : "normal";
+      
+      const style = `background-color:${fillColor}!important; color:${textColor}!important; border-color:${borderColor}!important; font-weight:${fontWeight}!important; font-style:${fontStyle}!important;`;
+      html += `<button class="shift-btn" data-shift="${escapeHtml(shift.code)}" type="button" style="${style}">${escapeHtml(shift.code)}</button>`;
+    });
+    
+    html += `<button class="shift-btn off" data-shift="O*" type="button">O*</button>`;
+    html += `<button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>`;
+    
+    container.innerHTML = html;
+    attachShiftButtonListeners();
+  } catch (err) {
+    console.error("Failed to load shifts for picker", err);
+    const container = document.getElementById("shiftGridContainer");
+    if (container) {
+      container.innerHTML = `
+        <button class="shift-btn off" data-shift="O*" type="button">O*</button>
+        <button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>
+      `;
+      attachShiftButtonListeners();
+    }
+  }
+}
+
+function attachShiftButtonListeners(){
+  document.querySelectorAll(".shift-btn").forEach(btn => {
+    btn.addEventListener("click", async function(){
+      if (!activeCell) return;
+
+      const td = activeCell.td;
+      const userId = activeCell.userId;
+      const date = activeCell.date;
+      const shift = this.dataset.shift;
+      const key = `${userId}_${date}`;
+
+      let rankToSave = null;
+
+      if (shift === "O*") {
+        const pe = pendingEdits[key];
+        const currentRank =
+          (pe && pe.shift === "O") ? (pe.important_rank ?? null) :
+          (requestsCache.get(key)?.value === "O") ? (requestsCache.get(key).important_rank ?? null) :
+          null;
+
+        const taken = getTakenOffRanksThisWeek(userId, date, key);
+        rankToSave = nextOffPrioritySmart(currentRank, taken);
+
+        if (rankToSave === null && (taken.has(1) && taken.has(2))) {
+          alert("No more strong preferences available.\\nUse O or add a comment if needed.");
+          closeShiftModal();
+          return;
+        }
+      }
+
+      try {
+        closeShiftModal();
+
+        if (shift !== "CLEAR" && shift !== "L") {
+          const currentCount = countUserRequestsThisWeek(userId, date);
+          const alreadyExists = requestsCache.has(key);
+
+          if (!alreadyExists && currentCount >= MAX_REQUESTS_PER_WEEK) {
+            alert("You can only enter 5 requests per week.");
+            closeShiftModal();
+            return;
+          }
+        }
+
+        if (shift === "CLEAR") {
+          td.textContent = "";
+          delete pendingEdits[key];
+        } else if (shift === "O*") {
+          if (rankToSave === 1) td.textContent = "OÂ¹";
+          else if (rankToSave === 2) td.textContent = "OÂ²";
+          else td.textContent = "O";
+          pendingEdits[key] = { userId, date, shift: "O", important_rank: rankToSave };
+        } else {
+          td.textContent = shift;
+          pendingEdits[key] = { userId, date, shift, important_rank: null };
+        }
+
+        if (shift === "CLEAR") {
+          await deleteRequestCell(userId, date);
+          requestsCache.delete(key);
+          delete pendingEdits[key];
+          toast(`Cleared + saved (${key})`);
+        } else {
+          const valueToSave = (shift === "O*") ? "O" : shift;
+          const saved = await upsertRequestCell(userId, date, valueToSave, rankToSave);
+          requestsCache.set(key, saved);
+          delete pendingEdits[key];
+          toast(`Saved (${key}) = ${shift}`);
+        }
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+
+        const msg = err?.message || err?.error?.message || err?.details || JSON.stringify(err);
+
+        const pe = pendingEdits[key];
+        const row = pe ? { value: pe.shift, important_rank: pe.important_rank } : requestsCache.get(key);
+        
+        if (row?.value === "O") {
+          if (row.important_rank === 1) td.textContent = "OÂ¹";
+          else if (row.important_rank === 2) td.textContent = "OÂ²";
+          else if (row.important_rank === 3) td.textContent = "OÂ³";
+          else td.textContent = "O";
+        } else {
+          td.textContent = row?.value || "";
+        }
+
+        delete pendingEdits[key];
+
+        if ((msg || "").toLowerCase().includes("max 5")) {
+          alert("Max 5 requests per week. Clear one day to pick another.");
+        } else if ((msg || "").toLowerCase().includes("priority") || (msg || "").toLowerCase().includes("max 2")) {
+          alert("No more strong preferences available.\\nUse O or add a comment.");
+        } else {
+          alert("Save failed. Check console.");
+        }
+      }
+    });
+  });
+}
+
 function openShiftModal(){
   if (!activeCell) return;
 
@@ -3272,9 +3556,15 @@ function openShiftModal(){
     if (isAdmin) {
       const key = `${activeCell.userId}_${activeCell.date}`;
       const locked = locksCache.has(key);
-      shiftLockBtn.textContent = locked ? "🔒" : "🔓";
+      shiftLockBtn.textContent = locked ? "ðŸ”’" : "ðŸ”“";
       shiftLockBtn.title = locked ? "Unlock this cell" : "Lock this cell";
     }
+  }
+
+  // Admin-only: show L button
+  const shiftBtnL = document.getElementById('shiftBtnL');
+  if (shiftBtnL) {
+    shiftBtnL.style.display = currentUser?.is_admin ? "block" : "none";
   }
 
   document.body.classList.add("modal-open");
@@ -3329,7 +3619,7 @@ const shift = btn.dataset.shift;
 const key = `${userId}_${date}`;
 const existing = requestsCache.get(key);
 
-// Special handling for O*: cycle strong preference ranks (O¹ / O²)
+// Special handling for O*: cycle strong preference ranks (OÂ¹ / OÂ²)
 let rankToSave = null;
 
 if (shift === "O*") {
@@ -3344,7 +3634,7 @@ if (shift === "O*") {
   const taken = getTakenOffRanksThisWeek(userId, date, key);
   rankToSave = nextOffPrioritySmart(currentRank, taken);
 
-  // 🚫 HARD BLOCK after O¹ + O²
+  // ðŸš« HARD BLOCK after OÂ¹ + OÂ²
   if (rankToSave === null && (taken.has(1) && taken.has(2))) {
     alert("No more strong preferences available.\nUse O or add a comment if needed.");
     closeShiftModal();
@@ -3356,9 +3646,9 @@ if (shift === "O*") {
  
 
     /* -----------------------------
-       STEP 1: Max 5 per week guard
+       STEP 1: Max 5 per week guard (except for Leave)
        ----------------------------- */
-    if (shift !== "CLEAR") {
+    if (shift !== "CLEAR" && shift !== "L") {
       const currentCount = countUserRequestsThisWeek(userId, date);
       const alreadyExists = requestsCache.has(key);
 
@@ -3383,9 +3673,9 @@ if (shift === "O*") {
 
 } else if (shift === "O*") {
   // strong OFF, cycles rank
-  if (rankToSave === 1) td.textContent = "O¹";
-  else if (rankToSave === 2) td.textContent = "O²";
-  else td.textContent = "O"; // fallback (shouldn’t happen if cycling works)
+  if (rankToSave === 1) td.textContent = "OÂ¹";
+  else if (rankToSave === 2) td.textContent = "OÂ²";
+  else td.textContent = "O"; // fallback (shouldnâ€™t happen if cycling works)
 
   // note: we save as value "O" with important_rank 1/2
   pendingEdits[key] = { userId, date, shift: "O", important_rank: rankToSave };
@@ -3434,9 +3724,9 @@ const existing = requestsCache.get(key);
 
 const row = pe ? { value: pe.shift, important_rank: pe.important_rank } : existing;
 if (row?.value === "O") {
-  if (row.important_rank === 1) td.textContent = "O¹";
-  else if (row.important_rank === 2) td.textContent = "O²";
-  else if (row.important_rank === 3) td.textContent = "O³";
+  if (row.important_rank === 1) td.textContent = "OÂ¹";
+  else if (row.important_rank === 2) td.textContent = "OÂ²";
+  else if (row.important_rank === 3) td.textContent = "OÂ³";
   else td.textContent = "O";
 } else {
   td.textContent = row?.value || "";
@@ -3534,6 +3824,22 @@ async function deleteRequestCell(userId, date){
   if (error) throw error;
 }
 
+function goToFullAdmin() {
+  console.log("[DEBUG] goToFullAdmin called");
+  if (!currentUser) {
+    alert("Not logged in.");
+    return;
+  }
+  const pin = sessionStorage.getItem(`calpeward.pin.${currentUser.id}`);
+  if (!pin) {
+    alert("No session PIN. Log in again.");
+    return;
+  }
+  console.log("[DEBUG] Storing session and navigating to admin.html");
+  const sessionData = { userId: currentUser.id, pin: pin };
+  window.name = "calpeward:" + btoa(JSON.stringify(sessionData));
+  window.location.href = "admin.html";
+}
     
 async function loadRota() {
   // -----------------------------
@@ -3541,8 +3847,9 @@ async function loadRota() {
   // -----------------------------
   const { data: users, error: userError } = await supabaseClient
 .from("users")
-.select("id, name, role_id, is_admin, is_active, preferred_lang, roles(name)")
-    .order("created_at", { ascending: true })
+.select("id, name, role_id, is_admin, is_active, preferred_lang, display_order, roles(name)")
+    .order("role_id", { ascending: true })
+    .order("display_order", { ascending: true })
 
   if (userError) {
     console.error("Users load error:", userError);
@@ -3550,10 +3857,11 @@ async function loadRota() {
     return;
   }
 
-  // Build helper map
+  // Build helper map + store all users for print/export
+  allUsers = users || [];
   usersById = new Map((users || []).map(u => [u.id, u.name]));
 
-  // 🔐 Restore logged-in user from localStorage (ONE TIME LOGIN)
+  // ðŸ” Restore logged-in user from localStorage (ONE TIME LOGIN)
 const savedId = localStorage.getItem(STORAGE_KEY);
 if (savedId && !currentUser) {
   const restored = (users || []).find(u => String(u.id) === String(savedId));
@@ -3561,6 +3869,7 @@ if (savedId && !currentUser) {
 
   if (restored && restoredPin) {
     currentUser = restored;
+    await loadUserPermissions();
     updateBadges();
     applyUnlockState();
   } else {
@@ -3604,7 +3913,7 @@ populatePeriodDropdown(periods);
 periodSelect.value = String(activePeriodId);
 
 const selected = periods.find(p => String(p.id) === String(activePeriodId));
-activePeriodObj = selected;   // ← THIS is 5A in action
+activePeriodObj = selected;   // â† THIS is 5A in action
 updateCloseLabel(selected);
   
 // -----------------------------
@@ -3678,9 +3987,13 @@ if (start && end) {
 // -----------------------------
 const weeks = groupDatesIntoWeeks(dates);
 
+// Store for export/report features
+allWeeks = weeks;
+weekWindowStart = 0;
+
 
 // Hide inactive users from the rota table (for everyone)
-// (Admins can still view/manage them in Admin → Users with "Show inactive")
+// (Admins can still view/manage them in Admin â†’ Users with "Show inactive")
 const visibleUsers = users.filter(u => u.is_active !== false);
 
 render(visibleUsers, weeks);
@@ -3689,7 +4002,7 @@ render(visibleUsers, weeks);
 // Period label
 if (weeks.length) {
 document.getElementById("periodLabel").textContent =
-  `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} · 5-week period`;
+  `${fmt(weeks[0].weekStart)} â€“ ${fmt(weeks[weeks.length - 1].weekEnd)} Â· 5-week period`;
 
 }
 
@@ -3732,19 +4045,19 @@ function render(users, weeks){
 
     th.colSpan = 7;
     th.innerHTML = `
-  <span class="week-label">${fmt(w.weekStart)} – ${fmt(w.weekEnd)}</span>
+  <span class="week-label">${fmt(w.weekStart)} â€“ ${fmt(w.weekEnd)}</span>
 ${w.weekId ? `
   <button
     class="week-comment-btn"
     type="button"
     data-week-id="${String(w.weekId)}"
     title="Week comment"
-  >💬</button>
+  >ðŸ’¬</button>
 ` : `
   <span
     style="opacity:0.35; margin-left:6px;"
     title="Week has no ID (rota_dates.week_id missing)"
-  >💬</span>
+  >ðŸ’¬</span>
 `}
 `;
 r1.appendChild(th);
@@ -3813,6 +4126,9 @@ r1.appendChild(th);
     // section header row
     const sectionTr = document.createElement("tr");
     sectionTr.className = "section-row";
+    // Store role_id for print filtering
+    const roleId = g.className === 'section-cn' ? 1 : g.className === 'section-sn' ? 2 : 3;
+    sectionTr.dataset.roleId = roleId;
 
     const sectionTd = document.createElement("td");
     sectionTd.className = `name-col ${g.className}`;
@@ -3846,7 +4162,7 @@ r1.appendChild(th);
           td.dataset.userId = u.id;
           td.dataset.date = dateStr;
 
-          // ✅ Fill from cache / pending edits
+          // âœ… Fill from cache / pending edits
           const key = `${u.id}_${dateStr}`;
 
           // Pending edits override everything visually
@@ -3854,9 +4170,9 @@ if (pendingEdits[key]) {
   const pe = pendingEdits[key];
 
 if (pe.shift === "O") {
-  if (pe.important_rank === 1) td.textContent = "O¹";
-  else if (pe.important_rank === 2) td.textContent = "O²";
-  else if (pe.important_rank === 3) td.textContent = "O³";
+  if (pe.important_rank === 1) td.textContent = "OÂ¹";
+  else if (pe.important_rank === 2) td.textContent = "OÂ²";
+  else if (pe.important_rank === 3) td.textContent = "OÂ³";
   else td.textContent = "O";
 } else {
   td.textContent = pe.shift || "";
@@ -3866,8 +4182,8 @@ if (pe.shift === "O") {
   const r = requestsCache.get(key);
 
   if (r?.value === "O") {
-    if (r.important_rank === 1) td.textContent = "O¹";
-    else if (r.important_rank === 2) td.textContent = "O²";
+    if (r.important_rank === 1) td.textContent = "OÂ¹";
+    else if (r.important_rank === 2) td.textContent = "OÂ²";
     else td.textContent = "O";
   } else {
     td.textContent = r?.value || "";
@@ -3918,7 +4234,7 @@ function applyUnlockState(){
     r.querySelectorAll("td.cell").forEach(td => {
       const isClosedWeek = td.classList.contains("closed");
 
-      // ✅ FINAL rule:
+      // âœ… FINAL rule:
       // - must be your row (or admin)
       // - week must be open (closed class blocks)
       // periodClosed is NOT a blocker: week toggle overrides it
@@ -3946,12 +4262,12 @@ td.classList.toggle("editable", canEdit);
   const date = td.dataset.date;
   const lock = locksCache.get(`${userId}_${date}`);
 
-  // 🚫 Staff: locked cell blocks editing, shows reason
+  // ðŸš« Staff: locked cell blocks editing, shows reason
   if (lock && !currentUser?.is_admin) {
     const reason =
       (currentLang === "es" ? lock.reason_es : lock.reason_en) ||
       lock.reason_en ||
-      (currentLang === "es" ? "Este día está bloqueado por administración." : "This day is locked by management.");
+      (currentLang === "es" ? "Este dÃ­a estÃ¡ bloqueado por administraciÃ³n." : "This day is locked by management.");
 
     alert(reason);
     return;
@@ -3966,11 +4282,1021 @@ td.classList.toggle("editable", canEdit);
 }
 
 
+    
     /* =========================================================
-       10) BOOT
+       PRINT & EXPORT SYSTEM
        ========================================================= */
+    const printBtn = document.getElementById("printBtn");
+    const printModal = document.getElementById("printModal");
+    const printClose = document.getElementById("printClose");
+    const printCloseX = document.getElementById("printCloseX");
+    const printStaffOptions = document.getElementById("printStaffOptions");
+    const printAdminOptions = document.getElementById("printAdminOptions");
+    const printAllRequests = document.getElementById("printAllRequests");
+    const printGroupCN = document.getElementById("printGroupCN");
+    const printGroupSN = document.getElementById("printGroupSN");
+    const printGroupNA = document.getElementById("printGroupNA");
+    const printOwnRow = document.getElementById("printOwnRow");
+    const exportExcel = document.getElementById("exportExcel");
+    const reportRequestsUsage = document.getElementById("reportRequestsUsage");
+    const reportComments = document.getElementById("reportComments");
+    
+    function openPrintModal(){
+        if(!currentUser){alert(t("loginFirst")||"Please log in first.");return}
+        printStaffOptions.style.display="block";
+        printAdminOptions.style.display=currentUser.is_admin?"block":"none";
+        printModal.setAttribute("aria-hidden","false");
+        printModal.style.display="flex"
+    }
+    
+    function closePrintModal(){
+        printModal.setAttribute("aria-hidden","true");
+        printModal.style.display="none"
+    }
 
-/**
+    function buildPrintHeaderHtml(title, subtitle = "") {
+        const period = activePeriodObj?.name || "";
+        const printedAt = `${new Date().toLocaleDateString("en-GB")} ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+        return `
+          <div class="print-header">
+            <h1>Calpe Ward Requests - ${escapeHtml(title)}</h1>
+            <div class="print-meta">${escapeHtml(subtitle)}<br>Period: ${escapeHtml(period)} | Printed: ${escapeHtml(printedAt)}</div>
+          </div>
+        `;
+    }
+
+    function cloneRotaForPrint() {
+        const rota = document.getElementById("rota");
+        return rota ? rota.cloneNode(true) : null;
+    }
+
+    function openFittedPrintWindow({ title, subtitle, rotaClone, commentsData, commentsOnly, weekOrder, weeksInfo }) {
+      console.log("openFittedPrintWindow called with:");
+      console.log("- title:", title);
+      console.log("- subtitle:", subtitle);
+      console.log("- rotaClone:", rotaClone ? "present" : "null");
+      console.log("- commentsData:", commentsData);
+      console.log("- commentsData length:", commentsData?.length || 0);
+      console.log("- commentsOnly:", commentsOnly);
+      console.log("- weekOrder:", weekOrder);
+      console.log("- weeksInfo:", weeksInfo);
+      
+      try {
+        if (!rotaClone && !commentsOnly) {
+          alert("Nothing to print.");
+          return;
+        }
+
+        const win = window.open("", "_blank");
+        if (!win) {
+          alert("Pop-up blocked. Please allow pop-ups for printing.");
+          return;
+        }
+
+            const doc = win.document;
+            doc.open();
+            doc.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Print</title></head><body></body></html>');
+            doc.close();
+
+            // Build everything via DOM to avoid any script-breaking issues
+            const style = doc.createElement('style');
+            style.textContent = `
+:root { --print-scale: 1; --cn-band: #c8e6c9; --sn-band: #b3e5fc; --na-band: #ffe0b2; }
+@page { size: A4 landscape; margin: 4mm; }
+html, body { margin: 0; padding: 0; background: #fff; color: #222; }
+body { font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif; }
+#mmProbe { width: 100mm; height: 0; position: absolute; left: -9999px; top: -9999px; visibility: hidden; }
+#printArea { transform: scale(var(--print-scale)); transform-origin: top left; width: calc(100% / var(--print-scale)); }
+.print-header { padding: 0 0 3mm 0; margin: 0 0 3mm 0; border-bottom: 2pt solid #333; }
+.print-header { page-break-after: avoid; }
+.print-header h1 { margin: 0 0 1.5mm 0; font-size: 14pt; font-weight: 800; line-height: 1; color: #111; }
+.print-header .print-meta { font-size: 8pt; color: #666; line-height: 1.3; }
+table { border-collapse: collapse; width: 100%; }
+#rota { table-layout: auto; }
+#rota th { background: #e0e0e0; border: 1pt solid #888; padding: 3px 2px; font-size: 7pt; font-weight: 700; color: #000; }
+#rota td { border: 1pt solid #ccc; padding: 3px 2px; font-size: 6.8pt; text-align: center; line-height: 1.4; }
+#rota tbody th { background: #f5f5f5; font-weight: 600; text-align: left; padding: 3px 4px; font-size: 7pt; border: 1pt solid #888; }
+#rota thead th { background: #d9d9d9; }
+/* Prevent browser from repeating the header on subsequent pages */
+#rota thead { display: table-row-group; }
+#rota tfoot { display: table-row-group; }
+.week-label { font-size: 6.8pt; font-weight: 700; }
+.week-comment-btn { display: none !important; }
+/* Tidy, consistent week separator */
+th.week-sep, td.week-sep {
+  background: #c8c8c8 !important;
+  border-left: 1.5pt solid #666 !important;
+  border-right: 1.5pt solid #666 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  width: 2pt !important;
+  min-width: 2pt !important;
+  padding: 0 !important;
+}
+td.section-cn { background: var(--cn-band) !important; font-weight: 700; color: #2e7d32; border: 1pt solid #888 !important; }
+td.section-sn { background: var(--sn-band) !important; font-weight: 700; color: #01579b; border: 1pt solid #888 !important; }
+td.section-na { background: var(--na-band) !important; font-weight: 700; color: #e65100; border: 1pt solid #888 !important; }
+.weekend { background: #fafafa; }
+.closed { background: #f0f0f0; }
+tr { page-break-inside: avoid; }
+#rota { page-break-inside: auto; }
+* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+#rota td.cell {
+  font-weight: 400;
+  font-size: 7pt;
+  letter-spacing: 0.4pt;
+  background: #ffffff;
+  color: #000;
+  white-space: nowrap;
+}
+#rota tbody tr { page-break-inside: avoid; }
+/* Keep request rows together; let comments follow naturally */
+#rota tbody th.name-col, #rota td.name-col { white-space: nowrap; }
+
+#rota td.cell:empty {
+  background: #ffffff;
+}
+
+/* OÂ¹ and OÂ² - RED text, bold */
+#rota td.cell.shift-o1,
+#rota td.cell.shift-o2 {
+  background: #ffffff !important;
+  color: #d32f2f !important;
+  font-weight: 700;
+}
+
+/* Regular O - dark green text, not bold */
+#rota td.cell.shift-o {
+  background: #ffffff !important;
+  color: #1b5e20 !important;
+  font-weight: 400;
+}
+
+/* L (Leave) - pink background, not bold */
+#rota td.cell.shift-l {
+  background: #fbe2d5 !important;
+  color: #000 !important;
+  font-weight: 400;
+}
+
+/* N (Night) - clear/bright blue text, not bold */
+#rota td.cell.shift-n {
+  background: #ffffff !important;
+  color: #1565c0 !important;
+  font-weight: 400;
+}
+
+/* LD, 8-8, W - regular black text, not bold */
+#rota td.cell.shift-bold-black {
+  background: #ffffff !important;
+  color: #000 !important;
+  font-weight: 400;
+}
+
+.comments-section {
+  margin-top: 20pt;
+  padding-top: 10pt;
+  border-top: 2pt solid #333;
+  page-break-before: avoid;
+}
+
+.comments-section h2 {
+  margin: 0 0 8pt 0;
+  font-size: 12pt;
+  font-weight: 700;
+  color: #111;
+}
+
+.comment-item {
+  margin: 8pt 0;
+  padding: 6pt;
+  border-left: 3pt solid #1976d2;
+  background: #f5f5f5;
+  font-size: 8pt;
+  page-break-inside: avoid;
+}
+
+.comment-header {
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 3pt;
+}
+
+.comment-text {
+  color: #555;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Comments row inside rota table to guarantee perfect alignment */
+tbody .comments-row td.comment-week-cell {
+  vertical-align: top;
+  padding: 6pt;
+  background: #f9f9f9;
+  border: 1pt solid #ddd;
+}
+tbody .comments-row td.name-placeholder {
+  border: none !important;
+  background: transparent !important;
+}
+`;
+            doc.head.appendChild(style);
+
+            // Create print header
+            const period = activePeriodObj?.name || "";
+            const printedAt = new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+            
+            const printHeader = doc.createElement('div');
+            printHeader.className = 'print-header';
+            const h1 = doc.createElement('h1');
+            h1.textContent = "Calpe Ward Requests - " + title;
+            const meta = doc.createElement('div');
+            meta.className = 'print-meta';
+            meta.textContent = subtitle + "\nPeriod: " + period + " | Printed: " + printedAt;
+            printHeader.appendChild(h1);
+            printHeader.appendChild(meta);
+
+            const mmProbe = doc.createElement('div');
+            mmProbe.id = 'mmProbe';
+
+            const printArea = doc.createElement('div');
+            printArea.id = 'printArea';
+            printArea.appendChild(printHeader);
+            
+            // Add rota table if not comments-only
+            if(rotaClone){
+                printArea.appendChild(rotaClone);
+            }
+            
+            // Add comments organized by week if provided
+            if(commentsData && commentsData.length > 0){
+                console.log("Rendering", commentsData.length, "comments in print window");
+                // Group comments by week
+                const commentsByWeek = {};
+                commentsData.forEach(c => {
+                    const weekStart = c.week_start || "Unknown";
+                    if(!commentsByWeek[weekStart]) commentsByWeek[weekStart] = [];
+                    commentsByWeek[weekStart].push(c);
+                });
+
+                // Determine week order
+                const order = Array.isArray(weeksInfo) && weeksInfo.length === 5
+                  ? weeksInfo.slice().sort((a,b)=>new Date(a.week_start)-new Date(b.week_start)).map(w=>w.week_start)
+                  : (Array.isArray(weekOrder) && weekOrder.length
+                      ? weekOrder.slice().sort((a,b)=>new Date(a)-new Date(b))
+                      : Object.keys(commentsByWeek).sort((a,b)=>new Date(a)-new Date(b))
+                    );
+
+                // Build a ghost row inside the rota table so alignment is perfect
+                const rotaTable = rotaClone || doc.getElementById('rota');
+                if (rotaTable) {
+                  try {
+                    // Determine week groups by counting day header cells between separators
+                    const dayHead = rotaTable.querySelector('thead tr:nth-child(2)')
+                      || rotaTable.querySelector('thead tr:last-child');
+                    const headCells = dayHead ? Array.from(dayHead.querySelectorAll('th')) : [];
+                    let afterName = headCells.slice(1); // skip name column
+                    if (afterName.length === 0) {
+                      const dataRow = rotaTable.querySelector('tbody tr:not(.section-row)');
+                      const cells = dataRow ? Array.from(dataRow.querySelectorAll('td')) : [];
+                      afterName = cells.slice(1);
+                    }
+                    const groups = [];
+                    let count = 0;
+                    for (const el of afterName){
+                      if (el.classList && el.classList.contains('week-sep')){
+                        if (count > 0){ groups.push(count); count = 0; }
+                        continue;
+                      }
+                      const span = el.getAttribute('colspan');
+                      const n = span ? parseInt(span,10) : 1;
+                      count += (isNaN(n) ? 1 : n);
+                    }
+                    if (count > 0) groups.push(count);
+                    if (groups.length !== 5){
+                      // Fallback to equal 7-day weeks if header is unusual
+                      for (let i = groups.length; i < 5; i++) groups.push(7);
+                      if (groups.length > 5) groups.splice(5);
+                    }
+
+                    // Append to the last tbody to avoid header duplication
+                    const bodies = Array.from(rotaTable.querySelectorAll('tbody'));
+                    const targetBody = bodies.length ? bodies[bodies.length - 1] : null;
+                    const commentsBody = targetBody || doc.createElement('tbody');
+                    const row = doc.createElement('tr');
+                    row.className = 'comments-row';
+
+                    // Placeholder for name column
+                    const nameTd = doc.createElement('td');
+                    nameTd.className = 'name-placeholder';
+                    row.appendChild(nameTd);
+
+                    const weekStartsOrdered = order.slice(0,5);
+                    for (let i = 0; i < 5; i++) {
+                      const weekStart = weekStartsOrdered[i];
+                      const span = groups[i] || 7;
+                      const td = doc.createElement('td');
+                      td.className = 'comment-week-cell';
+                      td.setAttribute('colspan', String(span));
+
+                      // Keep your preferred header inside each week block
+                      const weekDate = new Date(weekStart).toLocaleDateString('en-GB');
+                      const head = doc.createElement('div');
+                      head.style.cssText = 'font-weight:700;font-size:9pt;color:#1976d2;margin-bottom:6pt;border-bottom:1pt solid #1976d2;padding-bottom:3pt;';
+                      head.textContent = 'Week commencing: ' + weekDate;
+                      td.appendChild(head);
+
+                      (commentsByWeek[weekStart] || []).forEach(c => {
+                        const userName = usersById.get(String(c.user_id)) || 'Unknown';
+                        const card = doc.createElement('div');
+                        card.style.cssText = 'margin:6pt 0;padding:6pt;border-left:2pt solid #1976d2;background:#fff;font-size:8pt;';
+                        const n = doc.createElement('div');
+                        n.style.cssText = 'font-weight:600;color:#222;margin-bottom:3pt;';
+                        n.textContent = userName;
+                        const t = doc.createElement('div');
+                        t.style.cssText = 'color:#555;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;font-size:7.5pt;';
+                        t.textContent = c.comment || '';
+                        card.appendChild(n);
+                        card.appendChild(t);
+                        td.appendChild(card);
+                      });
+
+                      row.appendChild(td);
+                      if (i < 4) {
+                        const sep = doc.createElement('td');
+                        sep.className = 'week-sep';
+                        row.appendChild(sep);
+                      }
+                    }
+
+                    commentsBody.appendChild(row);
+                    if (!targetBody) rotaTable.appendChild(commentsBody);
+                  } catch(e) {
+                    console.warn('Ghost-row comments failed:', e);
+                  }
+                }
+            } else {
+                console.log("No comments to render - commentsData:", commentsData);
+            }
+
+            doc.body.appendChild(mmProbe);
+            doc.body.appendChild(printArea);
+
+            // Add print logic
+            const script = doc.createElement('script');
+            script.textContent = `(function(){
+// Classify cells by shift type and add styling
+var cells = document.querySelectorAll('#rota td.cell');
+cells.forEach(function(cell){
+  var text = (cell.textContent || '').trim();
+  if(!text) return;
+  
+  if(text === 'OÂ¹' || text === 'O1') {
+    cell.classList.add('shift-o1');
+  } else if(text === 'OÂ²' || text === 'O2') {
+    cell.classList.add('shift-o2');
+  } else if(text === 'O') {
+    cell.classList.add('shift-o');
+  } else if(text.includes('N') && !text.includes('LD')) {
+    cell.classList.add('shift-n');
+  } else if(text.includes('L') && !text.includes('LD')) {
+    cell.classList.add('shift-l');
+  } else if(text.includes('LD') || text.includes('8-8') || text === 'W') {
+    cell.classList.add('shift-bold-black');
+  }
+});
+
+// Align ghost-row week cells to actual week widths
+(function(){
+  try{
+    var dayRow = document.querySelector('#rota thead tr:nth-child(2)') || document.querySelector('#rota thead tr:last-child');
+    if(!dayRow) return;
+    var dayCells = Array.from(dayRow.querySelectorAll('th')).filter(function(th){
+      return !(th.classList && (th.classList.contains('name-col') || th.classList.contains('week-sep')));
+    });
+    if(dayCells.length === 0) return;
+    var dayWidth = dayCells[0].getBoundingClientRect().width;
+    if(!dayWidth || dayWidth <= 0) return;
+    var weekCells = document.querySelectorAll('#rota td.comment-week-cell');
+    weekCells.forEach(function(td){
+      var span = parseInt(td.getAttribute('colspan'), 10);
+      if(!span || isNaN(span)) span = 7;
+      td.style.width = (dayWidth * span) + 'px';
+    });
+  } catch(e){ console.warn('Width alignment for comment-week-cell failed:', e); }
+})();
+
+function mmToPx(mm){var probe=document.getElementById('mmProbe');return(probe.getBoundingClientRect().width/100)*mm;}
+function fit(){var p=document.getElementById('printArea');document.documentElement.style.setProperty('--print-scale','1');var r=p.getBoundingClientRect();var s=Math.min(mmToPx(293)/r.width,mmToPx(206)/r.height);document.documentElement.style.setProperty('--print-scale',(Math.max(0.1,Math.min(1,s*0.995))).toFixed(4));}
+window.addEventListener('load',function(){requestAnimationFrame(function(){requestAnimationFrame(function(){fit();setTimeout(function(){window.focus();window.print();setTimeout(function(){window.close();},250);},50);});});});
+})();`;
+            doc.body.appendChild(script);
+
+        } catch (err) {
+            console.error("Print failed:", err);
+            alert("Print failed: " + err.message);
+        }
+    }
+
+    function hideForRole(roleId) {
+        const allSections = Array.from(document.querySelectorAll("#rota tbody tr.section-row"));
+        const allRows = Array.from(document.querySelectorAll("#rota tbody tr:not(.section-row)"));
+        const prev = new Map();
+
+        [...allSections, ...allRows].forEach(el => prev.set(el, el.style.display));
+
+        allSections.forEach(section => {
+            const sectionRoleId = parseInt(section.dataset.roleId);
+            if (sectionRoleId !== roleId) section.style.display = "none";
+        });
+        allRows.forEach(row => {
+            const userIdStr = row.dataset.userId;
+            const user = allUsers.find(u => String(u.id) === userIdStr || u.id === userIdStr);
+            if (user && user.role_id !== roleId) row.style.display = "none";
+        });
+
+        return function restore() {
+            prev.forEach((display, el) => { el.style.display = display; });
+        };
+    }
+
+    function hideForCurrentUser() {
+        if (!currentUser) return () => {};
+        const allRows = Array.from(document.querySelectorAll("#rota tbody tr:not(.section-row)"));
+        const sectionRows = Array.from(document.querySelectorAll("#rota tbody tr.section-row"));
+        const prev = new Map();
+
+        [...allRows, ...sectionRows].forEach(el => prev.set(el, el.style.display));
+
+        allRows.forEach(row => {
+            const userIdStr = row.dataset.userId;
+            if (String(currentUser.id) !== userIdStr) row.style.display = "none";
+        });
+        sectionRows.forEach(sectionRow => {
+            const sectionRoleId = parseInt(sectionRow.dataset.roleId);
+            if (sectionRoleId !== currentUser.role_id) sectionRow.style.display = "none";
+        });
+
+        return function restore() {
+            prev.forEach((display, el) => { el.style.display = display; });
+        };
+    }
+
+    function printAll(){
+        closePrintModal();
+        const rotaClone = cloneRotaForPrint();
+        openFittedPrintWindow({ title: "All Requests", subtitle: "", rotaClone });
+    }
+    
+    function printByGroup(roleId,roleName){
+        const restore = hideForRole(roleId);
+        const rotaClone = cloneRotaForPrint();
+        restore();
+        closePrintModal();
+        openFittedPrintWindow({ title: `${roleName} Requests`, subtitle: `Group: ${roleName}`, rotaClone });
+    }
+    
+    function printOwnRowFunc(){
+        if(!currentUser) return;
+        const restore = hideForCurrentUser();
+        const rotaClone = cloneRotaForPrint();
+        restore();
+        closePrintModal();
+        openFittedPrintWindow({ title: "My Requests", subtitle: `User: ${currentUser.name}`, rotaClone });
+    }
+    
+    // Admin print configuration modal
+    function openAdminPrintConfig(){
+        if(!currentUser?.is_admin) {alert("Admin access required"); return}
+        closePrintModal();
+        
+        const modal = document.createElement("div");
+        modal.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.28);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:10001;overflow-y:auto;padding:14px";
+        
+        const dialog = document.createElement("div");
+        dialog.style.cssText = "background:linear-gradient(180deg,#ffffff 0%,#f6f8fc 100%);padding:18px;border-radius:22px;max-width:620px;width:min(620px,100%);box-shadow:0 28px 80px rgba(15,23,42,0.14);border:1px solid rgba(15,23,42,0.05);margin:20px auto;font-family:'Manrope',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a";
+        
+        let html = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:0.1px;">Admin Print Configuration</h2>
+                <button type="button" onclick="this.closest('[data-modal]').remove()" style="width:32px;height:32px;border-radius:10px;border:1px solid #e5eaf3;background:#ffffff;cursor:pointer;color:#94a3b8;box-shadow:0 3px 8px rgba(15,23,42,0.05);font-size:18px;line-height:1;">Ã—</button>
+            </div>
+            
+            <!-- ROLES SECTION -->
+            <div style="margin-bottom:18px">
+                <label style="display:block;font-weight:600;margin-bottom:10px;font-size:12.5px;color:#6b7387">Select Roles:</label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" class="admin-role-check" value="1" style="width:18px;height:18px;cursor:pointer"> Charge Nurses
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" class="admin-role-check" value="2" style="width:18px;height:18px;cursor:pointer"> Staff Nurses
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" class="admin-role-check" value="3" style="width:18px;height:18px;cursor:pointer"> Nursing Assistants
+                    </label>
+                </div>
+            </div>
+            
+            <!-- USERS SECTION -->
+            <div style="margin-bottom:18px">
+                <label style="display:block;font-weight:600;margin-bottom:10px;font-size:12.5px;color:#6b7387">Select Users (or leave empty for all):</label>
+                <input type="text" id="userSearchInput" placeholder="Search staff..." style="width:100%;padding:8px 12px;margin-bottom:12px;border:1px solid #e5eaf3;border-radius:10px;font-size:12.5px;background:#ffffff;box-shadow:inset 0 1px 2px rgba(15,23,42,0.06)">
+                <div id="userList" style="max-height:200px;overflow-y:auto;border:1px solid #e7ebf3;border-radius:12px;padding:8px;background:#ffffff;box-shadow:inset 0 1px 2px rgba(15,23,42,0.06)">`;
+        
+        allUsers.forEach(u => {
+            html += `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px;margin:0">
+                <input type="checkbox" class="admin-user-check" value="${u.id}" style="width:16px;height:16px;cursor:pointer"> ${escapeHtml(u.name)}
+            </label>`;
+        });
+        
+        html += `</div>
+            </div>
+            
+            <!-- COMMENTS SECTION -->
+            <div style="margin-bottom:18px;padding:14px;background:#f5f7fb;border-radius:14px;border:1px solid #e7ebf3">
+                <label style="display:block;font-weight:600;margin-bottom:10px;font-size:12.5px;color:#6b7387">What to Print:</label>
+                
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px">
+                    <input type="radio" name="printMode" value="both" checked style="width:16px;height:16px;cursor:pointer"> Requests & Comments
+                </label>
+                
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px">
+                    <input type="radio" name="printMode" value="requests" style="width:16px;height:16px;cursor:pointer"> Requests Only
+                </label>
+                
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="radio" name="printMode" value="comments" style="width:16px;height:16px;cursor:pointer"> Comments Only
+                </label>
+            </div>
+            
+            <!-- BUTTONS -->
+            <div style="display:flex;gap:12px;justify-content:flex-end">
+                <button type="button" onclick="this.closest('[data-modal]').remove()" style="height:32px;padding:0 14px;border:1px solid #e5eaf3;background:#ffffff;border-radius:12px;cursor:pointer;font-weight:600;font-size:12.5px;box-shadow:0 3px 8px rgba(15,23,42,0.05)">Cancel</button>
+                <button type="button" id="adminPrintExecBtn" style="height:32px;padding:0 16px;background:linear-gradient(180deg,#6f8bff 0%,#5472f2 100%);color:white;border:1px solid rgba(84,114,242,0.5);border-radius:12px;cursor:pointer;font-weight:600;font-size:12.5px;box-shadow:0 6px 14px rgba(66,95,210,0.25)">Print</button>
+            </div>
+        `;
+        
+        dialog.innerHTML = html;
+        dialog.setAttribute("data-modal", "true");
+        modal.appendChild(dialog);
+        document.body.appendChild(modal);
+        
+        // User search functionality
+        const userSearchInput = document.getElementById("userSearchInput");
+        const userCheckboxes = document.querySelectorAll(".admin-user-check");
+        userSearchInput.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+            userCheckboxes.forEach(checkbox => {
+                const label = checkbox.closest("label");
+                const userName = label.textContent.toLowerCase();
+                label.style.display = userName.includes(query) ? "flex" : "none";
+            });
+        });
+        
+        // Print execution
+        document.getElementById("adminPrintExecBtn").addEventListener("click", () => {
+            const selectedRoles = Array.from(document.querySelectorAll(".admin-role-check:checked")).map(el => parseInt(el.value));
+            const selectedUsers = Array.from(document.querySelectorAll(".admin-user-check:checked")).map(el => el.value);
+            const printMode = document.querySelector("input[name='printMode']:checked").value;
+            
+            modal.remove();
+            executeAdminPrint(selectedRoles, selectedUsers, printMode);
+        });
+        
+        modal.addEventListener("click", (e) => {
+            if(e.target === modal) modal.remove();
+        });
+    }
+    
+    async function executeAdminPrint(selectedRoles, selectedUsers, printMode){
+        console.log("=== executeAdminPrint called ===");
+        console.log("Selected roles:", selectedRoles);
+        console.log("Selected users:", selectedUsers);
+        console.log("Print mode:", printMode);
+        
+        try{
+            if(!activePeriodId){
+                alert("No active period selected.");
+                return
+            }
+            
+            console.log("Active period ID:", activePeriodId);
+            
+            // Build list of users to keep visible
+            let filteredUsers = allUsers;
+            if(selectedRoles.length > 0){
+                filteredUsers = allUsers.filter(u => selectedRoles.includes(u.role_id));
+            }
+            if(selectedUsers.length > 0){
+                filteredUsers = filteredUsers.filter(u => selectedUsers.includes(String(u.id)));
+            }
+            
+            console.log("Filtered users count:", filteredUsers.length);
+            console.log("Filtered users:", filteredUsers.map(u => u.name));
+            
+            if(filteredUsers.length === 0){
+                alert("No staff selected.");
+                return
+            }
+            
+            // Save filtered users for comment fetching later
+            const usersForComments = filteredUsers.slice();
+            console.log("Saved users for comments:", usersForComments.length);
+            
+            // Filter the rota table to show only selected users
+            const restore = (() => {
+                const original = new Map();
+                const selectedUserIds = new Set(filteredUsers.map(u => String(u.id)));
+                
+                document.querySelectorAll("#rota tbody tr").forEach(row => {
+                  original.set(row, row.style.display);
+                  const isSection = row.classList.contains('section-row');
+                  if (isSection) {
+                    // Keep role sections visible when users are not individually selected
+                    if (selectedUsers.length === 0) {
+                      const roleIdAttr = row.getAttribute('data-role-id') || row.dataset.roleId;
+                      const sectionRoleId = parseInt(roleIdAttr, 10);
+                      if (selectedRoles.length === 0 || selectedRoles.includes(sectionRoleId)) {
+                        // keep visible
+                      } else {
+                        row.style.display = 'none';
+                      }
+                    } else {
+                      // If specific users are selected, hide all section headers
+                      row.style.display = 'none';
+                    }
+                    return;
+                  }
+
+                  const nameCell = row.querySelector("td:first-child");
+                  if(nameCell){
+                    const user = allUsers.find(u => u.name === nameCell.textContent);
+                    if(!user || !selectedUserIds.has(String(user.id))){
+                      row.style.display = "none";
+                    }
+                  }
+                });
+                
+                return () => {
+                    original.forEach((display, row) => {
+                        row.style.display = display;
+                    });
+                };
+            })();
+            
+            // Clone the filtered rota
+            const rotaClone = cloneRotaForPrint();
+            restore();
+            
+            console.log("Rota cloned successfully");
+            
+            // Build title based on selections
+            let title = "Filtered Requests";
+            let subtitle = "";
+            
+            if(selectedRoles.length > 0 && selectedUsers.length === 0){
+                const roleNames = selectedRoles.map(rid => {
+                    if(rid == 1) return "Charge Nurses";
+                    if(rid == 2) return "Staff Nurses";
+                    if(rid == 3) return "Nursing Assistants";
+                    return "";
+                }).join(", ");
+                title = "Requests by Role";
+                subtitle = roleNames;
+            } else if(selectedUsers.length > 0 && selectedRoles.length === 0){
+                const userNames = usersForComments.map(u => u.name).join(", ");
+                title = "Selected Staff Requests";
+                subtitle = userNames;
+            } else if(selectedRoles.length > 0 && selectedUsers.length > 0){
+                const userNames = usersForComments.map(u => u.name).join(", ");
+                title = "Filtered Staff Requests";
+                subtitle = userNames;
+            } else {
+                title = "All Requests";
+                subtitle = "";
+            }
+            
+            console.log("Title:", title);
+            console.log("Subtitle:", subtitle);
+            
+            // If comments requested, fetch them
+            let commentsData = [];
+            let weeks = null; // Declare outside the if block so it's accessible later
+            if(printMode !== "requests"){
+              console.log("Fetching comments...");
+              console.log("usersForComments:", usersForComments?.length);
+              const userIds = usersForComments.map(u => u.id);
+              console.log("User IDs for comments:", userIds);
+
+              // Pull week IDs from the same DOM controls the modal uses
+              const weekBtns = Array.from(document.querySelectorAll('.week-comment-btn'));
+              const weekIds = Array.from(new Set(weekBtns
+                .map(b => (b?.dataset?.weekId || '').trim())
+                .filter(Boolean))
+              );
+              console.log("Week IDs from DOM:", weekIds);
+
+              // Resolve week_start values for these IDs (safe table)
+              const { data: weeksData, error: weekErr } = await supabaseClient
+                .from('rota_weeks')
+                .select('id, week_start')
+                .in('id', weekIds)
+                .order('week_start', { ascending: true });
+
+              if (weekErr) {
+                console.error('Week fetch error:', weekErr);
+                throw weekErr;
+              }
+
+              weeks = weeksData; // Assign to outer scope variable
+              console.log('Weeks fetched (by DOM ids):', weeks?.length || 0, weeks);
+
+              if (weeks && weeks.length > 0) {
+                // EXACT same path as the modal: fetchWeekComments per week
+                const commentPromises = weeks.map(week =>
+                  fetchWeekComments(week.id).then(rows => ({
+                    data: rows || [],
+                    week_start: week.week_start
+                  }))
+                );
+
+                const results = await Promise.all(commentPromises);
+
+                // Combine and enrich
+                commentsData = [];
+                for (const result of results) {
+                  for (const comment of result.data) {
+                    commentsData.push({
+                      ...comment,
+                      week_start: result.week_start,
+                      user_name: usersById.get(String(comment.user_id)) || 'Unknown'
+                    });
+                  }
+                }
+
+                console.log('Total comments fetched (pre-filter):', commentsData.length);
+
+                // Filter by selected users
+                const selectedUserIds = new Set(userIds.map(id => String(id)));
+                commentsData = commentsData.filter(c => selectedUserIds.has(String(c.user_id)));
+
+                console.log('Comments after filtering by selected users:', commentsData.length);
+              }
+            } else {
+                console.log("Skipping comments (requests only mode)");
+            }
+            
+            console.log("Opening print window...");
+            
+            // Call print window with all data
+            if(printMode === "comments"){
+                // Comments only mode
+                openFittedPrintWindow({ 
+                    title: "Staff Comments Only", 
+                    subtitle: usersForComments.map(u => u.name).join(", "), 
+                    rotaClone: null,
+                    commentsData: commentsData,
+                    weekOrder: (printMode !== "requests" && typeof weeks !== 'undefined' ? weeks.map(w=>w.week_start) : undefined),
+                    weeksInfo: (printMode !== "requests" && typeof weeks !== 'undefined' ? weeks : undefined),
+                    commentsOnly: true
+                });
+            } else {
+                // Requests or Both mode
+                openFittedPrintWindow({ 
+                    title: title, 
+                    subtitle: subtitle, 
+                    rotaClone: rotaClone,
+                    commentsData: commentsData,
+                    weekOrder: (printMode !== "requests" && typeof weeks !== 'undefined' ? weeks.map(w=>w.week_start) : undefined),
+                    weeksInfo: (printMode !== "requests" && typeof weeks !== 'undefined' ? weeks : undefined)
+                });
+            }
+        } catch(err){
+            console.error("Admin print error:", err);
+            alert("Print failed: " + (err.message || "Unknown error"));
+        }
+    }
+    
+    async function exportToExcel(){
+        try{
+            const weeks = (allWeeks || []).slice(weekWindowStart, weekWindowStart + WINDOW_WEEKS);
+            if (!weeks.length) {
+                alert("No weeks loaded for export.");
+                return;
+            }
+
+            const visibleUsers = allUsers.filter(u => u.is_active !== false);
+            const dayLetters = ["S","M","T","W","T","F","S"];
+            const totalColumns = 2 + (weeks.length * 8); // Name + spacer + (7 days + count) per week
+            const csvRows = [];
+
+            const toCell = (val) => {
+                if (val == null) return "";
+                const s = String(val);
+                if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+                return s;
+            };
+
+            const blankRow = () => new Array(totalColumns).fill("");
+            const rolePrefix = (user) => {
+                if (user.role_id === 1) return "CN";
+                if (user.role_id === 2) return "SN";
+                if (user.role_id === 3) return "NA";
+                return "";
+            };
+
+            const formatRequestValue = (req) => {
+                if (!req) return "";
+                if (req.value === "O") {
+                    if (req.important_rank === 1) return "OÂ¹";
+                    if (req.important_rank === 2) return "OÂ²";
+                    if (req.important_rank === 3) return "OÂ³";
+                    return "O";
+                }
+                if (req.value === "8-8") return "'8-8";
+                return req.value || "";
+            };
+
+            const headerTop = blankRow();
+            headerTop[0] = "Calpe Ward";
+            csvRows.push(blankRow());
+            csvRows.push(headerTop);
+            csvRows.push(blankRow());
+
+            const periodLabel = activePeriodObj?.name || `${fmt(weeks[0].weekStart)} - ${fmt(weeks[weeks.length - 1].weekEnd)}`;
+            const periodRow = blankRow();
+            periodRow[0] = periodLabel;
+            csvRows.push(periodRow);
+            csvRows.push(blankRow());
+
+            const accessRow = blankRow();
+            accessRow[0] = "Access Requests";
+            csvRows.push(accessRow);
+
+            const headerRow = blankRow();
+            headerRow[0] = "Name";
+            headerRow[1] = "";
+            weeks.forEach((w, wIdx) => {
+                for (let d = 0; d < 7; d++) {
+                    headerRow[2 + (wIdx * 8) + d] = dayLetters[d];
+                }
+                headerRow[2 + (wIdx * 8) + 7] = (wIdx === 0) ? "7" : "";
+            });
+            csvRows.push(headerRow);
+
+            const dateRow = blankRow();
+            weeks.forEach((w, wIdx) => {
+                for (let d = 0; d < 7; d++) {
+                    const dateNum = new Date(w.days[d].date).getDate();
+                    dateRow[2 + (wIdx * 8) + d] = String(dateNum);
+                }
+            });
+            csvRows.push(dateRow);
+
+            visibleUsers.forEach(user => {
+                const row = blankRow();
+                const prefix = rolePrefix(user);
+                row[0] = prefix ? `${prefix} ${user.name}` : user.name;
+                row[1] = "";
+                weeks.forEach((w, wIdx) => {
+                    for (let d = 0; d < 7; d++) {
+                        const dateStr = w.days[d].date;
+                        const req = requestsCache.get(`${user.id}_${dateStr}`);
+                        row[2 + (wIdx * 8) + d] = formatRequestValue(req);
+                    }
+                    row[2 + (wIdx * 8) + 7] = "";
+                });
+                csvRows.push(row);
+            });
+
+            const csv = "\ufeff" + csvRows.map(r => r.map(toCell).join(",")).join("\n");
+            const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+            const link=document.createElement("a");
+            const url=URL.createObjectURL(blob);
+            link.setAttribute("href",url);
+            link.setAttribute("download",`calpe-ward-requests-${activePeriodObj?.name||"export"}.csv`);
+            link.style.display="none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            closePrintModal();
+            alert("Excel file exported successfully!")
+        }catch(err){
+            console.error("Export failed:",err);
+            alert("Failed to export. Check console.")
+        }
+    }
+    
+    async function generateRequestsUsageReport(){
+        try{
+            const weeks=allWeeks.slice(weekWindowStart,weekWindowStart+5);
+            const stats=allUsers.map(user=>{
+                let totalRequests=0,offDutyCount=0,priorityOffDuty=0;
+                weeks.forEach(w=>{
+                    const days=daysInWeek(w.weekStart);
+                    days.forEach(d=>{
+                        const dateStr=isoDate(d);
+                        const req=requestsCache.get(`${user.id}_${dateStr}`);
+                        if(req?.value){
+                            totalRequests++;
+                            if(req.value==="O"||req.value==="O*"){
+                                offDutyCount++;
+                                if(req.value==="O*")priorityOffDuty++
+                            }
+                        }
+                    })
+                });
+                return{
+                    name:user.name,
+                    role:user.role_id===1?"CN":user.role_id===2?"SN":"NA",
+                    totalRequests,
+                    offDutyCount,
+                    priorityOffDuty,
+                    percentUsed:Math.round((totalRequests/(weeks.length*7))*100)
+                }
+            });
+            let csv="Name,Role,Total Requests,Off Duty Requests,Priority Off Duty,% Used\n";
+            stats.forEach(s=>csv+=`"${s.name}",${s.role},${s.totalRequests},${s.offDutyCount},${s.priorityOffDuty},${s.percentUsed}%\n`);
+            const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+            const link=document.createElement("a");
+            const url=URL.createObjectURL(blob);
+            link.setAttribute("href",url);
+            link.setAttribute("download",`requests-usage-report-${activePeriodObj?.name||"report"}.csv`);
+            link.style.display="none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            closePrintModal();
+            alert("Requests usage report generated!")
+        }catch(err){
+            console.error("Report generation failed:",err);
+            alert("Failed to generate report. Check console.")
+        }
+    }
+    
+    async function generateCommentsReport(){
+        try{
+            if(!activePeriodId){
+                alert("No active period selected.");
+                return
+            }
+            const{data:comments,error}=await supabaseClient
+                .from("week_comments")
+                .select("*, users(name)")
+                .eq("period_id",activePeriodId)
+                .order("week_start",{ascending:true})
+                .order("created_at",{ascending:true});
+            if(error)throw error;
+            if(!comments||comments.length===0){
+                alert("No comments found for this period.");
+                return
+            }
+            let csv="Week Start,User,Comment,Posted\n";
+            comments.forEach(c=>{
+                const weekDate=new Date(c.week_start).toLocaleDateString("en-GB");
+                const userName=c.users?.name||"Unknown";
+                const comment=(c.comment||"").replace(/"/g,'""');
+                const posted=new Date(c.created_at).toLocaleString("en-GB");
+                csv+=`"${weekDate}","${userName}","${comment}","${posted}"\n`
+            });
+            const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+            const link=document.createElement("a");
+            const url=URL.createObjectURL(blob);
+            link.setAttribute("href",url);
+            link.setAttribute("download",`comments-report-${activePeriodObj?.name||"report"}.csv`);
+            link.style.display="none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            closePrintModal();
+            alert(`Comments report generated! ${comments.length} comments exported.`)
+        }catch(err){
+            console.error("Comments report failed:",err);
+            alert("Failed to generate comments report. Check console.")
+        }
+    }
+    
+    printBtn?.addEventListener("click",openPrintModal);
+    printClose?.addEventListener("click",closePrintModal);
+    printCloseX?.addEventListener("click",closePrintModal);
+    printAllRequests?.addEventListener("click",printAll);
+    printGroupCN?.addEventListener("click",()=>printByGroup(1,"Charge Nurses"));
+    printGroupSN?.addEventListener("click",()=>printByGroup(2,"Staff Nurses"));
+    printGroupNA?.addEventListener("click",()=>printByGroup(3,"Nursing Assistants"));
+    printOwnRow?.addEventListener("click",printOwnRowFunc);
+    exportExcel?.addEventListener("click",exportToExcel);
+    reportRequestsUsage?.addEventListener("click",generateRequestsUsageReport);
+    reportComments?.addEventListener("click",generateCommentsReport);
+    printModal?.addEventListener("click",(e)=>{if(e.target===printModal)closePrintModal()});
+
+/* =========================================================
        10) BOOT
        ========================================================= */
     loadRota();
+    populateShiftGrid();

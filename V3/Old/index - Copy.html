@@ -25,12 +25,6 @@
   <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Shift Functions -->
-  <script src="js/shift-functions.js" defer></script>
-  
-  <!-- View As Feature -->
-  <script src="js/view-as.js" defer></script>
-
   <!-- =========================
        STYLES
        ========================= -->
@@ -53,7 +47,7 @@
   --sn-band: #9fd0ff;
   --na-band: #ffd18a;
 
-  /* ✅ shared modal/admin theme vars (so userModal doesn't rely on later CSS order) */
+  /* ? shared modal/admin theme vars (so userModal doesn't rely on later CSS order) */
   --accent: #4F8DF7;
   --accent-hover: #2F6FEA;
   --accent-weak: rgba(79,141,247,0.16);
@@ -67,7 +61,7 @@
 
 
     body{
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
       margin: 18px;
       color: var(--text);
       background: #f7f7f7;
@@ -273,7 +267,7 @@ thead th{
   z-index: 100;
 }
 
-/* Exact heights so Safari can’t invent half-pixel gaps */
+/* Exact heights so Safari can't invent half-pixel gaps */
 thead tr:nth-child(1) th{ height: var(--h-week); top: 0; z-index: 130; background:#ededed !important; }
 thead tr:nth-child(2) th{ height: var(--h-day);  top: calc(var(--h-week) - 1px); z-index: 120; }
 thead tr:nth-child(3) th{ height: var(--h-date); top: calc(var(--h-week) + var(--h-day) - 2px); z-index: 110; }
@@ -466,7 +460,7 @@ tbody td{
   justify-content: center;
 }
 
-/* ✅ When any modal backdrop is opened (including userModal) */
+/* ? When any modal backdrop is opened (including userModal) */
 .modal-backdrop[aria-hidden="false"]{
   display: flex;
 }
@@ -479,22 +473,22 @@ tbody td{
   border: 1px solid rgba(15,23,42,0.05);
   box-shadow: var(--modal-shadow);
   padding: 18px;
-  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   color: var(--ink);
 
-  /* ✅ scrolling */
+  /* ? scrolling */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 
-  /* ✅ REAL viewport height on modern mobile */
+  /* ? REAL viewport height on modern mobile */
   max-height: calc(100dvh - 28px);
 
-  /* ✅ keep last content reachable above iPhone home bar */
+  /* ? keep last content reachable above iPhone home bar */
   padding-bottom: calc(18px + env(safe-area-inset-bottom));
 }
 
-/* ✅ fallback for older iOS that doesn't support dvh properly */
+/* ? fallback for older iOS that doesn't support dvh properly */
 @supports not (height: 100dvh){
   .modal{ max-height: calc(100vh - 28px); }
 }
@@ -668,7 +662,7 @@ tbody td{
 
 
 .user-actions button{
-  white-space: nowrap;                  /* ✅ prevents button text wrapping */
+  white-space: nowrap;                  /* ? prevents button text wrapping */
 }
 
 .user-meta{
@@ -778,7 +772,7 @@ tbody td{
   background: linear-gradient(180deg, #ffffff 0%, #f6f8fc 100%);
   border: 1px solid rgba(15,23,42,0.05);
   color: var(--ink);
-  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 }
 
 #userModal h2{
@@ -794,7 +788,7 @@ tbody td{
 }
 
 /* card block */
-/* Only make actual “cards” look like cards */
+/* Only make actual  cards  look like cards */
 #userModal .card{
   border: 1px solid #e7ebf3;
   border-radius: 16px;
@@ -931,7 +925,7 @@ tbody td{
 
 #userModal .flags-label{
   font-size: 12px;
-  font-weight: 600;        /* not shouty, not “FLAGS” energy */
+  font-weight: 600;        /* not shouty, not  FLAGS  energy */
   color: #667085;
 }
 
@@ -1059,11 +1053,11 @@ tbody td{
 }
 
 #printModal #printCloseX{
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border-radius: 999px;
-  border: 1px solid #e5eaf3 !important;
+  border: 1px solid #e6ebf5 !important;
   background: #ffffff !important;
   color: #64748b !important;
   box-shadow: none;
@@ -1073,19 +1067,7 @@ tbody td{
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px !important;
-}
-
-#printModal button{
-  height: 32px !important;
-  padding: 0 14px !important;
-  border-radius: 12px !important;
-  font-size: 12.5px !important;
-  border: 1px solid #e5eaf3 !important;
-  background: #ffffff !important;
-  color: var(--ink) !important;
-  box-shadow: 0 3px 8px rgba(15,23,42,0.05) !important;
-  min-width: 0 !important;
+  font-size: 14px !important;
 }
 
 #printModal button{
@@ -1104,16 +1086,16 @@ tbody td{
 
 #printModal button.primary,
 #printModal #printAdminOptions button[onclick]{
-  background: #eaf0ff !important;
-  border: 1px solid #c6d4ff !important;
-  color: #2e50d6 !important;
-  box-shadow: 0 4px 10px rgba(46,80,214,0.12) !important;
+  background: #f0f3ff !important;
+  border: 1px solid #d5dcf8 !important;
+  color: #2c3e8c !important;
+  box-shadow: 0 3px 8px rgba(44,62,140,0.12) !important;
 }
 
 #printModal button.primary:hover,
 #printModal #printAdminOptions button[onclick]:hover{
-  background: #e0e9ff !important;
-  border-color: #b6c7ff !important;
+  background: #e7edff !important;
+  border-color: #c7d2f6 !important;
 }
 
      /* =========================
@@ -1322,7 +1304,7 @@ tbody td{
   border-color: rgba(74,103,226,0.6) !important;
 }
 
-/* keep ADMIN badge readable but not “villain button” */
+/* keep ADMIN badge readable but not  villain button  */
 .badge.admin{
   background: var(--accent-weak);
   border: 1px solid rgba(91,124,250,0.25);
@@ -1417,7 +1399,7 @@ tbody td{
   color: #6b7280;
 }
 #adminModal .modal{
-  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   color: var(--ink);
   font-size: 13px;
 }
@@ -1726,7 +1708,7 @@ button.badge{
     margin: 0; 
     padding: 0; 
     background: #fff; 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   }
   
   .wrap { 
@@ -1911,11 +1893,6 @@ button.badge{
 </div>
 <div class="rightbits">
   <select id="periodSelect"></select>
-  <!-- View As Selector (Admin Only) -->
-  <select id="viewAsSelector" style="display:none; padding:8px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px; font-weight:600; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; cursor:pointer;">
-    <option value="">View As...</option>
-  </select>
-
 
   <!-- 👤 Account badge -->
   <button class="badge account-badge" id="loginBadge" type="button">
@@ -1928,14 +1905,9 @@ button.badge{
     🖨️
   </button>
 
-  <!-- 🔭 View As (superadmin only) -->
-  <button class="badge" id="viewAsBtn" type="button" title="View As" style="display:none;">
-    🔭
-  </button>
-
-  <!-- 🔔 Bell is its own button -->
+  <!-- ?? Bell is its own button -->
   <button class="badge" id="noticeBell" type="button" title="Notices">
-    🔔 <span id="noticeBellDot" style="display:none;">•</span>
+    ?? <span id="noticeBellDot" style="display:none;"> </span>
   </button>
 
   <div class="badge admin" id="adminBadge" style="display:none;">ADMIN</div>
@@ -1956,7 +1928,7 @@ button.badge{
       <p id="pinDesc">Enter your 4-digit PIN to unlock editing.</p>
 
       <div class="row">
-        <input class="pin" id="pinInput" inputmode="numeric" maxlength="4" placeholder="••••" />
+        <input class="pin" id="pinInput" inputmode="numeric" maxlength="4" placeholder="    " />
         <div class="btns">
           <button id="pinCancel" type="button">Cancel</button>
           <button class="primary" id="pinConfirm" type="button">Unlock</button>
@@ -1985,7 +1957,7 @@ button.badge{
       title="Lock this cell"
       style="display:none;"
     >
-      🔒
+      ??
     </button>
 
     <button
@@ -2008,14 +1980,7 @@ button.badge{
 
 
       <div class="shift-grid" id="shiftGridContainer">
-        <button class="shift-btn" data-shift="LD" type="button">LD</button>
-        <button class="shift-btn" data-shift="8-8" type="button">8–8</button>
-        <button class="shift-btn" data-shift="N" type="button">N</button>
-        <button class="shift-btn" data-shift="W" type="button">W</button>
-        <button class="shift-btn" data-shift="O" type="button">O</button>
-        <button class="shift-btn off" data-shift="O*" type="button">O*</button>
-        <button class="shift-btn admin-only" id="shiftBtnL" data-shift="L" type="button" style="display:none; background:#e3f2fd; border-color:#90caf9;">L</button>
-        <button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>
+        <!-- Shifts loaded from catalogue here, plus hardcoded O* and CLEAR -->
       </div>
 
       <div class="btns">
@@ -2107,7 +2072,7 @@ button.badge{
   <!-- Weeks list -->
   <div style="border:1px solid #ddd; border-radius:10px; padding:10px;">
     <div style="font-weight:800; margin-bottom:6px;">Weeks</div>
-    <div id="adminWeeksList" class="subtitle">Pick a period…</div>
+    <div id="adminWeeksList" class="subtitle">Pick a period </div>
   </div>
 
 </div>
@@ -2139,7 +2104,7 @@ button.badge{
     </div>
 
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-      <input id="adminUserSearch" placeholder="Search name…"
+      <input id="adminUserSearch" placeholder="Search name "
         style="flex:1; min-width:180px; padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;" />
 
       <button id="adminAddUserBtn" class="primary" type="button"
@@ -2207,7 +2172,7 @@ button.badge{
   <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
     <input
       id="adminNoticeSearch"
-      placeholder="Search title…"
+      placeholder="Search title "
       style="flex:1; min-width:180px; padding:8px 10px; border-radius:10px; border:1px solid #ccc; font-size:12px;"
     />
 
@@ -2283,7 +2248,7 @@ button.badge{
     </div>
 
     <div class="card" style="padding:10px; margin-top:10px;">
-      <div style="font-weight:800; margin-bottom:6px;">Body (Spanish – optional)</div>
+      <div style="font-weight:800; margin-bottom:6px;">Body (Spanish   optional)</div>
       <div id="adminNoticeBodyEs" style="background:white; border-radius:10px; border:1px solid #ccc; min-height:200px;"></div>
     </div>
 
@@ -2326,23 +2291,23 @@ button.badge{
 
         <li>
           <strong>O*</strong> is a <strong>strong preference</strong> and is prioritised as
-          <strong>O¹ first</strong> and then <strong>O²</strong>.
+          <strong>O  first</strong> and then <strong>O </strong>.
         </li>
 
         <li>
           You can only have <strong>two strong preferences</strong>
-          (<strong>O¹</strong> and <strong>O²</strong>) per week.
+          (<strong>O </strong> and <strong>O </strong>) per week.
         </li>
 
         <li>
-          <strong>Only O¹ is guaranteed</strong> at ward level.
+          <strong>Only O  is guaranteed</strong> at ward level.
         </li>
 
         <li>
           All other requests are <strong>preferences only</strong>. They are considered at ward level
           but are <strong>not guaranteed</strong>.
           <br>
-          <strong>Choosing between days and nights (LD / 8–8 / N)</strong> is also a preference only.
+          <strong>Choosing between days and nights (LD / 8 8 / N)</strong> is also a preference only.
           Night shifts, in particular, are more difficult to allocate and cannot always be accommodated.
         </li>
 
@@ -2360,16 +2325,16 @@ button.badge{
 
       <div style="margin-top:12px; font-weight:900;">Shift key (preferences)</div>
       <ul style="margin:6px 0 0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
-        <li><strong>LD</strong> – Long Day (08:00–20:30)</li>
-        <li><strong>8–8</strong> – Day shift (08:00–20:00)</li>
-        <li><strong>W</strong> – Happy to work days or nights</li>
-        <li><strong>N</strong> – Preference to work nights</li>
+        <li><strong>LD</strong>   Long Day (08:00 20:30)</li>
+        <li><strong>8 8</strong>   Day shift (08:00 20:00)</li>
+        <li><strong>W</strong>   Happy to work days or nights</li>
+        <li><strong>N</strong>   Preference to work nights</li>
       </ul>
     </div>
 
     <!-- ES -->
     <div id="shiftHelpContentEs" class="card" style="padding:12px; display:none;">
-      <div style="font-weight:900; margin-bottom:8px;">Guía de solicitudes de turnos</div>
+      <div style="font-weight:900; margin-bottom:8px;">Gu a de solicitudes de turnos</div>
 
       <ul style="margin:0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
         <li>
@@ -2379,24 +2344,24 @@ button.badge{
 
         <li>
           <strong>O*</strong> es una <strong>preferencia fuerte</strong> y se prioriza como
-          <strong>O¹ primero</strong> y después <strong>O²</strong>.
+          <strong>O  primero</strong> y despu s <strong>O </strong>.
         </li>
 
         <li>
           Solo puedes tener <strong>dos preferencias fuertes</strong>
-          (<strong>O¹</strong> y <strong>O²</strong>) por semana.
+          (<strong>O </strong> y <strong>O </strong>) por semana.
         </li>
 
         <li>
-          <strong>Solo O¹ está garantizado</strong> a nivel de la unidad.
+          <strong>Solo O  est  garantizado</strong> a nivel de la unidad.
         </li>
 
         <li>
-          El resto de solicitudes son <strong>preferencias</strong>. Se tendrán en cuenta,
-          pero <strong>no están garantizadas</strong>.
+          El resto de solicitudes son <strong>preferencias</strong>. Se tendr n en cuenta,
+          pero <strong>no est n garantizadas</strong>.
           <br>
-          <strong>Elegir entre turnos de día y noche (LD / 8–8 / N)</strong> también es solo
-          una preferencia. Los turnos de noche, en particular, son más difíciles de asignar
+          <strong>Elegir entre turnos de d a y noche (LD / 8 8 / N)</strong> tambi n es solo
+          una preferencia. Los turnos de noche, en particular, son m s dif ciles de asignar
           y no siempre pueden acomodarse.
         </li>
 
@@ -2407,17 +2372,17 @@ button.badge{
         </li>
 
         <li>
-          Las guías pueden cambiar y <strong>todas las preferencias pueden ser modificadas
-          por la dirección</strong> cuando se publiquen los turnos.
+          Las gu as pueden cambiar y <strong>todas las preferencias pueden ser modificadas
+          por la direcci n</strong> cuando se publiquen los turnos.
         </li>
       </ul>
 
       <div style="margin-top:12px; font-weight:900;">Leyenda (preferencias)</div>
       <ul style="margin:6px 0 0; padding-left:18px; line-height:1.45; font-size:13px; color:#334155;">
-        <li><strong>LD</strong> – Turno largo (08:00–20:30)</li>
-        <li><strong>8–8</strong> – Turno de día (08:00–20:00)</li>
-        <li><strong>W</strong> – Disponible para días o noches</li>
-        <li><strong>N</strong> – Preferencia por noches</li>
+        <li><strong>LD</strong>   Turno largo (08:00 20:30)</li>
+        <li><strong>8 8</strong>   Turno de d a (08:00 20:00)</li>
+        <li><strong>W</strong>   Disponible para d as o noches</li>
+        <li><strong>N</strong>   Preferencia por noches</li>
       </ul>
     </div>
 
@@ -2440,7 +2405,7 @@ button.badge{
       <div class="user-head">
         <div class="user-head-left">
           <h2 id="userTitle">Edit your account</h2>
-          <p class="subtitle" id="userMeta">—</p>
+          <p class="subtitle" id="userMeta"> </p>
         </div>
 
         <div class="user-flags" aria-label="Language">
@@ -2449,7 +2414,7 @@ button.badge{
 <button id="userLangEn" type="button" class="flag-btn" title="English" aria-label="English">
   <img class="flag-img" src="icons/gb.svg" alt="">
 </button>
-<button id="userLangEs" type="button" class="flag-btn" title="Español" aria-label="Español">
+<button id="userLangEs" type="button" class="flag-btn" title="Espa ol" aria-label="Espa ol">
   <img class="flag-img" src="icons/es.svg" alt="">
 </button>
           </div>
@@ -2567,7 +2532,7 @@ const I18N = {
     cancel: "Cancel",
     ok: "OK",
     save: "Save",
-    loadingUsers: "Loading users…",
+    loadingUsers: "Loading users ",
     failedLoadUsers: "Failed to load users.",
     notLoggedIn: "Not logged in",
     loginFirst: "Log in first to add comments.",
@@ -2621,21 +2586,21 @@ failedSaveWeekComment: "Failed to save comment. Check console.",
     cancel: "Cancelar",
     ok: "Vale",
     save: "Guardar",
-    loadingUsers: "Cargando usuarios…",
+    loadingUsers: "Cargando usuarios ",
     failedLoadUsers: "No se pudieron cargar los usuarios.",
-    notLoggedIn: "Sin sesión",
-    loginFirst: "Inicia sesión para añadir comentarios.",
+    notLoggedIn: "Sin sesi n",
+    loginFirst: "Inicia sesi n para a adir comentarios.",
 
     pinTitle: (name) => `PIN de ${name}`,
-    pinDesc: "Introduce tu PIN de 4 dígitos para desbloquear la edición.",
+    pinDesc: "Introduce tu PIN de 4 d gitos para desbloquear la edici n.",
     pinErrWrong: "PIN incorrecto.",
-    pinErrFormat: "El PIN debe tener 4 dígitos.",
+    pinErrFormat: "El PIN debe tener 4 d gitos.",
     unlock: "Desbloquear",
 
     shiftTitle: "Selecciona turno",
-    shiftDesc: "Elige una preferencia para este día.",
-    shiftHelpTitle: "Guía de solicitudes de turnos",
-    shiftHelpSub: "Cómo se consideran las preferencias",
+    shiftDesc: "Elige una preferencia para este d a.",
+    shiftHelpTitle: "Gu a de solicitudes de turnos",
+    shiftHelpSub: "C mo se consideran las preferencias",
 
     accountEditTitle: "Editar tu cuenta",
     changePin: "Cambiar PIN",
@@ -2643,7 +2608,7 @@ failedSaveWeekComment: "Failed to save comment. Check console.",
     newPin: "Nuevo PIN",
     repeatNewPin: "Repite el nuevo PIN",
     saveNewPin: "Guardar nuevo PIN",
-    logout: "Cerrar sesión",
+    logout: "Cerrar sesi n",
     language: "Idioma",
     pinUpdated: "PIN actualizado.",
 
@@ -2657,7 +2622,7 @@ failedSaveWeekComment: "Failed to save comment. Check console.",
     // Week comments
 weekCommentsTitle: "Comentarios de la semana",
 yourCommentLabel: "Tu comentario",
-noCommentsYet: "Aún no hay comentarios.",
+noCommentsYet: "A n no hay comentarios.",
 saveComment: "Guardar",
 closeComment: "Cerrar",
 failedLoadWeekComments: "No se pudieron cargar los comentarios. Revisa la consola.",
@@ -2731,7 +2696,7 @@ function applyLanguage(){
 if (shiftDesc) shiftDesc.innerHTML =
   currentLang === "en"
     ? 'Choose a <strong>preference</strong> for this day.'
-    : 'Elige una <strong>preferencia</strong> para este día.';
+    : 'Elige una <strong>preferencia</strong> para este d a.';
 
   // ^ if you want markup, handle it intentionally like this, or just use textContent.
 
@@ -2919,7 +2884,7 @@ function getSessionPinOrThrow(){
 }
     
 function nextOffPrioritySmart(currentRank, taken){
-  // Cycle intent: null → 1 → 2 → BLOCK
+  // Cycle intent: null ? 1 ? 2 ? BLOCK
   let desired =
     (currentRank == null) ? 1 :
     (currentRank === 1) ? 2 :
@@ -2929,7 +2894,7 @@ function nextOffPrioritySmart(currentRank, taken){
   if (desired != null && taken.has(desired)) {
     if (!taken.has(1)) desired = 1;
     else if (!taken.has(2)) desired = 2;
-    else desired = null; // both O1 and O2 used → block
+    else desired = null; // both O1 and O2 used ? block
   }
 
   return desired;
@@ -2999,7 +2964,7 @@ async function upsertWeekComment(weekId, userId, comment){
 }
 
 async function resetWeeksFullyOpen(periodId){
-  if (!currentUser?.is_admin) { alert("Admin only."); return; }
+  if (!requirePermission("weeks.set_open_flags", "Permission required to update weeks.")) return;
 
   const { data: wkRows, error: wkErr } = await supabaseClient
     .from("rota_dates")
@@ -3020,7 +2985,7 @@ async function resetWeeksFullyOpen(periodId){
 }
 
 async function resetWeeksFullyClosed(periodId){
-  if (!currentUser?.is_admin) { alert("Admin only."); return; }
+  if (!requirePermission("weeks.set_open_flags", "Permission required to update weeks.")) return;
 
   const { data: wkRows, error: wkErr } = await supabaseClient
     .from("rota_dates")
@@ -3048,7 +3013,7 @@ async function resetWeeksFullyClosed(periodId){
     .order("start_date", { ascending: true });
 
   // Staff: show active + non-hidden. Admin: show all.
-  if (!currentUser?.is_admin) {
+  if (!hasPermission("periods.toggle_hidden")) {
     q = q.or("is_hidden.eq.false,is_active.eq.true");
   }
 
@@ -3075,14 +3040,14 @@ function populatePeriodDropdown(periods){
     const s = new Date(p.start_date);
     const e = new Date(p.end_date);
 
-    const hiddenTag = (currentUser?.is_admin && p.is_hidden) ? " (hidden)" : "";
-    const activeTag = p.is_active ? " ★" : "";
+    const hiddenTag = (hasPermission("periods.toggle_hidden") && p.is_hidden) ? " (hidden)" : "";
+    const activeTag = p.is_active ? " ?" : "";
 
-    opt.textContent = `${fmt(s)} – ${fmt(e)}${activeTag}${hiddenTag}`;
+    opt.textContent = `${fmt(s)}   ${fmt(e)}${activeTag}${hiddenTag}`;
     periodSelect.appendChild(opt);
   }
 
-  // ✅ ensure dropdown always reflects activePeriodId
+  // ? ensure dropdown always reflects activePeriodId
   if (activePeriodId != null) {
     periodSelect.value = String(activePeriodId);
   }
@@ -3100,7 +3065,7 @@ function isPeriodClosed(period){
 }
 
     function isAdminWeekToggleAllowed(){
-  return !!currentUser?.is_admin;
+  return hasPermission("weeks.set_open_flags");
 }
 /* =========================================================
    3) STATE (who is logged in / what is unlocked)
@@ -3110,6 +3075,7 @@ let selectedUser = null;     // user you clicked before PIN entry
     let usersById = new Map();
     let allUsers = [];           // all users array (for print/export features)
 let sessionPin = null; // store PIN in memory only (not localStorage)
+let userPermissions = new Set();
 
 
     function pinKey(userId){ return `calpeward.pin.${userId}`; }
@@ -3123,11 +3089,6 @@ function clearSessionPin(userId){
   sessionPin = null;
   if (userId) sessionStorage.removeItem(pinKey(userId));
 }
-
-/* =========================================================
-   3a) PERMISSIONS
-   ========================================================= */
-let userPermissions = new Set();
 
 async function loadUserPermissions(){
   userPermissions = new Set();
@@ -3159,6 +3120,12 @@ function hasPermission(key){
   if (currentUser.is_admin) return true;
   return userPermissions.has(key);
 }
+
+function requirePermission(key, msg){
+  if (hasPermission(key)) return true;
+  alert(msg || "Permission required.");
+  return false;
+}
     
 /* =========================================================
    3b) STATE (editing + requests)
@@ -3169,7 +3136,7 @@ const requestsCache = new Map(); // key -> { id, user_id, date, value, important
  let periodsCache = [];
  const locksCache = new Map(); // key -> { user_id, date, reason_en, reason_es, locked_by, locked_at }
 let activePeriodId = null;
-    let activePeriodObj = null; // ← the actual period object
+    let activePeriodObj = null; // ? the actual period object
     let closeTriggeredReload = false;
     
 // ===== 5-week window navigation =====
@@ -3384,10 +3351,10 @@ function setShiftHelpLanguage(lang){
 
   const title = document.getElementById("shiftHelpTitle");
   const sub = document.getElementById("shiftHelpSubtitle");
-  if (title) title.textContent = isEn ? "Shift request guidelines" : "Guía de solicitudes de turnos";
+  if (title) title.textContent = isEn ? "Shift request guidelines" : "Gu a de solicitudes de turnos";
   if (sub) sub.textContent = isEn
   ? "How preferences are considered"
-  : "Cómo se consideran las preferencias";
+  : "C mo se consideran las preferencias";
 
   if (shiftHelpClose) shiftHelpClose.textContent = isEn ? "Close" : "Cerrar";
   if (shiftHelpClose2) shiftHelpClose2.textContent = isEn ? "OK" : "Vale";
@@ -3424,7 +3391,7 @@ shiftLockBtn?.addEventListener("click", async (e) => {
   e.preventDefault();
   e.stopPropagation();
 
-  if (!currentUser?.is_admin) return;
+  if (!requirePermission("requests.lock_cells", "Permission required to lock requests.")) return;
   if (!activeCell) return;
 
   const pin = getSessionPinOrThrow();
@@ -3436,7 +3403,7 @@ shiftLockBtn?.addEventListener("click", async (e) => {
 
   try {
     if (existing) {
-      // 🔓 UNLOCK
+      // ?? UNLOCK
       const { error } = await supabaseClient.rpc(
         "admin_unlock_request_cell",
         {
@@ -3449,13 +3416,13 @@ shiftLockBtn?.addEventListener("click", async (e) => {
       if (error) throw error;
 
       locksCache.delete(key);
-      shiftLockBtn.textContent = "🔓";
+      shiftLockBtn.textContent = "??";
 
     } else {
-      // 🔒 LOCK (optional reason)
+      // ?? LOCK (optional reason)
       const reason = prompt(
         currentLang === "es"
-          ? "Motivo (opcional). El usuario lo verá al pulsar este día:"
+          ? "Motivo (opcional). El usuario lo ver  al pulsar este d a:"
           : "Reason (optional). Staff will see this if they click this day:"
       );
 
@@ -3475,7 +3442,7 @@ shiftLockBtn?.addEventListener("click", async (e) => {
       if (error) throw error;
 
       locksCache.set(key, data);
-      shiftLockBtn.textContent = "🔒";
+      shiftLockBtn.textContent = "??";
     }
 
     await loadRota(); // keep UI honest
@@ -3555,7 +3522,7 @@ closeLabel.innerHTML = `
   clearInterval(closeCountdownTimer);
   closeCountdownTimer = null;
 
-  // ✅ FIX 3: force UI to re-render locked state once
+  // ? FIX 3: force UI to re-render locked state once
   if (!closeTriggeredReload) {
     closeTriggeredReload = true;
     loadRota(); // re-fetch + redraw so cells become locked
@@ -3632,7 +3599,7 @@ function logout(){
 
 // Wire badge click
 loginBadge.addEventListener("click", () => {
-  if (!currentUser) return;        // don’t open it when not logged in
+  if (!currentUser) return;        // don t open it when not logged in
   openUserModal();
 });
 
@@ -3736,7 +3703,7 @@ function showUserPinErr(msg){
     
 function openWeekCommentModal(){
   if (!activeWeekIdForComment) return;
-  document.body.classList.add("modal-open");  // ✅
+  document.body.classList.add("modal-open");  // ?
   weekCommentModal.style.display = "flex";
   weekCommentModal.setAttribute("aria-hidden","false");
 }
@@ -3759,13 +3726,13 @@ weekCommentModal.addEventListener("click", (e) => {
 
 if (adminBadge) {
   adminBadge.addEventListener("click", () => {
-    if (!currentUser?.is_admin) return;
+    if (!requirePermission("system.admin_panel", "Admin panel access required.")) return;
     openAdminConsole();
   });
 }
  
 
-// Click handler for 💬 buttons (event delegation)
+// Click handler for ?? buttons (event delegation)
 document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".week-comment-btn");
   if (!btn) return;
@@ -3796,7 +3763,7 @@ alert(t("loginFirst"));
     weekCommentInput.value = mine?.comment || "";
 
     // ---- Admin list (all staff comments)
-    if (currentUser.is_admin) {
+    if (hasPermission("requests.view_comments")) {
       weekCommentAdminList.style.display = "block";
 
       if (!rows || rows.length === 0) {
@@ -3857,8 +3824,8 @@ weekCommentSave.addEventListener("click", async () => {
       btn.classList.toggle("has-comment", (rows || []).length > 0);
     }
 
-    // If admin, refresh the visible comment list too
-    if (currentUser.is_admin) {
+    // If permitted, refresh the visible comment list too
+    if (hasPermission("requests.view_comments")) {
       weekCommentAdminList.style.display = "block";
       if (!rows || rows.length === 0) {
        weekCommentAdminList.innerHTML = `<div class="subtitle">${escapeHtml(t("noCommentsYet"))}</div>`;
@@ -3894,7 +3861,7 @@ weekCommentSave.addEventListener("click", async () => {
    ========================================================= */
 if (periodSelect) {
   periodSelect.addEventListener("change", async () => {
-    closeTriggeredReload = false; // ✅ reset for new period
+    closeTriggeredReload = false; // ? reset for new period
     activePeriodId = periodSelect.value;
 
     const selected = periodsCache.find(p => String(p.id) === String(activePeriodId));
@@ -3920,7 +3887,7 @@ const adminGeneratePreview = document.getElementById("adminGeneratePreview");
 const adminGenerateBtn = document.getElementById("adminGenerateBtn");
 
 function openAdminConsole(){
-  if (!currentUser?.is_admin) return;
+  if (!requirePermission("system.admin_panel", "Admin panel access required.")) return;
   document.body.classList.add("modal-open");
   adminModal.style.display = "flex";
   adminModal.setAttribute("aria-hidden","false");
@@ -3933,23 +3900,6 @@ function closeAdminConsole(){
   adminModal.style.display = "none";
   adminModal.setAttribute("aria-hidden","true");
   updateBodyModalOpen();
-}
-
-function goToFullAdmin() {
-  console.log("[DEBUG] goToFullAdmin called");
-  if (!currentUser) {
-    alert("Not logged in.");
-    return;
-  }
-  const pin = sessionStorage.getItem(`calpeward.pin.${currentUser.id}`);
-  if (!pin) {
-    alert("No session PIN. Log in again.");
-    return;
-  }
-  console.log("[DEBUG] Storing session and navigating to admin.html");
-  const sessionData = { userId: currentUser.id, pin: pin };
-  window.name = "calpeward:" + btoa(JSON.stringify(sessionData));
-  window.location.href = "admin.html";
 }
 
 
@@ -4027,6 +3977,7 @@ function isNoticeAcked(n){
 }
 
 async function fetchNoticeAcksForAdmin(noticeId){
+  if (!hasPermission("notices.view_ack_lists")) return null;
   const { data, error } = await supabaseClient
     .rpc("admin_get_notice_acks", { p_notice_id: noticeId });
 
@@ -4169,12 +4120,12 @@ const unread = (noticesCache || []).filter(n => n.is_active !== false && !isNoti
   noticeUnreadList.innerHTML = unread.map(n => {
     const body = getNoticeBody(n); // Already formatted as HTML from Quill
     const when = n.updated_at ? new Date(n.updated_at).toLocaleString("en-GB") : "";
-    const who = escapeHtml(n.created_by_name || "—");
+    const who = escapeHtml(n.created_by_name || " ");
 
     return `
       <div class="notice-card">
         <div class="notice-title">${escapeHtml(n.title || "Notice")}</div>
-        <div class="notice-meta">By ${who} · ${when} <span class="notice-pill unread" style="margin-left:6px;">NEW</span></div>
+        <div class="notice-meta">By ${who}   ${when} <span class="notice-pill unread" style="margin-left:6px;">NEW</span></div>
         <div class="notice-body" style="line-height: 1.6;">${body}</div>
       </div>
     `;
@@ -4262,7 +4213,7 @@ function renderAllNoticesList(){
         <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
           <div style="min-width:0;">
             <div class="notice-title">${escapeHtml(n.title || "Notice")}</div>
-            <div class="notice-meta">By ${who}${when ? " · " + when : ""}</div>
+            <div class="notice-meta">By ${who}${when ? "   " + when : ""}</div>
           </div>
           <div>${pill}</div>
         </div>
@@ -4284,6 +4235,9 @@ function renderAllNoticesList(){
 
 
 async function adminFetchNoticeAcks(noticeId){
+  if (!hasPermission("notices.view_ack_lists")) {
+    return { acked: null, pending: null, restricted: true };
+  }
   const pin = getSessionPinOrThrow();
 
   const { data, error } = await supabaseClient.rpc("admin_get_notice_acks", {
@@ -4302,6 +4256,7 @@ async function adminFetchNoticeAcks(noticeId){
 // Admin-only: fetch ack counts for a set of notices via RPC
 async function adminFetchNoticeAckCounts(noticeIds){
   if (!Array.isArray(noticeIds) || noticeIds.length === 0) return [];
+  if (!hasPermission("notices.view_ack_counts")) return [];
 
   const { data, error } = await supabaseClient.rpc("admin_notice_ack_counts", {
     p_notice_ids: noticeIds
@@ -4317,31 +4272,29 @@ async function adminFetchNoticeAckCounts(noticeIds){
 
 // Update admin cache and visible DOM for a single notice id
 function updateAdminNoticeCountsForId(noticeId, counts){
+  if (!hasPermission("notices.view_ack_counts")) return;
+  if (!counts || counts.restricted === true) return;
   try {
     const idStr = String(noticeId);
     const noticeObj = adminNoticesCache.find(n => String(n.id) === idStr);
 
-    const newAckCount = counts && typeof counts.ack_count !== 'undefined' ? Number(counts.ack_count) : NaN;
-    const newAckTotal = counts && typeof counts.ack_total !== 'undefined' ? Number(counts.ack_total) : NaN;
+    const hasAckCount = typeof counts.ack_count === "number";
+    const hasAckTotal = typeof counts.ack_total === "number";
 
     if (noticeObj){
-      // Only overwrite ack_count if we have a valid new value
-      if (!isNaN(newAckCount)) noticeObj.ack_count = newAckCount;
-      // Never allow ack_total to decrease - prefer the larger known total
-      if (!isNaN(newAckTotal)) noticeObj.ack_total = Math.max(Number(noticeObj.ack_total) || 0, newAckTotal);
+      if (hasAckCount) noticeObj.ack_count = counts.ack_count;
+      if (hasAckTotal) noticeObj.ack_total = counts.ack_total;
     } else {
-      // If notice isn't in cache, add a minimal entry (don't allow NaN)
-      adminNoticesCache.push({
-        id: noticeId,
-        ack_count: !isNaN(newAckCount) ? newAckCount : 0,
-        ack_total: !isNaN(newAckTotal) ? newAckTotal : 0
-      });
+      const entry = { id: noticeId };
+      if (hasAckCount) entry.ack_count = counts.ack_count;
+      if (hasAckTotal) entry.ack_total = counts.ack_total;
+      adminNoticesCache.push(entry);
     }
 
     const countSpan = document.querySelector(`[data-ack-count="${idStr}"]`);
-    if (countSpan) countSpan.textContent = String(noticeObj?.ack_count ?? (isNaN(newAckCount) ? 0 : newAckCount));
+    if (countSpan && hasAckCount) countSpan.textContent = String(counts.ack_count);
     const totalSpan = document.querySelector(`[data-ack-total="${idStr}"]`);
-    if (totalSpan) totalSpan.textContent = String(noticeObj?.ack_total ?? (isNaN(newAckTotal) ? 0 : newAckTotal));
+    if (totalSpan && hasAckTotal) totalSpan.textContent = String(counts.ack_total);
 
     // Force a re-render of admin list if necessary
     if (typeof renderAdminNotices === 'function') renderAdminNotices();
@@ -4352,6 +4305,11 @@ function updateAdminNoticeCountsForId(noticeId, counts){
 
 function renderAckList(container, list){
   if (!container) return;
+
+  if (list === null) {
+    container.innerHTML = `<div class="subtitle">Restricted</div>`;
+    return;
+  }
 
   if (!list?.length){
     container.innerHTML = `<div class="subtitle">None</div>`;
@@ -4388,7 +4346,7 @@ async function ackOneNotice(noticeId, noticeVersion){
   try {
     await refreshNotices();
 
-    if (currentUser?.is_admin && typeof adminFetchNoticeAckCounts === 'function'){
+    if (hasPermission("notices.view_ack_counts") && typeof adminFetchNoticeAckCounts === 'function'){
       try {
         const counts = await adminFetchNoticeAckCounts([noticeId]);
         const c = Array.isArray(counts) && counts[0] ? counts[0] : null;
@@ -4457,17 +4415,19 @@ noticeAllList?.addEventListener("click", async (e) => {
 
     try {
       details.dataset.loaded = "1";
-      const { acked, pending } = await adminFetchNoticeAcks(noticeId);
+      const { acked, pending, restricted } = await adminFetchNoticeAcks(noticeId);
       renderAckList(ackedBox, acked);
       renderAckList(pendBox, pending);
 
       // Update admin counts immediately from the detailed lists
-      try {
-        const ac = Array.isArray(acked) ? acked.length : 0;
-        const at = ac + (Array.isArray(pending) ? pending.length : 0);
-        updateAdminNoticeCountsForId(noticeId, { ack_count: ac, ack_total: at });
-      } catch (e){
-        console.warn('Failed to update counts after loading ack list', noticeId, e);
+      if (!restricted) {
+        try {
+          const ac = Array.isArray(acked) ? acked.length : 0;
+          const at = ac + (Array.isArray(pending) ? pending.length : 0);
+          updateAdminNoticeCountsForId(noticeId, { ack_count: ac, ack_total: at });
+        } catch (e){
+          console.warn('Failed to update counts after loading ack list', noticeId, e);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -4565,7 +4525,13 @@ let editingNotice = null;
 let adminEditingUserId = null;
 
 async function loadAdminNotices(){
-  if (!currentUser?.is_admin) return;
+  if (!hasPermission("notices.view_admin")) {
+    if (adminNoticesList) {
+      adminNoticesList.innerHTML = `<div class="subtitle" style="padding:12px;">Permission required.</div>`;
+    }
+    adminNoticesCache = [];
+    return;
+  }
 
 const { data, error } = await supabaseClient
   .from("notices")
@@ -4596,7 +4562,7 @@ const { data, error } = await supabaseClient
   // Fetch ack counts (batched RPC) and merge into cache
   try {
     const ids = (adminNoticesCache || []).map(n => n.id).filter(Boolean);
-    if (ids.length) {
+    if (ids.length && hasPermission("notices.view_ack_counts")) {
       const counts = await adminFetchNoticeAckCounts(ids);
       console.debug('adminNoticeCounts fetched', counts);
       const map = new Map((counts || []).map(r => [String(r.notice_id), { ack_count: Number(r.ack_count), ack_total: Number(r.ack_total) }]));
@@ -4686,15 +4652,15 @@ function readNoticeTargetsFromUI(){
 }
 
 function openAdminNoticeEditor(notice){
-  if (!currentUser?.is_admin) return;
-
   if (!notice){
+    if (!requirePermission("notices.create", "Permission required to create notices.")) return;
     clearNoticeEditor();
     editingNotice = null;
     openAdminNoticeModal();
     return;
   }
 
+  if (!requirePermission("notices.edit", "Permission required to edit notices.")) return;
   editingNotice = notice;
 
   if (adminNoticeTitle) adminNoticeTitle.textContent = "Edit notice";
@@ -4724,14 +4690,29 @@ function renderAdminNotices(){
     return;
   }
 
+  const canEdit = hasPermission("notices.edit");
+  const canToggle = hasPermission("notices.toggle_active");
+  const canDelete = hasPermission("notices.delete");
+  const canViewAckCounts = hasPermission("notices.view_ack_counts");
+  const canViewAckLists = hasPermission("notices.view_ack_lists");
+  const showAckSummary = canViewAckCounts || canViewAckLists;
+
   adminNoticesList.innerHTML = rows.map(n => {
     const createdBy = escapeHtml(n.users?.name || "Unknown");
     const when = n.updated_at
       ? new Date(n.updated_at).toLocaleDateString("en-GB")
       : "";
 
-    const ackCount = n.ack_count ?? 0;
-    const ackTotal = n.ack_total ?? 0;
+    const ackCount = canViewAckCounts ? (n.ack_count ?? 0) : "-";
+    const ackTotal = canViewAckCounts ? (n.ack_total ?? 0) : "-";
+    const ackToggleAttr = canViewAckLists ? `data-ack-toggle="${n.id}"` : "";
+    const ackViewLabel = canViewAckLists ? `<span class="muted"> - View</span>` : "";
+
+    const actionButtons = []
+      .concat(canEdit ? `<button data-act="edit">Edit</button>` : [])
+      .concat(canToggle ? `<button data-act="toggle">${n.is_active ? "Hide" : "Unhide"}</button>` : [])
+      .concat(canDelete ? `<button data-act="delete">Delete</button>` : [])
+      .join("");
 
     return `
       <div class="notice-row"
@@ -4745,8 +4726,8 @@ function renderAdminNotices(){
 
             <div style="font-size:11px; color:#667085; margin-top:4px;">
               v${n.version}
-              · ${createdBy}
-              · ${when}
+              - ${createdBy}
+              - ${when}
               ${!n.is_active
                 ? `<span class="notice-pill" style="margin-left:6px;">Inactive</span>`
                 : ``}
@@ -4754,31 +4735,32 @@ function renderAdminNotices(){
           </div>
 
           <div style="display:flex; gap:6px;">
-            <button data-act="edit">Edit</button>
-            <button data-act="toggle">${n.is_active ? "Hide" : "Unhide"}</button>
-            <button data-act="delete">Delete</button>
+            ${actionButtons}
           </div>
         </div>
 
-        <!-- ACKNOWLEDGED BY (ADMIN ONLY) -->
+        ${showAckSummary ? `
         <div class="ack-summary" style="margin-top:8px;">
           <button type="button"
                   class="ghost"
-                  data-ack-toggle="${n.id}"
+                  ${ackToggleAttr}
                   style="padding:6px 10px; border-radius:999px; font-size:12px;">
             Acknowledged:
-            <span data-ack-count="${n.id}">${ackCount ?? "—"}</span>
+            <span data-ack-count="${n.id}">${ackCount}</span>
             <span class="muted"> / </span>
-            <span data-ack-total="${n.id}">${ackTotal ?? "—"}</span>
-            <span class="muted"> · View</span>
+            <span data-ack-total="${n.id}">${ackTotal}</span>
+            ${ackViewLabel}
           </button>
 
+          ${canViewAckLists ? `
           <div id="ack-list-${n.id}"
                class="ack-list"
                style="display:none; margin-top:8px; padding:10px; border:1px solid #e5e7eb; border-radius:12px;">
-            <div class="subtitle">Loading…</div>
+            <div class="subtitle">Loading...</div>
           </div>
+          ` : ""}
         </div>
+        ` : ""}
 
       </div>
     `;
@@ -4786,8 +4768,14 @@ function renderAdminNotices(){
 }
 
 
-
 async function adminUpsertNotice(payload){
+  if (payload?.id) {
+    if (!requirePermission("notices.edit", "Permission required to edit notices.")) {
+      throw new Error("Permission required.");
+    }
+  } else if (!requirePermission("notices.create", "Permission required to create notices.")) {
+    throw new Error("Permission required.");
+  }
   const pin = getSessionPinOrThrow();
 
   // Enforce: if roles are supplied we treat this as targeted (target_all=false).
@@ -4810,6 +4798,7 @@ async function adminUpsertNotice(payload){
 }
 
 async function toggleAdminNoticeActive(notice){
+  if (!requirePermission("notices.toggle_active", "Permission required to toggle notices.")) return;
   const pin = getSessionPinOrThrow();
 
   const next = (notice.is_active === false) ? true : false;
@@ -4829,6 +4818,7 @@ async function toggleAdminNoticeActive(notice){
 }
 
 async function deleteAdminNotice(notice){
+  if (!requirePermission("notices.delete", "Permission required to delete notices.")) return;
   const pin = getSessionPinOrThrow();
 
   const ok = confirm(`Delete "${notice.title}"?\n\nThis cannot be undone.`);
@@ -4848,8 +4838,11 @@ async function deleteAdminNotice(notice){
 
 async function loadAdminUsers(){
   if (!adminUsersList) return;
-
-  adminUsersList.textContent = "Loading users…";
+  if (!hasPermission("users.view")) {
+    adminUsersList.innerHTML = `<div class="subtitle" style="margin-top:8px;">Restricted.</div>`;
+    return;
+  }
+  adminUsersList.textContent = "Loading users ";
 
   const { data, error } = await supabaseClient
     .from("users")
@@ -4883,6 +4876,9 @@ function renderAdminUsers(){
     return;
   }
 
+  const canEditUsers = hasPermission("users.edit");
+  const canToggleUsers = hasPermission("users.toggle_active");
+
   const groups = [
     { title: "Charge Nurses", role_id: 1 },
     { title: "Staff Nurses", role_id: 2 },
@@ -4898,9 +4894,16 @@ function renderAdminUsers(){
     html.push(`<div class="user-group-title">${g.title}</div>`);
 
     html.push(members.map(u => {
+      const isAdminAccount = !!u.is_admin;
+      const allowEdit = canEditUsers && (!isAdminAccount || currentUser?.is_admin);
+      const allowToggle = canToggleUsers && (!isAdminAccount || currentUser?.is_admin);
+      const actionButtons = []
+        .concat(allowEdit ? `<button type="button" data-act="edit" data-id="${u.id}">Edit</button>` : [])
+        .concat(allowToggle ? `<button type="button" data-act="toggle" data-id="${u.id}">${u.is_active === false ? "Reactivate" : "Deactivate"}</button>` : [])
+        .join("");
       return `
         <div class="user-row" draggable="true" data-user-id="${u.id}" data-role-id="${g.role_id}">
-          <div class="drag-handle" title="Drag to reorder">↕</div>
+          <div class="drag-handle" title="Drag to reorder">?</div>
           <div class="user-meta">
             <div class="user-name">
               ${escapeHtml(u.name || "")}
@@ -4909,12 +4912,7 @@ function renderAdminUsers(){
             </div>
           </div>
 
-          <div class="user-actions">
-            <button type="button" data-act="edit" data-id="${u.id}">Edit</button>
-            <button type="button" data-act="toggle" data-id="${u.id}">
-              ${u.is_active === false ? "Reactivate" : "Deactivate"}
-            </button>
-          </div>
+          <div class="user-actions">\r\n            ${actionButtons}\r\n          </div>
         </div>
       `;
     }).join(""));
@@ -4931,8 +4929,13 @@ function clearUserEditor(){
 }
 
 function startEditUser(userId){
+  if (!requirePermission("users.edit", "Permission required to edit users.")) return;
   const u = adminUsersCache.find(x => x.id === userId);
   if (!u) return;
+  if (u.is_admin && !currentUser?.is_admin) {
+    alert("Admin accounts are read-only unless you are superadmin.");
+    return;
+  }
 
   adminEditingUserId = u.id;
   adminEditUserName.value = u.name || "";
@@ -4948,14 +4951,19 @@ function startEditUser(userId){
 }
 
 async function toggleUserActive(userId){
+  if (!requirePermission("users.toggle_active", "Permission required to change status.")) return;
   const u = adminUsersCache.find(x => x.id === userId);
   if (!u) return;
+  if (u.is_admin && !currentUser?.is_admin) {
+    alert("Admin accounts are read-only unless you are superadmin.");
+    return;
+  }
 
   const next = (u.is_active === false) ? true : false;
   const ok = confirm(`${next ? "Reactivate" : "Deactivate"} ${u.name}?`);
   if (!ok) return;
 
-  const pin = getSessionPinOrThrow(); // 🔑 THIS WAS MISSING
+  const pin = getSessionPinOrThrow(); // ?? THIS WAS MISSING
 
   const { error } = await supabaseClient.rpc("set_user_active", {
     p_admin_id: currentUser.id,
@@ -4980,6 +4988,7 @@ let draggedUserId = null;
 let draggedRoleId = null;
 
 adminUsersList?.addEventListener('dragstart', (e) => {
+  if (!hasPermission("users.reorder")) return;
   const userRow = e.target.closest('.user-row[draggable="true"]');
   if (!userRow) return;
   
@@ -5002,6 +5011,7 @@ adminUsersList?.addEventListener('dragend', (e) => {
 });
 
 adminUsersList?.addEventListener('dragover', (e) => {
+  if (!hasPermission("users.reorder")) return;
   e.preventDefault();
   const userRow = e.target.closest('.user-row[draggable="true"]');
   if (!userRow || !draggedElement) return;
@@ -5018,6 +5028,7 @@ adminUsersList?.addEventListener('dragover', (e) => {
 });
 
 adminUsersList?.addEventListener('drop', async (e) => {
+  if (!requirePermission("users.reorder", "Permission required to reorder rota.")) return;
   e.preventDefault();
   const targetRow = e.target.closest('.user-row[draggable="true"]');
   if (!targetRow || !draggedElement) return;
@@ -5044,6 +5055,7 @@ adminUsersList?.addEventListener('drop', async (e) => {
 });
 
 async function updateUserDisplayOrder(roleId) {
+  if (!requirePermission("users.reorder", "Permission required to reorder rota.")) return;
   try {
     // Get all user rows for this role in current DOM order
     const rows = Array.from(adminUsersList.querySelectorAll(`.user-row[data-role-id="${roleId}"]`));
@@ -5100,7 +5112,10 @@ adminUsersList?.addEventListener("click", (e) => {
   if (act === "toggle") toggleUserActive(id);
 });
 
-adminAddUserBtn?.addEventListener("click", clearUserEditor);
+adminAddUserBtn?.addEventListener("click", () => {
+  if (!requirePermission("users.create", "Permission required to add users.")) return;
+  clearUserEditor();
+});
 adminCancelUserEditBtn?.addEventListener("click", clearUserEditor);
 
 adminNoticesList?.addEventListener("click", async (e) => {
@@ -5124,12 +5139,14 @@ adminNoticesList?.addEventListener("click", async (e) => {
     // already loaded once
     if (box.dataset.loaded === "1") return;
 
-    box.innerHTML = `<div class="subtitle">Loading…</div>`;
+    box.innerHTML = `<div class="subtitle">Loading </div>`;
 
     try {
       const rows = await fetchNoticeAcksForAdmin(noticeId);
 
-      if (!rows.length) {
+      if (rows === null) {
+        box.innerHTML = `<div class="subtitle">Restricted</div>`;
+      } else if (!rows.length) {
         box.innerHTML = `<div class="subtitle">Nobody yet.</div>`;
       } else {
         box.innerHTML = `
@@ -5149,16 +5166,18 @@ adminNoticesList?.addEventListener("click", async (e) => {
         `;
 
         // Defensive: if the count shown is wrong, update it to the number of rows
-        try {
-          const countSpan = document.querySelector(`[data-ack-count="${noticeId}"]`);
-          if (countSpan && Number(countSpan.textContent) !== rows.length) {
-            console.debug('Mismatch detected: fixing ack count for', noticeId, 'to', rows.length);
-            countSpan.textContent = String(rows.length);
-            // update cache too
-            const noticeObj = adminNoticesCache.find(n => String(n.id) === String(noticeId));
-            if (noticeObj) noticeObj.ack_count = rows.length;
-          }
-        } catch (e) { console.warn('failed to update count fallback', e); }
+        if (hasPermission("notices.view_ack_counts")) {
+          try {
+            const countSpan = document.querySelector(`[data-ack-count="${noticeId}"]`);
+            if (countSpan && Number(countSpan.textContent) !== rows.length) {
+              console.debug('Mismatch detected: fixing ack count for', noticeId, 'to', rows.length);
+              countSpan.textContent = String(rows.length);
+              // update cache too
+              const noticeObj = adminNoticesCache.find(n => String(n.id) === String(noticeId));
+              if (noticeObj) noticeObj.ack_count = rows.length;
+            }
+          } catch (e) { console.warn('failed to update count fallback', e); }
+        }
       }
 
       box.dataset.loaded = "1";
@@ -5200,7 +5219,10 @@ adminNoticesList?.addEventListener("click", async (e) => {
 
 
 adminNoticeSave?.addEventListener("click", async () => {
-  if (!currentUser?.is_admin) return;
+  const canCreate = hasPermission("notices.create");
+  const canEdit = hasPermission("notices.edit");
+  if (editingNotice && !canEdit) return alert("Permission required to edit notices.");
+  if (!editingNotice && !canCreate) return alert("Permission required to create notices.");
 
   const title = (adminNoticeTitleInput?.value || "").trim();
   const bodyEn = (quillEnglish?.root.innerHTML || "").trim();
@@ -5271,6 +5293,10 @@ noticeRoleChks.forEach(chk => {
    ========================================================= */
 
 adminSaveUserBtn?.addEventListener("click", async () => {
+  const isEditing = !!adminEditingUserId;
+  if (isEditing) {
+    if (!requirePermission("users.edit", "Permission required to edit users.")) return;
+  } else if (!requirePermission("users.create", "Permission required to add users.")) return;
   const name = adminEditUserName.value.trim();
   const role_id = Number(adminEditUserRole.value);
   const pin = (adminEditUserPin.value || "").trim();
@@ -5278,6 +5304,7 @@ adminSaveUserBtn?.addEventListener("click", async () => {
   if (!name) return alert("Name is required.");
   if (![1,2,3].includes(role_id)) return alert("Role invalid.");
   if (pin && !/^\d{4}$/.test(pin)) return alert("PIN must be 4 digits.");
+  if (pin && !hasPermission("users.set_pin")) return alert("Permission required to change PIN.");
 
   try {
     const { data: userId, error } = await supabaseClient.rpc("admin_upsert_user", {
@@ -5326,6 +5353,7 @@ if (adminPeriodSelect) {
 if (adminSetActiveBtn) {
   adminSetActiveBtn.addEventListener("click", async () => {
     if (!adminSelectedPeriodId) return;
+    if (!requirePermission("periods.set_active", "Permission required to set active period.")) return;
     try {
       await setActivePeriod(adminSelectedPeriodId);
       await loadRota(); // refresh main view
@@ -5341,6 +5369,7 @@ if (adminSetActiveBtn) {
 if (adminToggleHiddenBtn) {
   adminToggleHiddenBtn.addEventListener("click", async () => {
     if (!adminSelectedPeriodId) return;
+    if (!requirePermission("periods.toggle_hidden", "Permission required to hide periods.")) return;
     try {
       await toggleHiddenPeriod(adminSelectedPeriodId);
       await loadRota(); // refresh main view
@@ -5355,8 +5384,8 @@ if (adminToggleHiddenBtn) {
 async function loadAdminPeriodsForDropdown(){
   if (!adminPeriodSelect) return;
 
-  adminPeriodMeta.textContent = "Loading…";
-  adminWeeksList.textContent = "Loading…";
+  adminPeriodMeta.textContent = "Loading ";
+  adminWeeksList.textContent = "Loading ";
 
   let periods;
   try {
@@ -5377,7 +5406,7 @@ async function loadAdminPeriodsForDropdown(){
     opt.value = p.id;
     const s = fmt(new Date(p.start_date));
     const e = fmt(new Date(p.end_date));
-    opt.textContent = `${s} – ${e}${p.is_active ? " ★" : ""}${p.is_hidden ? " (hidden)" : ""}`;
+    opt.textContent = `${s}   ${e}${p.is_active ? " ?" : ""}${p.is_hidden ? " (hidden)" : ""}`;
     adminPeriodSelect.appendChild(opt);
   }
 
@@ -5402,13 +5431,13 @@ function renderAdminPeriodMeta(periodId){
   }
 
   const bits = [];
-  if (p.is_active) bits.push("✅ Active");
-  if (p.is_hidden) bits.push("🙈 Hidden");
-  adminPeriodMeta.textContent = bits.join(" · ") || "—";
+  if (p.is_active) bits.push("? Active");
+  if (p.is_hidden) bits.push("?? Hidden");
+  adminPeriodMeta.textContent = bits.join("   ") || " ";
 }
 
 async function loadAdminWeeks(periodId){
-  adminWeeksList.textContent = "Loading weeks…";
+  adminWeeksList.textContent = "Loading weeks ";
 
   // Pull all dates for the period, but we only need them to discover the weeks + open state
   const { data, error } = await supabaseClient
@@ -5466,6 +5495,7 @@ const weeks = [...weekMap.values()].sort((a,b) => a.weekStart - b.weekStart);
   // Period lock (deadline)
   const p = periodsCache.find(x => String(x.id) === String(periodId));
   const periodClosed = isPeriodClosed(p);
+  const canToggleWeeks = hasPermission("weeks.set_open_flags");
 
   adminWeeksList.innerHTML = weeks.map(w => {
     const s = fmt(w.weekStart);
@@ -5490,7 +5520,7 @@ ${periodClosed ? "(after close time)" : "(before close time)"}
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #eee;">
         <div>
-          <div style="font-weight:800;">${s} – ${e}</div>
+          <div style="font-weight:800;">${s}   ${e}</div>
           <div style="margin-top:4px;">${pill}</div>
           ${lockNote}
         </div>
@@ -5501,6 +5531,8 @@ ${periodClosed ? "(after close time)" : "(before close time)"}
   data-open="${w.open ? "1" : "0"}"
   data-open-after-close="${w.openAfterClose ? "1" : "0"}"
   data-period-closed="${periodClosed ? "1" : "0"}"
+  ${canToggleWeeks ? "" : "disabled"}
+  title="${canToggleWeeks ? "" : "Restricted"}"
 >
           ${btnText}
         </button>
@@ -5511,7 +5543,7 @@ ${periodClosed ? "(after close time)" : "(before close time)"}
 // Bind toggles (admins can still manage weeks regardless of period close)
 adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
   btn.addEventListener("click", async () => {
-    if (!currentUser?.is_admin) return;
+    if (!requirePermission("weeks.set_open_flags", "Permission required to update weeks.")) return;
 
     const pin = getSessionPinOrThrow();
     const weekId = btn.dataset.weekId;
@@ -5520,7 +5552,7 @@ adminWeeksList.querySelectorAll("button[data-week-id]").forEach(btn => {
     const openAfterClose = btn.dataset.openAfterClose === "1";
     const periodClosed = btn.dataset.periodClosed === "1";
 
-// ✅ Toggle the correct flag depending on whether period is closed
+// ? Toggle the correct flag depending on whether period is closed
 let nextOpen = open;
 let nextOpenAfterClose = openAfterClose;
 
@@ -5553,6 +5585,9 @@ if (periodClosed) {
    ========================= */
   
 async function setActivePeriod(periodId){
+  if (!requirePermission("periods.set_active", "Permission required to set active period.")) {
+    throw new Error("Permission required.");
+  }
   const pin = getSessionPinOrThrow();
 
   const { error } = await supabaseClient.rpc("admin_set_active_period", {
@@ -5566,7 +5601,9 @@ async function setActivePeriod(periodId){
 }
     
 async function toggleHiddenPeriod(periodId){
-  if (!currentUser?.is_admin) throw new Error("Admin only.");
+  if (!requirePermission("periods.toggle_hidden", "Permission required to hide periods.")) {
+    throw new Error("Permission required.");
+  }
   const pin = getSessionPinOrThrow();
 
   const { error } = await supabaseClient.rpc("admin_toggle_hidden_period", {
@@ -5580,7 +5617,9 @@ async function toggleHiddenPeriod(periodId){
 // create 5 week period 
 
 async function generateNextFiveWeekPeriod(){
-  if (!currentUser?.is_admin) throw new Error("Admin only.");
+  if (!requirePermission("periods.create", "Permission required to create periods.")) {
+    throw new Error("Permission required.");
+  }
 
   const pin = getSessionPinOrThrow();
   const r = computeNextPeriodRange();
@@ -5588,9 +5627,9 @@ async function generateNextFiveWeekPeriod(){
 
   const startStr = isoDate(r.start);
   const endStr   = isoDate(r.end);
-  const periodName = `${fmt(r.start)} – ${fmt(r.end)}`;
+  const periodName = `${fmt(r.start)}   ${fmt(r.end)}`;
 
-  // 1️⃣ create period + weeks + dates server-side
+  // 1?? create period + weeks + dates server-side
   const { data: periodId, error } = await supabaseClient.rpc(
     "admin_create_five_week_period",
     {
@@ -5604,7 +5643,7 @@ async function generateNextFiveWeekPeriod(){
 
   if (error) throw error;
 
-  // ✅ return UUID only
+  // ? return UUID only
   return periodId;
 }
 
@@ -5639,11 +5678,12 @@ function refreshGeneratePreview(){
   }
 
   adminGeneratePreview.textContent =
-    `Next period: ${fmt(r.start)} – ${fmt(r.end)} (5 weeks, Sun–Sat).`;
+    `Next period: ${fmt(r.start)}   ${fmt(r.end)} (5 weeks, Sun Sat).`;
 }
 
 if (adminGenerateBtn) {
   adminGenerateBtn.addEventListener("click", async () => {
+    if (!requirePermission("periods.create", "Permission required to create periods.")) return;
     try {
       const r = computeNextPeriodRange();
       if (!r) {
@@ -5651,13 +5691,13 @@ if (adminGenerateBtn) {
         return;
       }
 
-      const ok = confirm(`Generate new 5-week period:\n${fmt(r.start)} – ${fmt(r.end)} ?`);
+      const ok = confirm(`Generate new 5-week period:\n${fmt(r.start)}   ${fmt(r.end)} ?`);
       if (!ok) return;
 
       adminGenerateBtn.disabled = true;
-      adminGeneratePreview.textContent = "Generating…";
+      adminGeneratePreview.textContent = "Generating ";
 
-      // ✅ RPC returns a UUID (string), not a period object
+      // ? RPC returns a UUID (string), not a period object
       const newPeriodId = await generateNextFiveWeekPeriod();
 
       // Refresh caches + UI
@@ -5672,7 +5712,7 @@ if (adminGenerateBtn) {
       // Optional: auto-set active so staff see it immediately
   // await setActivePeriod(newPeriodId); // only activate when ready
 
-      // Refresh again so ★ active + dropdown state update
+      // Refresh again so ? active + dropdown state update
       await loadRota();
       await loadAdminPeriodsForDropdown();
 
@@ -5698,6 +5738,9 @@ if (adminGenerateBtn) {
 
 
 async function setPeriodCloseTime(periodId, closesAtIsoOrNull){
+  if (!requirePermission("periods.set_close_time", "Permission required to set close time.")) {
+    throw new Error("Permission required.");
+  }
   const pin = getSessionPinOrThrow();
 
   const { error } = await supabaseClient.rpc("admin_set_period_closes_at", {
@@ -5713,7 +5756,7 @@ async function setPeriodCloseTime(periodId, closesAtIsoOrNull){
     // OPTIONAL BASELINE RESET HELPERS
 
 async function resetWeeksAfterClose(periodId){
-  if (!currentUser?.is_admin) { alert("Admin only."); return; }
+  if (!requirePermission("weeks.set_open_flags", "Permission required to update weeks.")) return;
   const { data: wkRows, error: wkErr } = await supabaseClient
     .from("rota_dates")
     .select("week_id")
@@ -5732,7 +5775,7 @@ async function resetWeeksAfterClose(periodId){
   if (resetErr) throw resetErr;
 }
     async function resetWeeksOpen(periodId){
-  if (!currentUser?.is_admin) { alert("Admin only."); return; }
+  if (!requirePermission("weeks.set_open_flags", "Permission required to update weeks.")) return;
 
   const { data: wkRows, error: wkErr } = await supabaseClient
     .from("rota_dates")
@@ -5753,7 +5796,7 @@ async function resetWeeksAfterClose(periodId){
 }
 
 async function resetWeeksDefaultForPeriod(periodId){
-  if (!currentUser?.is_admin) { alert("Admin only."); return; }
+  if (!requirePermission("weeks.set_open_flags", "Permission required to update weeks.")) return;
   const { data: wkRows, error: wkErr } = await supabaseClient
     .from("rota_dates")
     .select("week_id")
@@ -5776,13 +5819,14 @@ if (adminClosesAtSaveBtn) {
   adminClosesAtSaveBtn.addEventListener("click", async () => {
     if (!adminSelectedPeriodId) return alert("Pick a rota period first.");
     if (!adminClosesAtInput?.value) return alert("Pick a date/time first.");
+    if (!requirePermission("periods.set_close_time", "Permission required to set close time.")) return;
 
     try {
       const iso = datetimeLocalToISOString(adminClosesAtInput.value);
 
       await setPeriodCloseTime(adminSelectedPeriodId, iso);
 
-      // ✅ close time should slam all 5 weeks shut by default
+      // ? close time should slam all 5 weeks shut by default
       await resetWeeksAfterClose(adminSelectedPeriodId);
 
       await loadRota(); // refresh main
@@ -5798,6 +5842,7 @@ if (adminClosesAtSaveBtn) {
 if (adminClosesAtClearBtn) {
   adminClosesAtClearBtn.addEventListener("click", async () => {
     if (!adminSelectedPeriodId) return alert("Pick a rota period first.");
+    if (!requirePermission("periods.set_close_time", "Permission required to clear close time.")) return;
 
     try {
       await setPeriodCloseTime(adminSelectedPeriodId, null);
@@ -5896,9 +5941,8 @@ if(ok !== true){
 }
 
   currentUser = selectedUser;
-setSessionPin(selectedUser.id, pin); // ✅ critical (used for saving requests)
+setSessionPin(selectedUser.id, pin); // ? critical (used for saving requests)
 localStorage.setItem(STORAGE_KEY, currentUser.id);
-
 await loadUserPermissions();
 
 closePinModal();
@@ -5933,14 +5977,17 @@ if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
 
   else if (loginBadge) loginBadge.textContent = `Account: ${currentUser.name}`;
 
-  if (adminBadge) adminBadge.style.display = currentUser.is_admin ? "inline-block" : "none";
+  if (adminBadge) adminBadge.style.display = hasPermission("system.admin_panel") ? "inline-block" : "none";
 
   // Show print button only for admins
-  if (printBtn) printBtn.style.display = currentUser.is_admin ? "inline-block" : "none";
+  if (printBtn) {
+    const canPrint = hasPermission("print.open_admin") || hasPermission("print.export_csv");
+    printBtn.style.display = canPrint ? "inline-block" : "none";
+  }
 
   // Toggle a body-level class so we can scope admin-only UI affordances (e.g. locked-cell highlight)
   try {
-    document.body.classList.toggle("admin-view", !!currentUser?.is_admin);
+    document.body.classList.toggle("admin-view", hasPermission("requests.lock_cells"));
     // Re-apply unlock state so per-td `locked-admin` classes are correctly toggled
     if (typeof applyUnlockState === 'function') applyUnlockState();
   } catch (e) { /* ignore */ }
@@ -5959,13 +6006,13 @@ function openShiftModal(){
 
   // Admin-only: show lock button and paint state
   if (shiftLockBtn) {
-    const isAdmin = !!currentUser?.is_admin;
+    const isAdmin = hasPermission("requests.lock_cells");
     shiftLockBtn.style.display = isAdmin ? "inline-flex" : "none";
 
     if (isAdmin) {
       const key = `${activeCell.userId}_${activeCell.date}`;
       const locked = locksCache.has(key);
-      shiftLockBtn.textContent = locked ? "🔒" : "🔓";
+      shiftLockBtn.textContent = locked ? "??" : "??";
       shiftLockBtn.title = locked ? "Unlock this cell" : "Lock this cell";
     }
   }
@@ -5973,7 +6020,7 @@ function openShiftModal(){
   // Admin-only: show L button
   const shiftBtnL = document.getElementById('shiftBtnL');
   if (shiftBtnL) {
-    shiftBtnL.style.display = currentUser?.is_admin ? "block" : "none";
+    shiftBtnL.style.display = hasPermission("requests.edit_all") ? "block" : "none";
   }
 
   document.body.classList.add("modal-open");
@@ -6015,43 +6062,67 @@ document.addEventListener("keydown", (e) => {
   if (userModal && userModal.style.display === "flex") closeUserModal();
 });
 
-/* =========================================================
-   SHIFT PICKER: Dynamic shift grid population
-   ========================================================= */
-
-// NOTE: This function is OVERRIDDEN by js/shift-functions.js
-// The external file handles NEW schema with allowed_staff_groups
+// ===============================
+// Load shifts from catalogue
+// ===============================
 async function populateShiftGrid(){
-  console.warn("[INDEX.HTML] Old populateShiftGrid called - should be overridden by shift-functions.js");
   try {
-    const { data: shifts, error: shiftsErr} = await supabaseClient
+    // Get all shifts
+    const { data: shifts, error: shiftsErr } = await supabaseClient
       .from("shifts")
-      .select("id, code, label, hours_value, allowed_staff_groups")
-      .eq("allow_requests", true)
-      .order("code", { ascending: true });
+      .select("id, code, label, metadata")
+      .order("sort_order", { ascending: true });
     
     if (shiftsErr) throw shiftsErr;
+    
+    // Get scope assignments
+    const { data: scopes, error: scopesErr } = await supabaseClient
+      .from("shift_scopes")
+      .select("shift_id")
+      .eq("scope", "requests");
+    
+    if (scopesErr) throw scopesErr;
+    
+    const scopeSet = new Set((scopes || []).map(s => s.shift_id));
+    
+    // Filter shifts that have "requests" scope
+    const requestShifts = (shifts || []).filter(s => scopeSet.has(s.id));
     
     const container = document.getElementById("shiftGridContainer");
     if (!container) return;
     
+    // Build HTML for shifts from catalogue
     let html = "";
-    (shifts || []).forEach(shift => {
-      html += `<button class="shift-btn" data-shift-id="${shift.id}" data-shift-code="${escapeHtml(shift.code)}" type="button">${escapeHtml(shift.code)}</button>`;
+    requestShifts.forEach(shift => {
+      const meta = shift.metadata || {};
+      const fillColor = meta.fill_color || "#f7f7f7";
+      const textColor = meta.text_color || "#000";
+      const borderColor = meta.border_color || "#ccc";
+      const fontWeight = meta.bold ? "bold" : "700";
+      const fontStyle = meta.italics ? "italic" : "normal";
+      
+      const style = `background-color:${fillColor}!important; color:${textColor}!important; border-color:${borderColor}!important; font-weight:${fontWeight}!important; font-style:${fontStyle}!important;`;
+      html += `<button class="shift-btn" data-shift="${escapeHtml(shift.code)}" type="button" style="${style}">${escapeHtml(shift.code)}</button>`;
     });
     
-    html += `<button class="shift-btn off" data-shift-code="O*" type="button">O*</button>`;
-    html += `<button class="shift-btn" data-shift-code="CLEAR" type="button">Clear</button>`;
+    // Add hardcoded O* button
+    html += `<button class="shift-btn off" data-shift="O*" type="button">O*</button>`;
+    
+    // Add Clear button
+    html += `<button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>`;
     
     container.innerHTML = html;
+    
+    // Re-attach event listeners to new buttons
     attachShiftButtonListeners();
   } catch (err) {
     console.error("Failed to load shifts for picker", err);
+    // Fallback: at least show Clear and O*
     const container = document.getElementById("shiftGridContainer");
     if (container) {
       container.innerHTML = `
-        <button class="shift-btn off" data-shift-code="O*" type="button">O*</button>
-        <button class="shift-btn" data-shift-code="CLEAR" type="button">Clear</button>
+        <button class="shift-btn off" data-shift="O*" type="button">O*</button>
+        <button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>
       `;
       attachShiftButtonListeners();
     }
@@ -6066,7 +6137,7 @@ function attachShiftButtonListeners(){
       const td = activeCell.td;
       const userId = activeCell.userId;
       const date = activeCell.date;
-      const shift = this.dataset.shiftCode || this.dataset.shift; // Support both NEW and OLD
+      const shift = this.dataset.shift;
       const key = `${userId}_${date}`;
 
       let rankToSave = null;
@@ -6082,7 +6153,7 @@ function attachShiftButtonListeners(){
         rankToSave = nextOffPrioritySmart(currentRank, taken);
 
         if (rankToSave === null && (taken.has(1) && taken.has(2))) {
-          alert("No more strong preferences available.\\nUse O or add a comment if needed.");
+          alert("No more strong preferences available.\nUse O or add a comment if needed.");
           closeShiftModal();
           return;
         }
@@ -6097,6 +6168,7 @@ function attachShiftButtonListeners(){
 
           if (!alreadyExists && currentCount >= MAX_REQUESTS_PER_WEEK) {
             alert("You can only enter 5 requests per week.");
+            closeShiftModal();
             return;
           }
         }
@@ -6132,9 +6204,8 @@ function attachShiftButtonListeners(){
         const msg = err?.message || err?.error?.message || err?.details || JSON.stringify(err);
 
         const pe = pendingEdits[key];
-        const existing = requestsCache.get(key);
-
-        const row = pe ? { value: pe.shift, important_rank: pe.important_rank } : existing;
+        const row = pe ? { value: pe.shift, important_rank: pe.important_rank } : requestsCache.get(key);
+        
         if (row?.value === "O") {
           if (row.important_rank === 1) td.textContent = "O¹";
           else if (row.important_rank === 2) td.textContent = "O²";
@@ -6148,167 +6219,17 @@ function attachShiftButtonListeners(){
 
         if ((msg || "").toLowerCase().includes("max 5")) {
           alert("Max 5 requests per week. Clear one day to pick another.");
-          return;
+        } else if ((msg || "").toLowerCase().includes("priority") || (msg || "").toLowerCase().includes("max 2")) {
+          alert("No more strong preferences available.\nUse O or add a comment.");
+        } else {
+          alert("Save failed. Check console.");
         }
-
-        if ((msg || "").toLowerCase().includes("priority") ||
-            (msg || "").toLowerCase().includes("max 2")) {
-          alert("No more strong preferences available.\\nUse O or add a comment.");
-          return;
-        }
-        alert("Save failed. Check console.");
       }
     });
   });
 }
 
-
-    
-document.querySelectorAll(".shift-btn").forEach(btn => {
-  btn.addEventListener("click", async () => {
-    if (!activeCell) return;
-
-    const td = activeCell.td;
-    const userId = activeCell.userId;
-    const date = activeCell.date;
-const shift = btn.dataset.shift;
-const key = `${userId}_${date}`;
-const existing = requestsCache.get(key);
-
-// Special handling for O*: cycle strong preference ranks (O¹ / O²)
-let rankToSave = null;
-
-if (shift === "O*") {
-  const pe = pendingEdits[key];
-  const existing = requestsCache.get(key);
-
-  const currentRank =
-    (pe && pe.shift === "O") ? (pe.important_rank ?? null) :
-    (existing?.value === "O") ? (existing.important_rank ?? null) :
-    null;
-
-  const taken = getTakenOffRanksThisWeek(userId, date, key);
-  rankToSave = nextOffPrioritySmart(currentRank, taken);
-
-  // 🚫 HARD BLOCK after O¹ + O²
-  if (rankToSave === null && (taken.has(1) && taken.has(2))) {
-    alert("No more strong preferences available.\nUse O or add a comment if needed.");
-    closeShiftModal();
-    return;
-  }
-}
-
-
- 
-
-    /* -----------------------------
-       STEP 1: Max 5 per week guard (except for Leave)
-       ----------------------------- */
-    if (shift !== "CLEAR" && shift !== "L") {
-      const currentCount = countUserRequestsThisWeek(userId, date);
-      const alreadyExists = requestsCache.has(key);
-
-      if (!alreadyExists && currentCount >= MAX_REQUESTS_PER_WEEK) {
-        alert("You can only enter 5 requests per week.");
-        closeShiftModal();
-        return;
-      }
-    }
-
-
-    /* -----------------------------
-       Optimistic UI update
-       ----------------------------- */
- if (shift === "CLEAR") {
-  td.textContent = "";
-  delete pendingEdits[key];
-} else if (shift === "O") {
-  // plain OFF, no priority
-  td.textContent = "O";
-  pendingEdits[key] = { userId, date, shift: "O", important_rank: null };
-
-} else if (shift === "O*") {
-  // strong OFF, cycles rank
-  if (rankToSave === 1) td.textContent = "O¹";
-  else if (rankToSave === 2) td.textContent = "O²";
-  else td.textContent = "O"; // fallback (shouldn’t happen if cycling works)
-
-  // note: we save as value "O" with important_rank 1/2
-  pendingEdits[key] = { userId, date, shift: "O", important_rank: rankToSave };
-
-} else {
-  td.textContent = shift;
-  pendingEdits[key] = { userId, date, shift, important_rank: null };
-}
-
-    closeShiftModal();
-/* -----------------------------
-   Auto-save to Supabase
-   ----------------------------- */
-try {
-  if (shift === "CLEAR") {
-    await deleteRequestCell(userId, date);
-    requestsCache.delete(key);
-    delete pendingEdits[key];
-    toast(`Cleared + saved (${key})`);
-  } else {
-const valueToSave = (shift === "O*") ? "O" : shift;
-
-const saved = await upsertRequestCell(
-  userId,
-  date,
-  valueToSave,
-  rankToSave
-);
-
-    requestsCache.set(key, saved);
-    delete pendingEdits[key];
-    toast(`Saved (${key}) = ${shift}`);
-  }
-} catch (err) {
-  console.error("Auto-save failed:", err);
-
-  const msg =
-    err?.message ||
-    err?.error?.message ||
-    err?.details ||
-    JSON.stringify(err);
-
-// Revert UI to last known good state (pendingEdits first, then saved)
-const pe = pendingEdits[key];
-const existing = requestsCache.get(key);
-
-const row = pe ? { value: pe.shift, important_rank: pe.important_rank } : existing;
-if (row?.value === "O") {
-  if (row.important_rank === 1) td.textContent = "O¹";
-  else if (row.important_rank === 2) td.textContent = "O²";
-  else if (row.important_rank === 3) td.textContent = "O³";
-  else td.textContent = "O";
-} else {
-  td.textContent = row?.value || "";
-}
-
-
-
-  delete pendingEdits[key];
-
-  if ((msg || "").toLowerCase().includes("max 5")) {
-    alert("Max 5 requests per week. Clear one day to pick another.");
-    return;
-  }
-
-if ((msg || "").toLowerCase().includes("priority") ||
-    (msg || "").toLowerCase().includes("max 2")) {
-  alert("No more strong preferences available.\nUse O or add a comment.");
-  return;
-}
-  alert("Save failed. Check console.");
-}
-  });
-});
-
-
-    /* =========================================================
+/* =========================================================
    PATCH 2B) AUTO-SAVE (write to Supabase after each selection)
    ========================================================= */
 
@@ -6325,7 +6246,7 @@ async function upsertRequestCell(userId, date, value, importantRank){
   if (!pin) throw new Error("Missing session PIN. Log in again.");
 
   // Admin editing someone else -> admin RPC
-  if (currentUser.is_admin && String(userId) !== String(currentUser.id)) {
+  if (hasPermission("requests.edit_all") && String(userId) !== String(currentUser.id)) {
     const { data, error } = await supabaseClient.rpc("admin_set_request_cell", {
       p_admin_id: currentUser.id,
       p_pin: pin,
@@ -6360,7 +6281,7 @@ async function deleteRequestCell(userId, date){
   if (!pin) throw new Error("Missing session PIN. Log in again.");
 
   // Admin editing someone else -> admin RPC
-  if (currentUser.is_admin && String(userId) !== String(currentUser.id)) {
+  if (hasPermission("requests.edit_all") && String(userId) !== String(currentUser.id)) {
     const { error } = await supabaseClient.rpc("admin_clear_request_cell", {
       p_admin_id: currentUser.id,
       p_pin: pin,
@@ -6380,6 +6301,23 @@ async function deleteRequestCell(userId, date){
   if (error) throw error;
 }
 
+function goToFullAdmin() {
+  console.log("[DEBUG] goToFullAdmin called");
+  if (!currentUser) {
+    alert("Not logged in.");
+    return;
+  }
+  const pin = sessionStorage.getItem(`calpeward.pin.${currentUser.id}`);
+  if (!pin) {
+    alert("No session PIN. Log in again.");
+    return;
+  }
+  console.log("[DEBUG] Storing session and navigating to admin.html");
+  // Encode session to window.name for cross-window passing
+  const sessionData = { userId: currentUser.id, pin: pin };
+  window.name = "calpeward:" + btoa(JSON.stringify(sessionData));
+  window.location.href = "admin.html";
+}
     
 async function loadRota() {
   // -----------------------------
@@ -6401,10 +6339,10 @@ async function loadRota() {
   allUsers = users || [];
   usersById = new Map((users || []).map(u => [u.id, u.name]));
 
-  // 🔐 Restore logged-in user from localStorage (ONE TIME LOGIN)
+  // ?? Restore logged-in user from localStorage (ONE TIME LOGIN)
 const savedId = localStorage.getItem(STORAGE_KEY);
 if (savedId && !currentUser) {
-  const restored = (users || []).find(u => String(u.id) === String(savedId));
+    const restored = (users || []).find(u => String(u.id) === String(savedId));
   const restoredPin = restored ? sessionStorage.getItem(pinKey(restored.id)) : null;
 
   if (restored && restoredPin) {
@@ -6453,7 +6391,7 @@ populatePeriodDropdown(periods);
 periodSelect.value = String(activePeriodId);
 
 const selected = periods.find(p => String(p.id) === String(activePeriodId));
-activePeriodObj = selected;   // ← THIS is 5A in action
+activePeriodObj = selected;   // ? THIS is 5A in action
 updateCloseLabel(selected);
   
 // -----------------------------
@@ -6533,7 +6471,7 @@ weekWindowStart = 0;
 
 
 // Hide inactive users from the rota table (for everyone)
-// (Admins can still view/manage them in Admin → Users with "Show inactive")
+// (Admins can still view/manage them in Admin ? Users with "Show inactive")
 const visibleUsers = users.filter(u => u.is_active !== false);
 
 render(visibleUsers, weeks);
@@ -6542,7 +6480,7 @@ render(visibleUsers, weeks);
 // Period label
 if (weeks.length) {
 document.getElementById("periodLabel").textContent =
-  `${fmt(weeks[0].weekStart)} – ${fmt(weeks[weeks.length - 1].weekEnd)} · 5-week period`;
+  `${fmt(weeks[0].weekStart)}   ${fmt(weeks[weeks.length - 1].weekEnd)}   5-week period`;
 
 }
 
@@ -6585,19 +6523,19 @@ function render(users, weeks){
 
     th.colSpan = 7;
     th.innerHTML = `
-  <span class="week-label">${fmt(w.weekStart)} – ${fmt(w.weekEnd)}</span>
+  <span class="week-label">${fmt(w.weekStart)}   ${fmt(w.weekEnd)}</span>
 ${w.weekId ? `
   <button
     class="week-comment-btn"
     type="button"
     data-week-id="${String(w.weekId)}"
     title="Week comment"
-  >💬</button>
+  >??</button>
 ` : `
   <span
     style="opacity:0.35; margin-left:6px;"
     title="Week has no ID (rota_dates.week_id missing)"
-  >💬</span>
+  >??</span>
 `}
 `;
 r1.appendChild(th);
@@ -6702,7 +6640,7 @@ r1.appendChild(th);
           td.dataset.userId = u.id;
           td.dataset.date = dateStr;
 
-          // ✅ Fill from cache / pending edits
+          // ? Fill from cache / pending edits
           const key = `${u.id}_${dateStr}`;
 
           // Pending edits override everything visually
@@ -6710,9 +6648,9 @@ if (pendingEdits[key]) {
   const pe = pendingEdits[key];
 
 if (pe.shift === "O") {
-  if (pe.important_rank === 1) td.textContent = "O¹";
-  else if (pe.important_rank === 2) td.textContent = "O²";
-  else if (pe.important_rank === 3) td.textContent = "O³";
+  if (pe.important_rank === 1) td.textContent = "O ";
+  else if (pe.important_rank === 2) td.textContent = "O ";
+  else if (pe.important_rank === 3) td.textContent = "O ";
   else td.textContent = "O";
 } else {
   td.textContent = pe.shift || "";
@@ -6722,8 +6660,8 @@ if (pe.shift === "O") {
   const r = requestsCache.get(key);
 
   if (r?.value === "O") {
-    if (r.important_rank === 1) td.textContent = "O¹";
-    else if (r.important_rank === 2) td.textContent = "O²";
+    if (r.important_rank === 1) td.textContent = "O ";
+    else if (r.important_rank === 2) td.textContent = "O ";
     else td.textContent = "O";
   } else {
     td.textContent = r?.value || "";
@@ -6762,9 +6700,11 @@ function applyUnlockState(){
 
     const userId = r.dataset.userId;
 
+  const canEditOthers = hasPermission("requests.edit_all");
+  const canManageLocks = hasPermission("requests.lock_cells");
   const isUnlocked =
   currentUser && (
-    currentUser.is_admin ||
+    canEditOthers ||
     String(currentUser.id) === String(userId)
   );
 
@@ -6774,7 +6714,7 @@ function applyUnlockState(){
     r.querySelectorAll("td.cell").forEach(td => {
       const isClosedWeek = td.classList.contains("closed");
 
-      // ✅ FINAL rule:
+      // ? FINAL rule:
       // - must be your row (or admin)
       // - week must be open (closed class blocks)
       // periodClosed is NOT a blocker: week toggle overrides it
@@ -6791,8 +6731,8 @@ td.classList.toggle("editable", canEdit);
       // (admins are considered 'unlocked' so we can't rely on !isUnlocked there).
       const _key = `${userId}_${td.dataset.date}`;
       const _lockedForCell = locksCache.has(_key);
-      td.classList.toggle("locked-admin", !!currentUser?.is_admin && _lockedForCell);
-      if (_lockedForCell && !!currentUser?.is_admin) console.debug('applyUnlockState: locked-admin set for', _key);
+      td.classList.toggle("locked-admin", canManageLocks && _lockedForCell);
+      if (_lockedForCell && canManageLocks) console.debug('applyUnlockState: locked-admin set for', _key);
       if (!td.dataset.bound) {
         td.dataset.bound = "1";
  td.addEventListener("click", () => {
@@ -6802,12 +6742,12 @@ td.classList.toggle("editable", canEdit);
   const date = td.dataset.date;
   const lock = locksCache.get(`${userId}_${date}`);
 
-  // 🚫 Staff: locked cell blocks editing, shows reason
-  if (lock && !currentUser?.is_admin) {
+  // ?? Staff: locked cell blocks editing, shows reason
+  if (lock && !canManageLocks) {
     const reason =
       (currentLang === "es" ? lock.reason_es : lock.reason_en) ||
       lock.reason_en ||
-      (currentLang === "es" ? "Este día está bloqueado por administración." : "This day is locked by management.");
+      (currentLang === "es" ? "Este d a est  bloqueado por administraci n." : "This day is locked by management.");
 
     alert(reason);
     return;
@@ -6844,7 +6784,10 @@ td.classList.toggle("editable", canEdit);
     function openPrintModal(){
         if(!currentUser){alert(t("loginFirst")||"Please log in first.");return}
         printStaffOptions.style.display="block";
-        printAdminOptions.style.display=currentUser.is_admin?"block":"none";
+        printAdminOptions.style.display=hasPermission("print.open_admin")?"block":"none";
+        if (exportExcel) exportExcel.style.display = hasPermission("print.export_csv") ? "block" : "none";
+        if (reportRequestsUsage) reportRequestsUsage.style.display = hasPermission("print.export_csv") ? "block" : "none";
+        if (reportComments) reportComments.style.display = hasPermission("print.export_csv") ? "block" : "none";
         printModal.setAttribute("aria-hidden","false");
         printModal.style.display="flex"
     }
@@ -6958,7 +6901,7 @@ tr { page-break-inside: avoid; }
   background: #ffffff;
 }
 
-/* O¹ and O² - RED text, bold */
+/* O  and O  - RED text, bold */
 #rota td.cell.shift-o1,
 #rota td.cell.shift-o2 {
   background: #ffffff !important;
@@ -7193,9 +7136,9 @@ cells.forEach(function(cell){
   var text = (cell.textContent || '').trim();
   if(!text) return;
   
-  if(text === 'O¹' || text === 'O1') {
+  if(text === 'O ' || text === 'O1') {
     cell.classList.add('shift-o1');
-  } else if(text === 'O²' || text === 'O2') {
+  } else if(text === 'O ' || text === 'O2') {
     cell.classList.add('shift-o2');
   } else if(text === 'O') {
     cell.classList.add('shift-o');
@@ -7309,7 +7252,7 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
     
     // Admin print configuration modal
     function openAdminPrintConfig(){
-        if(!currentUser?.is_admin) {alert("Admin access required"); return}
+        if(!requirePermission("print.open_admin", "Admin print access required.")) return;
         closePrintModal();
         
         const modal = document.createElement("div");
@@ -7321,7 +7264,7 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
         let html = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
                 <h2 style="margin:0;font-size:17px;font-weight:700;letter-spacing:0.1px;">Admin Print Configuration</h2>
-                <button type="button" onclick="this.closest('[data-modal]').remove()" style="width:32px;height:32px;border-radius:10px;border:1px solid #e5eaf3;background:#ffffff;cursor:pointer;color:#94a3b8;box-shadow:0 3px 8px rgba(15,23,42,0.05);font-size:18px;line-height:1;">×</button>
+                <button type="button" onclick="this.closest('[data-modal]').remove()" style="width:32px;height:32px;border-radius:10px;border:1px solid #e5eaf3;background:#ffffff;cursor:pointer;color:#94a3b8;box-shadow:0 3px 8px rgba(15,23,42,0.05);font-size:18px;line-height:1;"> </button>
             </div>
             
             <!-- ROLES SECTION -->
@@ -7621,6 +7564,7 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
     }
     
     async function exportToExcel(){
+        if (!requirePermission("print.export_csv", "Permission required to export CSV.")) return;
         try{
             const weeks = (allWeeks || []).slice(weekWindowStart, weekWindowStart + WINDOW_WEEKS);
             if (!weeks.length) {
@@ -7651,9 +7595,9 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
             const formatRequestValue = (req) => {
                 if (!req) return "";
                 if (req.value === "O") {
-                    if (req.important_rank === 1) return "O¹";
-                    if (req.important_rank === 2) return "O²";
-                    if (req.important_rank === 3) return "O³";
+                    if (req.important_rank === 1) return "O ";
+                    if (req.important_rank === 2) return "O ";
+                    if (req.important_rank === 3) return "O ";
                     return "O";
                 }
                 if (req.value === "8-8") return "'8-8";
@@ -7732,6 +7676,7 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
     }
     
     async function generateRequestsUsageReport(){
+        if (!requirePermission("print.export_csv", "Permission required to export CSV.")) return;
         try{
             const weeks=allWeeks.slice(weekWindowStart,weekWindowStart+5);
             const stats=allUsers.map(user=>{
@@ -7780,6 +7725,7 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
     }
     
     async function generateCommentsReport(){
+        if (!requirePermission("print.export_csv", "Permission required to export CSV.")) return;
         try{
             if(!activePeriodId){
                 alert("No active period selected.");
@@ -7839,12 +7785,19 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
        10) BOOT
        ========================================================= */
     loadRota();
-    populateShiftGrid();
+    populateShiftGrid();  // Load shifts from catalogue for the request picker
     
 
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 

@@ -25,12 +25,6 @@
   <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Shift Functions -->
-  <script src="js/shift-functions.js" defer></script>
-  
-  <!-- View As Feature -->
-  <script src="js/view-as.js" defer></script>
-
   <!-- =========================
        STYLES
        ========================= -->
@@ -1911,11 +1905,6 @@ button.badge{
 </div>
 <div class="rightbits">
   <select id="periodSelect"></select>
-  <!-- View As Selector (Admin Only) -->
-  <select id="viewAsSelector" style="display:none; padding:8px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px; font-weight:600; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; cursor:pointer;">
-    <option value="">View As...</option>
-  </select>
-
 
   <!-- 👤 Account badge -->
   <button class="badge account-badge" id="loginBadge" type="button">
@@ -1926,11 +1915,6 @@ button.badge{
   <!-- 🖨️ Print/Export button (only for Sean Ells) -->
   <button class="badge" id="printBtn" type="button" title="Print & Export" style="display:none;">
     🖨️
-  </button>
-
-  <!-- 🔭 View As (superadmin only) -->
-  <button class="badge" id="viewAsBtn" type="button" title="View As" style="display:none;">
-    🔭
   </button>
 
   <!-- 🔔 Bell is its own button -->
@@ -6019,29 +6003,43 @@ document.addEventListener("keydown", (e) => {
    SHIFT PICKER: Dynamic shift grid population
    ========================================================= */
 
-// NOTE: This function is OVERRIDDEN by js/shift-functions.js
-// The external file handles NEW schema with allowed_staff_groups
 async function populateShiftGrid(){
-  console.warn("[INDEX.HTML] Old populateShiftGrid called - should be overridden by shift-functions.js");
   try {
     const { data: shifts, error: shiftsErr} = await supabaseClient
       .from("shifts")
-      .select("id, code, label, hours_value, allowed_staff_groups")
-      .eq("allow_requests", true)
-      .order("code", { ascending: true });
+      .select("id, code, label, metadata")
+      .order("sort_order", { ascending: true });
     
     if (shiftsErr) throw shiftsErr;
+    
+    const { data: scopes, error: scopesErr } = await supabaseClient
+      .from("shift_scopes")
+      .select("shift_id")
+      .eq("scope", "requests");
+    
+    if (scopesErr) throw scopesErr;
+    
+    const scopeSet = new Set((scopes || []).map(s => s.shift_id));
+    const requestShifts = (shifts || []).filter(s => scopeSet.has(s.id));
     
     const container = document.getElementById("shiftGridContainer");
     if (!container) return;
     
     let html = "";
-    (shifts || []).forEach(shift => {
-      html += `<button class="shift-btn" data-shift-id="${shift.id}" data-shift-code="${escapeHtml(shift.code)}" type="button">${escapeHtml(shift.code)}</button>`;
+    requestShifts.forEach(shift => {
+      const meta = shift.metadata || {};
+      const fillColor = meta.fill_color || "#f7f7f7";
+      const textColor = meta.text_color || "#000";
+      const borderColor = meta.border_color || "#ccc";
+      const fontWeight = meta.bold ? "bold" : "700";
+      const fontStyle = meta.italics ? "italic" : "normal";
+      
+      const style = `background-color:${fillColor}!important; color:${textColor}!important; border-color:${borderColor}!important; font-weight:${fontWeight}!important; font-style:${fontStyle}!important;`;
+      html += `<button class="shift-btn" data-shift="${escapeHtml(shift.code)}" type="button" style="${style}">${escapeHtml(shift.code)}</button>`;
     });
     
-    html += `<button class="shift-btn off" data-shift-code="O*" type="button">O*</button>`;
-    html += `<button class="shift-btn" data-shift-code="CLEAR" type="button">Clear</button>`;
+    html += `<button class="shift-btn off" data-shift="O*" type="button">O*</button>`;
+    html += `<button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>`;
     
     container.innerHTML = html;
     attachShiftButtonListeners();
@@ -6050,8 +6048,8 @@ async function populateShiftGrid(){
     const container = document.getElementById("shiftGridContainer");
     if (container) {
       container.innerHTML = `
-        <button class="shift-btn off" data-shift-code="O*" type="button">O*</button>
-        <button class="shift-btn" data-shift-code="CLEAR" type="button">Clear</button>
+        <button class="shift-btn off" data-shift="O*" type="button">O*</button>
+        <button class="shift-btn" data-shift="CLEAR" type="button">Clear</button>
       `;
       attachShiftButtonListeners();
     }
@@ -6066,7 +6064,7 @@ function attachShiftButtonListeners(){
       const td = activeCell.td;
       const userId = activeCell.userId;
       const date = activeCell.date;
-      const shift = this.dataset.shiftCode || this.dataset.shift; // Support both NEW and OLD
+      const shift = this.dataset.shift;
       const key = `${userId}_${date}`;
 
       let rankToSave = null;

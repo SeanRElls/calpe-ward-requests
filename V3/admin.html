@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -6,6 +6,7 @@
   <title>Calpe Ward Admin Console</title>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="js/view-as.js" defer></script>
   <style>
     :root{
       --ink: #0f172a;
@@ -21,7 +22,7 @@
 
     body{
       margin: 0;
-      font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
       color: var(--ink);
       background: var(--soft);
     }
@@ -421,6 +422,10 @@
 
     .perm-accordion summary::-webkit-details-marker{ display:none; }
 
+    .perm-accordion[open] summary{
+      background: #eef2ff;
+    }
+
     .perm-meta{
       font-size: 11px;
       color: var(--muted);
@@ -438,6 +443,11 @@
       color: var(--muted);
       border: 1px solid var(--line);
       background: #ffffff;
+      transition: transform 0.2s ease;
+    }
+
+    .perm-accordion[open] .perm-chevron{
+      transform: rotate(180deg);
     }
 
     .perm-body{
@@ -499,6 +509,17 @@
         <span class="status-dot"></span>
         <span>Not signed in</span>
       </div>
+      <div class="field" style="margin-bottom:14px;">
+        <h3>Quick login</h3>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+          <select id="adminLoginUser" class="control">
+            <option value="">Select user...</option>
+          </select>
+          <input id="adminLoginPin" class="control" placeholder="PIN (4 digits)" inputmode="numeric" maxlength="4" />
+          <button id="adminLoginBtn" class="btn primary" type="button">Sign in</button>
+          <div id="adminLoginMsg" class="page-subtitle"></div>
+        </div>
+      </div>
 
       <nav class="nav">
         <a class="is-active" data-panel="overview" href="#overview">Status</a>
@@ -551,7 +572,7 @@
 
           <div id="adminUserAuthNotice" class="field" style="display:none; margin-bottom:12px;">
             <h3>Admin access required</h3>
-            <p>Log in via the requests app first so we can read your admin session.</p>
+            <p>Sign in with your name and PIN to access admin tools.</p>
           </div>
 
           <div class="subtabs" role="tablist" aria-label="User management pages">
@@ -570,7 +591,7 @@
               </label>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-              <input id="adminUserSearch" class="control" placeholder="Search nameâ€¦" />
+              <input id="adminUserSearch" class="control" placeholder="Search name..." />
               <button id="adminAddUserBtn" class="btn primary" type="button">Add user</button>
             </div>
             <div id="adminUsersList" style="margin-top:12px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff;"></div>
@@ -602,9 +623,9 @@
             <details class="accordion" open>
               <summary class="accordion-title">Select user</summary>
               <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-                <input id="adminEditUserSearch" class="control" placeholder="Search userâ€¦" style="flex:1; min-width:180px;" />
+                <input id="adminEditUserSearch" class="control" placeholder="Search user..." style="flex:1; min-width:180px;" />
                 <select id="adminEditUserSelect" class="control" style="min-width:200px;">
-                  <option value="">Select userâ€¦</option>
+                  <option value="">Select user...</option>
                 </select>
               </div>
             </details>
@@ -637,7 +658,7 @@
                   <option value="2-per-week">2 per week</option>
                 </select>
                 <select id="adminUserAnchorWeek" class="control" style="min-width:160px;">
-                  <option value="">Anchor weekâ€¦</option>
+                  <option value="">Anchor week...</option>
                   <option value="1">Week 1</option>
                   <option value="2">Week 2</option>
                   <option value="3">Week 3</option>
@@ -673,9 +694,9 @@
             <h3>Permission groups</h3>
             <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
               <select id="permissionGroupSelect" class="control" style="max-width:240px;">
-                <option value="">Select groupâ€¦</option>
+                <option value="">Select group...</option>
               </select>
-              <input id="permissionGroupName" class="control" placeholder="New group nameâ€¦" style="max-width:240px;" />
+              <input id="permissionGroupName" class="control" placeholder="New group name..." style="max-width:240px;" />
               <button id="createPermissionGroupBtn" class="btn" type="button">Create group</button>
             </div>
             <div id="permissionGroupHelp" class="page-subtitle" style="margin-top:8px;">
@@ -716,10 +737,200 @@
 
         <section id="shift-catalogue" class="section panel" style="display:none;">
           <h2>Shift Catalogue</h2>
-          <p>Single source of truth for all shifts and picker scopes.</p>
-          <div class="actions">
-            <button class="btn primary" type="button">Add Shift</button>
-            <button class="btn" type="button">Import Catalogue</button>
+          <p>Define shifts, eligibility rules, and styling metadata.</p>
+
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <button id="createShiftBtn" class="btn primary" type="button">Create shift</button>
+          </div>
+
+          <div id="shiftsList" style="border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff;"></div>
+
+          <!-- Edit shift modal -->
+          <div id="editShiftModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; padding:20px; overflow-y:auto;">
+            <div style="background:#fff; border-radius:14px; max-width:600px; margin:40px auto; padding:24px;">
+              <h3 id="editShiftTitle" style="margin:0 0 16px 0; font-size:16px; font-weight:700;">Edit Shift</h3>
+              
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Code</h4>
+                <input id="editShiftCode" class="control" placeholder="e.g., LD" readonly style="background:#f5f5f5;" />
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Label</h4>
+                <input id="editShiftLabel" class="control" placeholder="e.g., Late Day" />
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div class="field">
+                  <h4 style="margin:0 0 8px 0;">Start Time (HH:MM)<span style="font-size:11px; color:var(--muted);"> optional</span></h4>
+                  <input id="editShiftStart" class="control" placeholder="e.g., 09:00" />
+                </div>
+                <div class="field">
+                  <h4 style="margin:0 0 8px 0;">End Time (HH:MM)<span style="font-size:11px; color:var(--muted);"> optional</span></h4>
+                  <input id="editShiftEnd" class="control" placeholder="e.g., 17:00" />
+                </div>
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Hours Total<span style="font-size:11px; color:var(--muted);"> optional</span></h4>
+                <input id="editShiftHours" class="control" type="number" placeholder="e.g., 8.0" />
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Eligible Staff Grades</h4>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="editShiftNA" /> Nursing Assistant
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="editShiftSN" /> Staff Nurse
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px;">
+                  <input type="checkbox" id="editShiftCN" /> Charge Nurse
+                </label>
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Styling</h4>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:8px;">
+                  <div>
+                    <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Fill Color</label>
+                    <input id="editShiftFill" class="control" type="color" value="#ffffff" style="height:40px;" />
+                  </div>
+                  <div>
+                    <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Text Color</label>
+                    <input id="editShiftText" class="control" type="color" value="#000000" style="height:40px;" />
+                  </div>
+                </div>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:4px;">
+                  <input type="checkbox" id="editShiftBold" /> Bold
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px;">
+                  <input type="checkbox" id="editShiftItalic" /> Italics
+                </label>
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Where can this shift be picked?</h4>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="editShiftRequests" /> In shift requests
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="editShiftRotaDraft" /> In rota draft
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="editShiftRotaPost" /> In rota (post-publish)
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px;">
+                  <input type="checkbox" id="editShiftAvailable" /> In available shifts
+                </label>
+              </div>
+
+              <div class="field" style="margin-bottom:12px; text-align:center;">
+                <h4 style="margin:0 0 8px 0;">Style Preview</h4>
+                <div id="editShiftPreview" style="padding:8px 12px; border-radius:6px; font-size:12px; font-weight:600; background:#ffffff; color:#000000; display:inline-block; min-width:100px;">
+                  Preview
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-top:16px;">
+                <button id="saveShiftBtn" class="btn primary" type="button">Save</button>
+                <button id="closeEditShiftBtn" class="btn" type="button">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Create shift modal -->
+          <div id="createShiftModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; padding:20px; overflow-y:auto;">
+            <div style="background:#fff; border-radius:14px; max-width:600px; margin:40px auto; padding:24px;">
+              <h3 style="margin:0 0 16px 0; font-size:16px; font-weight:700;">Create New Shift</h3>
+              
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Code</h4>
+                <input id="newShiftCode" class="control" placeholder="e.g., LD" />
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Label</h4>
+                <input id="newShiftLabel" class="control" placeholder="e.g., Late Day" />
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div class="field">
+                  <h4 style="margin:0 0 8px 0;">Start Time (HH:MM)<span style="font-size:11px; color:var(--muted);"> optional</span></h4>
+                  <input id="newShiftStart" class="control" placeholder="e.g., 09:00" />
+                </div>
+                <div class="field">
+                  <h4 style="margin:0 0 8px 0;">End Time (HH:MM)<span style="font-size:11px; color:var(--muted);"> optional</span></h4>
+                  <input id="newShiftEnd" class="control" placeholder="e.g., 17:00" />
+                </div>
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Hours Total<span style="font-size:11px; color:var(--muted);"> optional</span></h4>
+                <input id="newShiftHours" class="control" type="number" placeholder="e.g., 8.0" />
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Eligible Staff Grades</h4>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="newShiftNA" /> Nursing Assistant
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="newShiftSN" /> Staff Nurse
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px;">
+                  <input type="checkbox" id="newShiftCN" /> Charge Nurse
+                </label>
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Styling</h4>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:8px;">
+                  <div>
+                    <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Fill Color</label>
+                    <input id="newShiftFill" class="control" type="color" value="#ffffff" style="height:40px;" />
+                  </div>
+                  <div>
+                    <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Text Color</label>
+                    <input id="newShiftText" class="control" type="color" value="#000000" style="height:40px;" />
+                  </div>
+                </div>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:4px;">
+                  <input type="checkbox" id="newShiftBold" /> Bold
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px;">
+                  <input type="checkbox" id="newShiftItalic" /> Italics
+                </label>
+              </div>
+
+              <div class="field" style="margin-bottom:12px;">
+                <h4 style="margin:0 0 8px 0;">Where can this shift be picked?</h4>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="newShiftRequests" /> In shift requests
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="newShiftRotaDraft" /> In rota draft
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; margin-bottom:6px;">
+                  <input type="checkbox" id="newShiftRotaPost" /> In rota (post-publish)
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:12.5px;">
+                  <input type="checkbox" id="newShiftAvailable" /> In available shifts
+                </label>
+              </div>
+
+              <div class="field" style="margin-bottom:12px; text-align:center;">
+                <h4 style="margin:0 0 8px 0;">Style Preview</h4>
+                <div id="newShiftPreview" style="padding:8px 12px; border-radius:6px; font-size:12px; font-weight:600; background:#ffffff; color:#000000; display:inline-block; min-width:100px;">
+                  Preview
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-top:16px;">
+                <button id="createShiftSubmitBtn" class="btn primary" type="button">Create</button>
+                <button id="closeCreateShiftBtn" class="btn" type="button">Cancel</button>
+              </div>
+            </div>
           </div>
         </section>
 

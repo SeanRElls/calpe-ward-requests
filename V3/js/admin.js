@@ -1,7 +1,4 @@
-﻿const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    const STORAGE_KEY = "calpeward.loggedInUserId";
+    console.log("[ADMIN.JS] Script loaded");
 
     const navLinks = Array.from(document.querySelectorAll(".nav a[data-panel]"));
     const panels = Array.from(document.querySelectorAll(".panel"));
@@ -17,6 +14,10 @@
     const adminAddUserBtn = document.getElementById("adminAddUserBtn");
     const adminUserSearch = document.getElementById("adminUserSearch");
     const adminShowInactiveUsers = document.getElementById("adminShowInactiveUsers");
+    const adminLoginUser = document.getElementById("adminLoginUser");
+    const adminLoginPin = document.getElementById("adminLoginPin");
+    const adminLoginBtn = document.getElementById("adminLoginBtn");
+    const adminLoginMsg = document.getElementById("adminLoginMsg");
     const adminEditUserName = document.getElementById("adminEditUserName");
     const adminEditUserRole = document.getElementById("adminEditUserRole");
     const adminEditUserPin = document.getElementById("adminEditUserPin");
@@ -34,6 +35,8 @@
     const adminUsersReorderList = document.getElementById("adminUsersReorderList");
     const usersPages = Array.from(document.querySelectorAll(".users-page"));
     const usersPageTabs = Array.from(document.querySelectorAll(".subtab[data-users-page]"));
+    const shiftsPages = Array.from(document.querySelectorAll(".shifts-page"));
+    const shiftsPageTabs = Array.from(document.querySelectorAll(".subtab[data-shifts-page]"));
     const adminUserPermissionGroups = document.getElementById("adminUserPermissionGroups");
     const adminUserStatus = document.getElementById("adminUserStatus");
     const permissionGroupSelect = document.getElementById("permissionGroupSelect");
@@ -53,16 +56,75 @@
 
     function pinKey(userId){ return `calpeward.pin.${userId}`; }
 
+    const WINDOW_SESSION_PREFIX = "calpeward:";
+
+    function setWindowSession(userId, pin){
+      if (!userId || !pin) return;
+      try {
+        const payload = btoa(JSON.stringify({ userId: String(userId), pin: String(pin) }));
+        window.name = `${WINDOW_SESSION_PREFIX}${payload}`;
+      } catch (e) {
+        console.warn("Failed to store window session", e);
+      }
+    }
+
+    function getWindowSession(){
+      if (!window.name || !window.name.startsWith(WINDOW_SESSION_PREFIX)) {
+        console.log("[SESSION DEBUG] No window.name session. window.name=", window.name);
+        return null;
+      }
+      try {
+        const raw = window.name.slice(WINDOW_SESSION_PREFIX.length);
+        const session = JSON.parse(atob(raw));
+        console.log("[SESSION DEBUG] Window session found:", session);
+        return session;
+      } catch (e) {
+        console.warn("[SESSION DEBUG] Failed to parse window session", e);
+        return null;
+      }
+    }
+
+    function restoreSessionFromWindow(){
+      const data = getWindowSession();
+      console.log("[SESSION DEBUG] restoreSessionFromWindow: data=", data);
+      if (!data || !data.userId) {
+        console.log("[SESSION DEBUG] No data to restore");
+        return null;
+      }
+      console.log("[SESSION DEBUG] Restoring userId:", data.userId);
+      localStorage.setItem(STORAGE_KEY, data.userId);
+      console.log("[SESSION DEBUG] Set localStorage key:", STORAGE_KEY, "=", data.userId);
+      if (data.pin) {
+        sessionStorage.setItem(pinKey(data.userId), data.pin);
+        console.log("[SESSION DEBUG] Set sessionStorage pin for user", data.userId);
+      }
+      return data;
+    }
+
+    function clearWindowSession(){
+      if (window.name && window.name.startsWith(WINDOW_SESSION_PREFIX)) {
+        window.name = "";
+      }
+    }
+
     function getSessionPinOrThrow(){
       if (!currentUser) throw new Error("Not logged in.");
-      const pin = sessionStorage.getItem(pinKey(currentUser.id));
+      let pin = sessionStorage.getItem(pinKey(currentUser.id));
+      if (!pin) {
+        restoreSessionFromWindow();
+        pin = sessionStorage.getItem(pinKey(currentUser.id));
+      }
       if (!pin) throw new Error("Missing session PIN. Log in again.");
       return pin;
     }
 
     async function loadCurrentUser(){
+      console.log("[SESSION DEBUG] loadCurrentUser: starting");
+      restoreSessionFromWindow();
       const savedId = localStorage.getItem(STORAGE_KEY);
+      console.log("[SESSION DEBUG] loadCurrentUser: savedId from localStorage=", savedId);
       if (!savedId){
+        console.log("[SESSION DEBUG] No savedId, showing auth notice");
         adminUserAuthNotice.style.display = "block";
         updateUserStatus(null);
         return null;
@@ -88,6 +150,121 @@
       updateUserStatus(currentUser, true);
       applyPermissionUI();
       return currentUser;
+    }
+
+    async function loadLoginUsers(){
+      if (!adminLoginUser) return;
+      try {
+        const cachedRaw = localStorage.getItem("calpeward.users_cache");
+        const cachedUsers = cachedRaw ? JSON.parse(cachedRaw) : [];
+        const { data: users, error } = await supabaseClient
+          .from("users")
+          .select("id, name, is_active")
+          .order("name", { ascending: true });
+        if (error) throw error;
+        const sourceUsers = (users && users.length) ? users : cachedUsers;
+
+        const { data: permRows, error: permErr } = await supabaseClient
+          .from("permission_group_permissions")
+          .select("group_id")
+          .eq("permission_key", "system.admin_panel");
+        if (permErr) throw permErr;
+        const adminGroupIds = (permRows || []).map(r => r.group_id).filter(Boolean);
+
+        let adminUserIds = new Set();
+        if (adminGroupIds.length) {
+          const { data: groupUsers, error: guErr } = await supabaseClient
+            .from("user_permission_groups")
+            .select("user_id")
+            .in("group_id", adminGroupIds);
+          if (guErr) throw guErr;
+          adminUserIds = new Set((groupUsers || []).map(r => String(r.user_id)));
+        }
+
+        let options = (sourceUsers || [])
+          .filter(u => u.is_active !== false)
+          .filter(u => u.is_admin || adminUserIds.has(String(u.id)))
+          .map(u => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.name)}</option>`)
+          .join("");
+
+        if (!options) {
+          options = (sourceUsers || [])
+            .filter(u => u.is_active !== false)
+            .map(u => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.name)}</option>`)
+            .join("");
+          if (adminLoginMsg) adminLoginMsg.textContent = "No admin users found. Showing all active users.";
+        } else if (adminLoginMsg) {
+          adminLoginMsg.textContent = "";
+        }
+
+        adminLoginUser.innerHTML = `<option value="">Select user...</option>${options}`;
+      } catch (e) {
+        console.warn("Failed to load login users", e);
+        const cachedRaw = localStorage.getItem("calpeward.users_cache");
+        const cachedUsers = cachedRaw ? JSON.parse(cachedRaw) : [];
+        if (cachedUsers.length) {
+          const options = cachedUsers
+            .filter(u => u.is_active !== false)
+            .map(u => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.name)}</option>`)
+            .join("");
+          adminLoginUser.innerHTML = `<option value="">Select user...</option>${options}`;
+          if (adminLoginMsg) adminLoginMsg.textContent = "Loaded from cached users.";
+        } else {
+          adminLoginUser.innerHTML = `<option value="">Unable to load users</option>`;
+        }
+      }
+    }
+
+    async function adminLogin(){
+      if (!adminLoginUser || !adminLoginPin) return;
+      const userId = adminLoginUser.value;
+      const pin = (adminLoginPin.value || "").trim();
+      if (!userId) {
+        if (adminLoginMsg) adminLoginMsg.textContent = "Select a user.";
+        return;
+      }
+      if (!/^\d{4}$/.test(pin)) {
+        if (adminLoginMsg) adminLoginMsg.textContent = "Enter a 4-digit PIN.";
+        return;
+      }
+      if (adminLoginMsg) adminLoginMsg.textContent = "Signing in...";
+      try {
+        const { data: ok, error: vErr } = await supabaseClient.rpc("verify_user_pin", {
+          p_user_id: userId,
+          p_pin: pin
+        });
+        if (vErr) throw vErr;
+        if (!ok) {
+          if (adminLoginMsg) adminLoginMsg.textContent = "Invalid PIN.";
+          return;
+        }
+        const { data: user, error } = await supabaseClient
+          .from("users")
+          .select("id, name, role_id, is_admin, is_active")
+          .eq("id", userId)
+          .single();
+        if (error || !user) throw error || new Error("User not found");
+        localStorage.setItem(STORAGE_KEY, user.id);
+        sessionStorage.setItem(pinKey(user.id), pin);
+        setWindowSession(user.id, pin);
+        currentUser = user;
+        await loadUserPermissions();
+        const canAccess = hasPermission("system.admin_panel");
+        updateUserStatus(currentUser, canAccess);
+        adminUserAuthNotice.style.display = canAccess ? "none" : "block";
+        applyPermissionUI();
+        if (adminLoginMsg) {
+          adminLoginMsg.textContent = canAccess
+            ? "Signed in."
+            : "Signed in, but admin access is restricted.";
+        }
+        const activeLink = document.querySelector(".nav a.is-active");
+        const panelId = activeLink?.dataset.panel || navLinks[0]?.dataset.panel;
+        if (panelId) showPanel(panelId);
+      } catch (e) {
+        console.error(e);
+        if (adminLoginMsg) adminLoginMsg.textContent = "Login failed. Try again.";
+      }
     }
 
     async function loadUserPermissions(){
@@ -188,7 +365,7 @@
         adminUsersList.innerHTML = `<div class="page-subtitle" style="padding:10px;">Restricted</div>`;
         return;
       }
-      adminUsersList.textContent = "Loading usersâ€¦";
+      adminUsersList.textContent = "Loading users...";
 
       const { data, error } = await supabaseClient
         .from("users")
@@ -242,6 +419,7 @@
           const actionButtons = []
             .concat(allowEdit ? `<button type="button" class="btn" data-act="edit" data-id="${u.id}">Edit</button>` : [])
             .concat(allowToggle ? `<button type="button" class="btn" data-act="toggle" data-id="${u.id}">${u.is_active === false ? "Reactivate" : "Deactivate"}</button>` : [])
+            .concat(currentUser?.is_admin && !isAdminAccount ? `<button type="button" class="btn" data-act="viewas" data-id="${u.id}" style="background:#667eea; color:white; border-color:#667eea;">View As</button>` : [])
             .join("");
 
           return `
@@ -276,7 +454,7 @@
         .slice()
         .filter(u => (u.name || "").toLowerCase().includes(q))
         .map(u => `<option value="${u.id}">${escapeHtml(u.name || "")}</option>`);
-      adminEditUserSelect.innerHTML = `<option value="">Select userâ€¦</option>${options.join("")}`;
+      adminEditUserSelect.innerHTML = `<option value="">Select user...</option>${options.join("")}`;
     }
 
     function renderAdminUsersReorder(){
@@ -305,7 +483,7 @@
         html.push(members.map(u => {
           return `
             <div class="user-row" draggable="true" data-user-id="${u.id}" data-role-id="${g.role_id}">
-              <div class="drag-handle" title="Drag to reorder">â‰¡</div>
+              <div class="drag-handle" title="Drag to reorder">|||</div>
               <div class="user-meta">
                 <div class="user-name">${escapeHtml(u.name || "")}</div>
               </div>
@@ -546,6 +724,9 @@
       if (id === "permissions"){
         ensureCurrentUser().then(() => loadPermissionsCatalogue());
       }
+      if (id === "shift-catalogue"){
+        ensureCurrentUser().then(() => loadShiftsCatalogue());
+      }
     }
 
     navLinks.forEach(link => {
@@ -558,6 +739,18 @@
     usersPageTabs.forEach(tab => {
       tab.addEventListener("click", () => {
         showUsersPage(tab.dataset.usersPage);
+      });
+    });
+
+    shiftsPageTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        const pageId = "shiftsPage" + tab.dataset.shiftsPage.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("");
+        shiftsPages.forEach(page => {
+          page.style.display = page.id === pageId ? "block" : "none";
+        });
+        shiftsPageTabs.forEach(t => {
+          t.classList.toggle("is-active", t === tab);
+        });
       });
     });
 
@@ -773,7 +966,7 @@
                 ${escapeHtml(cat.title || "")}
                 <span class="perm-meta">${selectedCount}/${items.length} enabled</span>
               </div>
-              <span class="perm-chevron">âŒ„</span>
+              <span class="perm-chevron">v</span>
             </summary>
             <div class="perm-body">
               ${rows}
@@ -908,6 +1101,247 @@
       }
     }
 
+    async function loadShiftsCatalogue(){
+      if (!hasPermission("manage_shifts")) {
+        const list = document.getElementById("shiftsList");
+        if (list) list.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted);">Restricted access.</div>`;
+        return;
+      }
+      try {
+        // Query NEW schema: shifts table with allowed_staff_groups and scope flags
+        const { data: shifts, error: shiftsErr } = await supabaseClient
+          .from("shifts")
+          .select("id, code, label, hours_value, start_time, end_time, day_or_night, allowed_staff_groups, allow_requests, allow_draft, allow_post_publish")
+          .order("code", { ascending: true });
+        if (shiftsErr) throw shiftsErr;
+        allShifts = shifts || [];
+
+        const list = document.getElementById("shiftsList");
+        if (!list) return;
+        
+        list.innerHTML = (shifts || []).map(shift => {
+          const hours = shift.start_time && shift.end_time ? `${shift.start_time.substring(0,5)}–${shift.end_time.substring(0,5)}` : "(no hours)";
+          const staffGroups = shift.allowed_staff_groups || "None";
+          const scopes = [];
+          if (shift.allow_requests) scopes.push("requests");
+          if (shift.allow_draft) scopes.push("draft");
+          if (shift.allow_post_publish) scopes.push("post-publish");
+          const shiftScopes = scopes.join(", ") || "None";
+          
+          return `
+            <div style="padding:12px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <div style="flex:1;">
+                <div style="display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:8px; background:#f7f7f7; color:#000; border:1px solid #ccc; font-size:12px; font-weight:600;">
+                  ${escapeHtml(shift.code)} – ${escapeHtml(shift.label)} (${shift.hours_value}h)
+                </div>
+                <div style="font-size:11px; color:var(--muted); margin:4px 0;">Hours: ${escapeHtml(hours)}</div>
+                <div style="font-size:11px; color:var(--muted); margin:4px 0;">Staff Groups: ${escapeHtml(staffGroups)}</div>
+                <div style="font-size:11px; color:var(--muted); margin:4px 0;">Scopes: ${escapeHtml(shiftScopes)}</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn" onclick="editShift('${escapeHtml(shift.id)}')">Edit</button>
+                <button class="btn" onclick="deleteShift('${escapeHtml(shift.id)}', '${escapeHtml(shift.code)}')" style="background:#ef4444; color:#fff; border-color:#ef4444;">Delete</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        if ((shifts || []).length === 0) {
+          list.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted);">No shifts found.</div>`;
+        }
+      } catch (e) {
+        console.error("Failed to load shifts", e);
+        const list = document.getElementById("shiftsList");
+        if (list) list.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted);">Failed to load shifts.</div>`;
+      }
+    }
+
+    let allShifts = [];
+    let currentEditingShiftId = null;
+
+    function updateShiftPreview(){
+      const preview = document.getElementById("editShiftPreview");
+      if (!preview) return;
+      const fillColor = document.getElementById("editShiftFill")?.value || "#ffffff";
+      const textColor = document.getElementById("editShiftText")?.value || "#000000";
+      const bold = document.getElementById("editShiftBold")?.checked || false;
+      const italic = document.getElementById("editShiftItalic")?.checked || false;
+      preview.style.backgroundColor = fillColor;
+      preview.style.color = textColor;
+      preview.style.fontWeight = bold ? "700" : "600";
+      preview.style.fontStyle = italic ? "italic" : "normal";
+    }
+
+    function updateNewShiftPreview(){
+      const preview = document.getElementById("newShiftPreview");
+      if (!preview) return;
+      const fillColor = document.getElementById("newShiftFill")?.value || "#ffffff";
+      const textColor = document.getElementById("newShiftText")?.value || "#000000";
+      const bold = document.getElementById("newShiftBold")?.checked || false;
+      const italic = document.getElementById("newShiftItalic")?.checked || false;
+      preview.style.backgroundColor = fillColor;
+      preview.style.color = textColor;
+      preview.style.fontWeight = bold ? "700" : "600";
+      preview.style.fontStyle = italic ? "italic" : "normal";
+    }
+
+    window.editShift = async function(shiftId){
+      console.log("[EDIT SHIFT] Called with ID:", shiftId);
+      currentEditingShiftId = shiftId;
+      const shift = allShifts.find(s => s.id == shiftId); // Use == instead of === for type coercion
+      if (!shift) {
+        console.error("[EDIT SHIFT] Shift not found:", shiftId);
+        alert("Shift not found!");
+        return;
+      }
+
+      console.log("[EDIT SHIFT] Found shift:", shift);
+
+      try {
+        // NEW schema: allowed_staff_groups is comma-separated string
+        const staffGroups = (shift.allowed_staff_groups || "").split(",").map(g => g.trim());
+
+        document.getElementById("editShiftTitle").textContent = `Edit Shift: ${shift.code}`;
+        document.getElementById("editShiftCode").value = shift.code;
+        document.getElementById("editShiftLabel").value = shift.label || "";
+        document.getElementById("editShiftStart").value = shift.start_time || "";
+        document.getElementById("editShiftEnd").value = shift.end_time || "";
+        document.getElementById("editShiftHours").value = shift.hours_value || "";
+        document.getElementById("editShiftNA").checked = staffGroups.includes("NA");
+        document.getElementById("editShiftSN").checked = staffGroups.includes("Nurse");
+        document.getElementById("editShiftCN").checked = staffGroups.includes("CN");
+        document.getElementById("editShiftRequests").checked = shift.allow_requests || false;
+        document.getElementById("editShiftRotaDraft").checked = shift.allow_draft || false;
+        document.getElementById("editShiftRotaPost").checked = shift.allow_post_publish || false;
+
+        console.log("[EDIT SHIFT] Opening modal");
+        document.getElementById("editShiftModal").style.display = "block";
+      } catch (e) {
+        console.error("[EDIT SHIFT] Error:", e);
+        alert("Failed to open edit form: " + e.message);
+      }
+    };
+
+    window.saveShift = async function(){
+      if (!currentEditingShiftId) return;
+      const shift = allShifts.find(s => s.id === currentEditingShiftId);
+      if (!shift) return;
+
+      try {
+        // NEW schema: allowed_staff_groups is comma-separated string
+        const staffGroups = [];
+        if (document.getElementById("editShiftNA").checked) staffGroups.push("NA");
+        if (document.getElementById("editShiftSN").checked) staffGroups.push("Nurse");
+        if (document.getElementById("editShiftCN").checked) staffGroups.push("CN");
+
+        const { error: updateErr } = await supabaseClient
+          .from("shifts")
+          .update({
+            label: document.getElementById("editShiftLabel").value,
+            start_time: document.getElementById("editShiftStart").value || null,
+            end_time: document.getElementById("editShiftEnd").value || null,
+            hours_value: parseFloat(document.getElementById("editShiftHours").value) || 0,
+            allowed_staff_groups: staffGroups.join(","),
+            allow_requests: document.getElementById("editShiftRequests").checked,
+            allow_draft: document.getElementById("editShiftRotaDraft").checked,
+            allow_post_publish: document.getElementById("editShiftRotaPost").checked
+          })
+          .eq("id", currentEditingShiftId);
+        if (updateErr) throw updateErr;
+
+        alert("Shift updated successfully!");
+        document.getElementById("editShiftModal").style.display = "none";
+        await loadShiftsCatalogue();
+      } catch (e) {
+        console.error("Failed to save shift", e);
+        alert("Failed to save shift: " + e.message);
+      }
+    };
+
+    window.deleteShift = async function(shiftId, shiftCode){
+      if (!confirm(`Are you sure you want to delete shift "${shiftCode}"?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const { error: deleteErr } = await supabaseClient
+          .from("shifts")
+          .delete()
+          .eq("id", shiftId);
+        
+        if (deleteErr) throw deleteErr;
+
+        alert(`Shift "${shiftCode}" deleted successfully!`);
+        await loadShiftsCatalogue();
+      } catch (e) {
+        console.error("Failed to delete shift", e);
+        alert("Failed to delete shift: " + e.message);
+      }
+    };
+
+    window.createNewShift = async function(){
+      const code = document.getElementById("newShiftCode")?.value?.trim();
+      const label = document.getElementById("newShiftLabel")?.value?.trim();
+      
+      if (!code || !label) {
+        alert("Code and Label are required.");
+        return;
+      }
+
+      try {
+        // NEW schema: allowed_staff_groups is comma-separated string
+        const staffGroups = [];
+        if (document.getElementById("newShiftNA").checked) staffGroups.push("NA");
+        if (document.getElementById("newShiftSN").checked) staffGroups.push("Nurse");
+        if (document.getElementById("newShiftCN").checked) staffGroups.push("CN");
+
+        const { data: newShift, error: insertErr } = await supabaseClient
+          .from("shifts")
+          .insert({
+            code: code,
+            label: label,
+            start_time: document.getElementById("newShiftStart").value || null,
+            end_time: document.getElementById("newShiftEnd").value || null,
+            hours_value: parseFloat(document.getElementById("newShiftHours").value) || 0,
+            allowed_staff_groups: staffGroups.join(","),
+            allow_requests: document.getElementById("newShiftRequests").checked,
+            allow_draft: document.getElementById("newShiftRotaDraft").checked,
+            allow_post_publish: document.getElementById("newShiftRotaPost").checked,
+            day_or_night: "day"
+          })
+          .select();
+        if (insertErr) throw insertErr;
+        if (!newShift || newShift.length === 0) throw new Error("Failed to create shift");
+
+        alert("Shift created successfully!");
+        document.getElementById("createShiftModal").style.display = "none";
+        clearCreateShiftForm();
+        await loadShiftsCatalogue();
+      } catch (e) {
+        console.error("Failed to create shift", e);
+        alert("Failed to create shift: " + e.message);
+      }
+    };
+
+    function clearCreateShiftForm(){
+      document.getElementById("newShiftCode").value = "";
+      document.getElementById("newShiftLabel").value = "";
+      document.getElementById("newShiftStart").value = "";
+      document.getElementById("newShiftEnd").value = "";
+      document.getElementById("newShiftHours").value = "";
+      document.getElementById("newShiftNA").checked = false;
+      document.getElementById("newShiftSN").checked = false;
+      document.getElementById("newShiftCN").checked = false;
+      document.getElementById("newShiftFill").value = "#ffffff";
+      document.getElementById("newShiftText").value = "#000000";
+      document.getElementById("newShiftBold").checked = false;
+      document.getElementById("newShiftItalic").checked = false;
+      document.getElementById("newShiftRequests").checked = false;
+      document.getElementById("newShiftRotaDraft").checked = false;
+      document.getElementById("newShiftRotaPost").checked = false;
+      document.getElementById("newShiftAvailable").checked = false;
+      updateNewShiftPreview();
+    }
     adminCreateUserBtn?.addEventListener("click", createUser);
     adminAddUserCancelBtn?.addEventListener("click", clearUserAddForm);
 
@@ -927,6 +1361,15 @@
         loadUserPermissionGroups(id);
       }
       if (act === "toggle") toggleUserActive(id);
+      if (act === "viewas") {
+        if (confirm("Switch to viewing as this user?\n\nYou'll be able to see what they see in the app, including their shift picker options.")) {
+          if (typeof startViewingAs === 'function') {
+            startViewingAs(id);
+          } else {
+            alert("View As feature not loaded. Refresh the page.");
+          }
+        }
+      }
     });
 
     adminEditUserSearch?.addEventListener("input", () => {
@@ -949,8 +1392,71 @@
       saveUserPermissionGroups(userId);
     });
 
-    window.addEventListener("load", () => {
-      ensureCurrentUser();
+    // Shift catalogue event listeners
+    document.getElementById("createShiftBtn")?.addEventListener("click", () => {
+      clearCreateShiftForm();
+      document.getElementById("createShiftModal").style.display = "block";
+    });
+
+    // Add style preview listeners for create form
+    ["newShiftFill", "newShiftText", "newShiftBold", "newShiftItalic"].forEach(id => {
+      const elem = document.getElementById(id);
+      if (elem) {
+        elem.addEventListener("change", updateNewShiftPreview);
+        elem.addEventListener("input", updateNewShiftPreview);
+      }
+    });
+
+    // Add style preview listeners for edit form
+    ["editShiftFill", "editShiftText", "editShiftBold", "editShiftItalic"].forEach(id => {
+      const elem = document.getElementById(id);
+      if (elem) {
+        elem.addEventListener("change", updateShiftPreview);
+        elem.addEventListener("input", updateShiftPreview);
+      }
+    });
+
+    document.getElementById("createShiftSubmitBtn")?.addEventListener("click", createNewShift);
+    document.getElementById("closeCreateShiftBtn")?.addEventListener("click", () => {
+      document.getElementById("createShiftModal").style.display = "none";
+      clearCreateShiftForm();
+    });
+
+    document.getElementById("saveShiftBtn")?.addEventListener("click", saveShift);
+    document.getElementById("closeEditShiftBtn")?.addEventListener("click", () => {
+      document.getElementById("editShiftModal").style.display = "none";
+      currentEditingShiftId = null;
+    });
+
+    // Close modals when clicking outside
+    document.getElementById("editShiftModal")?.addEventListener("click", (e) => {
+      if (e.target.id === "editShiftModal") {
+        e.target.style.display = "none";
+        currentEditingShiftId = null;
+      }
+    });
+
+    document.getElementById("createShiftModal")?.addEventListener("click", (e) => {
+      if (e.target.id === "createShiftModal") {
+        e.target.style.display = "none";
+        clearCreateShiftForm();
+      }
+    });
+
+    console.log("[ADMIN.JS] Attaching load listener");
+    window.addEventListener("load", async () => {
+      console.log("[ADMIN.JS] Load event fired, calling ensureCurrentUser");
+      await ensureCurrentUser();
+      console.log("[ADMIN.JS] ensureCurrentUser done, calling loadLoginUsers");
+      await loadLoginUsers();
+      const activeLink = document.querySelector(".nav a.is-active");
+      const panelId = activeLink?.dataset.panel || navLinks[0]?.dataset.panel;
+      if (panelId) showPanel(panelId);
+    });
+
+    adminLoginBtn?.addEventListener("click", adminLogin);
+    adminLoginPin?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") adminLogin();
     });
 
     adminUsersReorderList?.addEventListener("dragstart", (e) => {

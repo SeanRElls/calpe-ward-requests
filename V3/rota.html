@@ -1183,9 +1183,8 @@
         window.resetEditingLock();
       }
 
-      // Banners: draft editing or published editing (only if permitted)
+      // Banner for draft editing only
       if (metadataDisplay) metadataDisplay.style.display = "none";
-      if (publishedBanner) publishedBanner.style.display = (isPublished && canEditPublished) ? "block" : "none";
     }
 
     async function publishPeriod() {
@@ -1425,20 +1424,15 @@
           window.initDraftEditing({
             onUnlock: () => {
               const metadataDisplay = document.getElementById("metadataDisplay");
-              const publishedBanner = document.getElementById("publishedEditBanner");
               if (currentEditContext === "draft") {
                 if (metadataDisplay) metadataDisplay.style.display = "block";
-                if (publishedBanner) publishedBanner.style.display = "none";
               } else {
                 if (metadataDisplay) metadataDisplay.style.display = "none";
-                if (publishedBanner) publishedBanner.style.display = "block";
               }
             },
             onLock: () => {
               const metadataDisplay = document.getElementById("metadataDisplay");
-              const publishedBanner = document.getElementById("publishedEditBanner");
               if (metadataDisplay) metadataDisplay.style.display = "none";
-              if (publishedBanner) publishedBanner.style.display = "none";
             },
             onPublishedCellClick: ({ userId, date }) => {
               openPublishedDetails({ userId, date });

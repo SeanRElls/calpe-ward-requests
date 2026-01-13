@@ -158,7 +158,7 @@ async function startViewingAs(userId) {
 
     const { data: user, error } = await supabaseClient
       .from("users")
-      .select("*")
+      .select("id, name, role_id, is_admin, is_active, preferred_lang, display_order")
       .eq("id", userId)
       .single();
 
@@ -232,20 +232,7 @@ async function populateViewAsSelector(targetSelector, statusEl) {
     return;
   }
 
-  try {
-    if (typeof supabaseClient === "undefined") {
-      throw new Error("Supabase client not initialised. Load page over http(s) so config.js runs.");
-    }
-
-    const { data: users, error } = await supabaseClient
-      .from("users")
-      .select("id, name, role_id, staff_group, is_admin, is_active")
-      .eq("is_active", true)
-      .order("role_id", { ascending: true })
-      .order("name", { ascending: true });
-
-    if (error) throw error;
-
+  const buildOptions = (users) => {
     const roles = {
       1: "Charge Nurses",
       2: "Staff Nurses",
@@ -259,8 +246,7 @@ async function populateViewAsSelector(targetSelector, statusEl) {
       if (roleUsers.length) {
         html += `<optgroup label="${roles[roleId]}">`;
         roleUsers.forEach(u => {
-          const staffGroup = u.staff_group ? ` (${u.staff_group})` : "";
-          html += `<option value="${u.id}">${escapeHtml(u.name)}${staffGroup}</option>`;
+          html += `<option value="${u.id}">${escapeHtml(u.name)}</option>`;
         });
         html += "</optgroup>";
       }
@@ -281,10 +267,43 @@ async function populateViewAsSelector(targetSelector, statusEl) {
       this.value = "";
       updateViewAsBannerState();
     };
+  };
+
+  try {
+    // Prefer already-loaded users if available
+    const preloaded = Array.isArray(window.allUsers) && window.allUsers.length ? window.allUsers : null;
+    if (preloaded) {
+      buildOptions(preloaded);
+      return;
+    }
+
+    if (typeof supabaseClient === "undefined") {
+      if (statusEl) statusEl.textContent = "Loading… (waiting for Supabase)";
+      setTimeout(() => populateViewAsSelector(selector, statusEl), 600);
+      return;
+    }
+
+    const { data: users, error } = await supabaseClient
+      .from("users")
+      .select("id, name, role_id, is_admin, is_active")
+      .eq("is_active", true)
+      .order("role_id", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (error) throw error;
+
+    buildOptions(users || []);
   } catch (e) {
     console.error("Failed to populate View As selector", e);
+    const fallbackUsers = Array.isArray(window.allUsers) ? window.allUsers : [];
+    if (fallbackUsers.length) {
+      if (statusEl) statusEl.textContent = "Using cached users (supabase unavailable)";
+      buildOptions(fallbackUsers);
+      return;
+    }
+
     selector.innerHTML = '<option value="">View As unavailable</option>';
-    if (statusEl) statusEl.textContent = "View As unavailable. Check network/sign-in and avoid file://.";
+    if (statusEl) statusEl.textContent = `View As unavailable: ${e?.message || "Check network/sign-in and avoid file://."}`;
   }
 }
 

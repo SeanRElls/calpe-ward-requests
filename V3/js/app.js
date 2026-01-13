@@ -3861,6 +3861,11 @@ async function loadRota() {
   allUsers = users || [];
   usersById = new Map((users || []).map(u => [u.id, u.name]));
 
+  // Refresh View As selector once users are loaded
+  if (typeof populateViewAsSelector === "function") {
+    populateViewAsSelector();
+  }
+
   // ðŸ” Restore logged-in user from localStorage (ONE TIME LOGIN)
 const savedId = localStorage.getItem(STORAGE_KEY);
 if (savedId && !currentUser) {

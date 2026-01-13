@@ -27,9 +27,6 @@
 
   <!-- Shift Functions -->
   <script src="js/shift-functions.js" defer></script>
-  
-  <!-- View As Feature -->
-  <script src="js/view-as.js" defer></script>
 
   <!-- =========================
        STYLES
@@ -1892,6 +1889,13 @@ button.badge{
 
 <body>
   <div class="wrap">
+    <!-- Page Navigation -->
+    <div id="pageNav" style="padding: 8px 12px; background: #f0f0f0; border-bottom: 1px solid #ddd; display: flex; gap: 12px; font-size: 14px;">
+      <a href="index.html" style="color: #4F8DF7; text-decoration: none; font-weight: 600;">📋 Requests</a>
+      <a href="#" onclick="navigateToRota(); return false;" style="color: #4F8DF7; text-decoration: none;">📅 View Rota</a>
+      <a href="#" id="navAdminLink" onclick="goToFullAdmin(); return false;" style="color: #4F8DF7; text-decoration: none; display: none;">⚙️ Admin</a>
+    </div>
+    
     <div class="titlebar">
      <div style="display:flex; gap:12px; align-items:center;">
   <img
@@ -1911,12 +1915,6 @@ button.badge{
 </div>
 <div class="rightbits">
   <select id="periodSelect"></select>
-  <!-- View As Selector (Admin Only) -->
-  <select id="viewAsSelector" style="display:none; padding:8px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px; font-weight:600; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; cursor:pointer;">
-    <option value="">View As...</option>
-  </select>
-
-
   <!-- 👤 Account badge -->
   <button class="badge account-badge" id="loginBadge" type="button">
     <span class="acc-ic">👤</span>
@@ -1928,12 +1926,7 @@ button.badge{
     🖨️
   </button>
 
-  <!-- 🔭 View As (superadmin only) -->
-  <button class="badge" id="viewAsBtn" type="button" title="View As" style="display:none;">
-    🔭
-  </button>
-
-  <!-- 🔔 Bell is its own button -->
+  <!--  Bell is its own button -->
   <button class="badge" id="noticeBell" type="button" title="Notices">
     🔔 <span id="noticeBellDot" style="display:none;">•</span>
   </button>
@@ -2059,6 +2052,7 @@ button.badge{
   <button id="adminTabUsers"    class="admin-tab">Users</button>
   <button id="adminTabNotices"  class="admin-tab">Notices</button>
   <button class="admin-tab" onclick="goToFullAdmin()" style="cursor:pointer;">Full Admin</button>
+  <button class="admin-tab" onclick="goToDraftRota()" style="cursor:pointer;">Draft Rota</button>
 </div>
 
 
@@ -3950,6 +3944,28 @@ function goToFullAdmin() {
   const sessionData = { userId: currentUser.id, pin: pin };
   window.name = "calpeward:" + btoa(JSON.stringify(sessionData));
   window.location.href = "admin.html";
+}
+
+function navigateToRota() {
+  console.log("[DEBUG] navigateToRota called");
+  if (!currentUser) {
+    alert("Not logged in.");
+    return;
+  }
+  const pin = sessionStorage.getItem(`calpeward.pin.${currentUser.id}`);
+  if (!pin) {
+    alert("No session PIN. Log in again.");
+    return;
+  }
+  console.log("[DEBUG] Storing session and navigating to rota.html");
+  const sessionData = { userId: currentUser.id, pin: pin };
+  window.name = "calpeward:" + btoa(JSON.stringify(sessionData));
+  window.location.href = "rota.html";
+}
+
+// Alias for backward compatibility
+function goToDraftRota() {
+  navigateToRota();
 }
 
 
@@ -5937,6 +5953,10 @@ if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
 
   // Show print button only for admins
   if (printBtn) printBtn.style.display = currentUser.is_admin ? "inline-block" : "none";
+  
+  // Show navigation admin link only for admins
+  const navAdminLink = document.getElementById("navAdminLink");
+  if (navAdminLink) navAdminLink.style.display = currentUser.is_admin ? "inline" : "none";
 
   // Toggle a body-level class so we can scope admin-only UI affordances (e.g. locked-cell highlight)
   try {
@@ -5956,6 +5976,11 @@ if (txt) txt.textContent = `${t("accountEditTitle")}: ${currentUser.name}`;
 
 function openShiftModal(){
   if (!activeCell) return;
+
+  // Rebuild shift picker for current user
+  if (typeof populateShiftGrid === 'function') {
+    populateShiftGrid();
+  }
 
   // Admin-only: show lock button and paint state
   if (shiftLockBtn) {
@@ -6602,11 +6627,11 @@ ${w.weekId ? `
 `;
 r1.appendChild(th);
 
-    if(idx !== weeks.length - 1){
-      const sep = document.createElement("th");
-      sep.className = "week-sep";
-      r1.appendChild(sep);
-    }
+    const sep = document.createElement("th");
+    sep.className = "week-sep";
+    sep.style.minWidth = "35px";
+    sep.style.backgroundColor = "#808080";
+    r1.appendChild(sep);
   });
   thead.appendChild(r1);
 
@@ -6626,11 +6651,11 @@ r1.appendChild(th);
       th.textContent = dayLetters[i];
       r2.appendChild(th);
     }
-    if(idx !== weeks.length - 1){
-      const sep = document.createElement("th");
-      sep.className = "week-sep";
-      r2.appendChild(sep);
-    }
+    const sep = document.createElement("th");
+    sep.className = "week-sep";
+    sep.style.minWidth = "35px";
+    sep.style.backgroundColor = "#808080";
+    r2.appendChild(sep);
   });
   thead.appendChild(r2);
 
@@ -6651,11 +6676,11 @@ r1.appendChild(th);
       th.textContent = d.getDate();
       r3.appendChild(th);
     }
-    if(idx !== weeks.length - 1){
-      const sep = document.createElement("th");
-      sep.className = "week-sep";
-      r3.appendChild(sep);
-    }
+    const sep = document.createElement("th");
+    sep.className = "week-sep";
+    sep.style.minWidth = "35px";
+    sep.style.backgroundColor = "#808080";
+    r3.appendChild(sep);
   });
   thead.appendChild(r3);
 
@@ -6672,7 +6697,7 @@ r1.appendChild(th);
 
     const sectionTd = document.createElement("td");
     sectionTd.className = `name-col ${g.className}`;
-    sectionTd.colSpan = 1 + (weeks.length * 7) + (weeks.length - 1);
+    sectionTd.colSpan = 1 + (weeks.length * 7) + weeks.length;
     sectionTd.innerHTML = `<span>${g.title}</span>`;
     sectionTr.appendChild(sectionTd);
     tbody.appendChild(sectionTr);
@@ -6734,11 +6759,19 @@ if (pe.shift === "O") {
           tr.appendChild(td);
         }
 
-        if(idx !== weeks.length - 1){
-          const sep = document.createElement("td");
-          sep.className = "week-sep";
-          tr.appendChild(sep);
-        }
+        // Add separator with target number INSIDE it
+        const sep = document.createElement("td");
+        sep.className = "week-sep";
+        sep.setAttribute("data-user-id", u.id);
+        sep.setAttribute("data-week-start", w.weekStart.toISOString().split('T')[0]);
+        sep.style.position = "relative";
+        sep.style.minWidth = "35px";
+        sep.style.fontSize = "13px";
+        sep.style.fontWeight = "600";
+        sep.style.textAlign = "center";
+        sep.style.paddingTop = "4px";
+        sep.style.paddingBottom = "4px";
+        tr.appendChild(sep);
       });
 
       tbody.appendChild(tr);
@@ -6746,14 +6779,91 @@ if (pe.shift === "O") {
   }
 
   // Keep your existing logic
+  populatePatternTargets();
   applyUnlockState();
   updateBadges();
 }
 
-
-    /* =========================================================
-   9) UNLOCK LOGIC (who can edit which row)
+/* =========================================================
+   PATTERN TARGET DISPLAY - Shows each person's weekly target
    ========================================================= */
+async function populatePatternTargets() {
+  try {
+    // Get all user patterns
+    const { data: userPatterns, error: upErr } = await supabaseClient
+      .from("user_patterns")
+      .select("user_id, pattern_id, anchor_week_start_date");
+    if (upErr) throw upErr;
+
+    const { data: patterns, error: pErr } = await supabaseClient
+      .from("pattern_definitions")
+      .select("id, weekly_targets, requires_anchor");
+    if (pErr) throw pErr;
+
+    const patternMap = {};
+    patterns.forEach(p => {
+      patternMap[p.id] = p;
+    });
+
+    console.log("[TARGETS] Found", patterns.length, "pattern definitions");
+    console.log("[TARGETS] Found", userPatterns.length, "user patterns");
+
+    // For each separator with target data, calculate the person's target for that week
+    const sepCells = document.querySelectorAll("td.week-sep[data-user-id]");
+    console.log("[TARGETS] Found", sepCells.length, "separator cells to populate");
+
+    sepCells.forEach((sep, idx) => {
+      const userId = sep.getAttribute("data-user-id");
+      const weekStart = new Date(sep.getAttribute("data-week-start"));
+
+      const userPattern = userPatterns.find(up => up.user_id === userId);
+      
+      if (!userPattern) {
+        sep.textContent = "-";
+        sep.style.color = "inherit";
+        sep.style.backgroundColor = "transparent";
+        return;
+      }
+
+      const pattern = patternMap[userPattern.pattern_id];
+      if (!pattern || !pattern.requires_anchor) {
+        sep.textContent = "";
+        sep.style.color = "inherit";
+        sep.style.backgroundColor = "transparent";
+        return;
+      }
+
+      // Calculate which week in the pattern cycle this is
+      const anchorDate = new Date(userPattern.anchor_week_start_date);
+      const weeksDiff = Math.floor((weekStart - anchorDate) / (7 * 24 * 60 * 60 * 1000));
+      const cycleLength = pattern.weekly_targets.length;
+      const weekInCycle = ((weeksDiff % cycleLength) + cycleLength) % cycleLength;
+      const target = pattern.weekly_targets[weekInCycle];
+
+      // Display with red text only for peak weeks (4 for 3/3/4, 3 for 2/2/3)
+      sep.textContent = String(target);
+      sep.style.textAlign = "center";
+      sep.style.fontSize = "12px";
+      
+      // Determine baseline: for 3/3/4 pattern baseline is 3, for 2/2/3 baseline is 2
+      const baseline = Math.min(...pattern.weekly_targets);
+      const isPeak = target > baseline;
+      
+      if (isPeak) {
+        sep.style.color = "#dc2626";
+        sep.style.fontWeight = "700";
+      } else {
+        sep.style.color = "inherit";
+        sep.style.fontWeight = "600";
+      }
+      sep.style.backgroundColor = "transparent";
+    });
+  } catch (e) {
+    console.error("[TARGETS] Failed to load pattern targets:", e);
+  }
+}
+
+
 function applyUnlockState(){
   const rows = document.querySelectorAll("#rota tbody tr");
 

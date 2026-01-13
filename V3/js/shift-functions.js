@@ -2,8 +2,8 @@
    SHIFT CATALOGUE - ENHANCED FUNCTIONALITY
    ========================================================= */
 
-// Permissions state
-let userPermissions = new Set();
+// Note: userPermissions is already defined in index.html as a global Set
+// We access it directly without redeclaring it here
 
 // Load user permissions from database
 async function loadUserPermissions(){
@@ -56,12 +56,22 @@ function goToFullAdmin() {
   window.location.href = "admin.html";
 }
 
+// Map role_id to staff group codes used in shifts
+const ROLE_TO_STAFF_GROUP = {
+  1: "CN",  // Charge Nurse
+  2: "SN",  // Staff Nurse
+  3: "NA"   // Nursing Assistant
+};
+
 // Dynamically populate shift picker from database (NEW SCHEMA)
 async function populateShiftGrid(){
+  // Check if supabaseClient is available
+  if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+    console.warn("[SHIFT-FUNCTIONS] supabaseClient not yet available, skipping shift grid population");
+    return;
+  }
+  
   try {
-    console.log("[SHIFT PICKER] Loading shifts from database...");
-    console.log("[SHIFT PICKER] Current user:", currentUser);
-    
     // Get shifts with scope flags and allowed_staff_groups
     const { data: shifts, error: shiftsErr } = await supabaseClient
       .from("shifts")
@@ -72,25 +82,18 @@ async function populateShiftGrid(){
     
     if (shiftsErr) throw shiftsErr;
     
-    console.log("[SHIFT PICKER] Raw shifts from database:", shifts);
-    
-    // Filter by current user's staff_group (admin sees all)
+    // Filter by current user's role (admin sees all)
     let requestShifts = shifts || [];
     if (currentUser && !currentUser.is_admin) {
-      const userGroup = currentUser.staff_group; // e.g., "NA" or "Nurse"
-      console.log("[SHIFT PICKER] User staff_group:", userGroup);
+      const userStaffGroup = ROLE_TO_STAFF_GROUP[currentUser.role_id];
       
-      if (userGroup) {
+      if (userStaffGroup) {
         requestShifts = requestShifts.filter(shift => {
           const allowed = shift.allowed_staff_groups || "";
-          const matches = allowed.includes(userGroup);
-          console.log(`[SHIFT PICKER] Shift ${shift.code}: allowed="${allowed}", userGroup="${userGroup}", matches=${matches}`);
-          return matches;
+          return allowed.includes(userStaffGroup);
         });
       }
     }
-    
-    console.log("[SHIFT PICKER] Filtered shifts for picker:", requestShifts);
     
     const container = document.getElementById("shiftGridContainer");
     if (!container) {
@@ -100,11 +103,8 @@ async function populateShiftGrid(){
     
     let html = "";
     requestShifts.forEach(shift => {
-      // Display code with disambiguation if needed
-      let displayText = shift.code;
-      if (shift.label) {
-        displayText = `${shift.code} (${shift.hours_value}h)`;
-      }
+      // Display just the code
+      const displayText = shift.code;
       
       // Store shift_id in data attribute
       html += `<button class="shift-btn" data-shift-id="${shift.id}" data-shift-code="${escapeHtml(shift.code)}" type="button">${escapeHtml(displayText)}</button>`;

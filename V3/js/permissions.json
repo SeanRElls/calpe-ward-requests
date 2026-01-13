@@ -18,6 +18,7 @@
       "title": "Requests",
       "items": [
         { "key": "requests.view_all", "label": "View all requests", "desc": "See requests for all users." },
+        { "key": "requests.view_own", "label": "View own requests", "desc": "Can view own requests on rota (draft and published)." },
         { "key": "requests.edit_all", "label": "Edit all requests", "desc": "Edit other users' requests." },
         { "key": "requests.lock_cells", "label": "Lock/unlock requests", "desc": "Lock or unlock request cells." },
         { "key": "requests.view_comments", "label": "View all comments", "desc": "View all week comments." }
@@ -29,8 +30,11 @@
       "items": [
         { "key": "rota.view_draft", "label": "View draft", "desc": "View draft rota." },
         { "key": "rota.edit_draft", "label": "Edit draft", "desc": "Edit draft rota cells." },
+        { "key": "rota.edit_published", "label": "Edit published", "desc": "Make post-publish corrections." },
         { "key": "rota.publish", "label": "Publish period", "desc": "Publish a period." },
-        { "key": "rota.approve", "label": "Annotate approval", "desc": "Add CNM approval annotation." }
+        { "key": "rota.approve", "label": "Annotate approval", "desc": "Add CNM approval annotation." },
+        { "key": "rota.swap", "label": "Swap shifts", "desc": "Initiate or approve shift swaps." },
+        { "key": "rota.view_history", "label": "View shift history", "desc": "View audit history for cells." }
       ]
     },
     {

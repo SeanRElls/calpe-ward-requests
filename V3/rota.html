@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="pageTitle">Calpe Ward</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/rota.css">
+  <link rel="stylesheet" href="css/rota-edit.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="js/permissions.js"></script>
+  <script src="js/shift-functions.js" defer></script>
+  <script src="js/shift-editor.js" defer></script>
+</head>
+
+<body>
+  <div class="wrap">
+    <!-- Page Navigation -->
+    <div id="pageNav" style="padding: 8px 12px; background: #f0f0f0; border-bottom: 1px solid #ddd; display: flex; gap: 12px; font-size: 14px;">
+      <a href="#" onclick="navigateToRequests(); return false;" style="color: #4F8DF7; text-decoration: none;">📋 Requests</a>
+      <a href="rota.html" style="color: #4F8DF7; text-decoration: none; font-weight: 600;">📅 View Rota</a>
+      <a href="#" id="navAdminLink" onclick="navigateToAdmin(); return false;" style="color: #4F8DF7; text-decoration: none; display: none;">⚙️ Admin</a>
+    </div>
+    
+    <!-- Title + Status -->
+    <div class="titlebar">
+      <div style="display:flex; gap:12px; align-items:center;">
+        <img
+          src="logo.png"
+          alt="Calpe Ward"
+          style="height:44px; width:auto;"
+        />
+        <div>
+          <h1>Calpe Ward</h1>
+          <div class="header-subrow">
+            <p id="periodLabel" class="subtitle"></p>
+            <div id="closeLabel"></div>
+          </div>
+        </div>
+      </div>
+      <div class="rightbits">
+        <span id="userName" class="badge"></span>
+        <button id="logoutBtn">Logout</button>
+      </div>
+    </div>
+
+    <!-- Period Status -->
+    <div id="periodStatus" class="period-status" style="display: none;">
+      <span class="status-badge" id="statusBadge"></span>
+      <span id="statusText"></span>
+    </div>
+
+    <!-- Period Selector -->
+    <div class="header-subrow" style="margin: 0 2px 12px;">
+      <label for="periodSelect" class="subtitle" style="font-weight: 600;">Period:</label>
+      <select id="periodSelect">
+        <option>Loading...</option>
+      </select>
+      <button id="publishBtn" class="btn" style="margin-left: 12px; display: none; background: #10b981; color: white;">📤 Publish Period</button>
+      <button id="unpublishBtn" class="btn" style="margin-left: 12px; display: none; background: #f59e0b; color: white;">⚠️ Unpublish</button>
+      <button id="toggleEditingBtn" class="btn" style="margin-left: 8px;">🔒 Locked</button>
+      <button id="toggleRequestsBtn" class="btn" style="margin-left: auto;">👁️ Show Requests</button>
+    </div>
+
+    <!-- Metadata Display (shown when editing) -->
+    <div id="metadataDisplay" class="metadata-display" style="display: none; padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 0 2px 12px; font-size: 14px;">
+      <strong>Draft Editing Mode:</strong> Click any cell to assign shifts. Changes save immediately.
+    </div>
+
+    <!-- Published edit warning banner -->
+    <div id="publishedEditBanner" class="metadata-display" style="display: none; padding: 12px; background: #ffe4d5; border: 1px solid #f97316; border-radius: 4px; margin: 0 2px 12px; font-size: 14px;">
+      <strong>Published Edit Mode:</strong> Use only for post-publish corrections. All changes are recorded.
+    </div>
+
+    <!-- Pattern Warnings (admin only, collapsible) -->
+    <div id="patternWarnings" class="pattern-warnings">
+      <details id="patternWarningsDetails">
+        <summary>Pattern Guidance</summary>
+        <div id="warningsList"></div>
+      </details>
+    </div>
+
+    <!-- Rota Table -->
+    <div class="rota-scroll">
+      <table id="rota"></table>
+    </div>
+
+    <!-- Shift Picker Modal -->
+    <div class="modal-backdrop" id="shiftPickerBackdrop" aria-hidden="true">
+      <div id="shiftPickerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="shiftPickerTitle">
+        <h2 id="shiftPickerTitle">Select shift</h2>
+        <p id="shiftPickerDate" class="subtitle"></p>
+        <div class="modal-bubble">
+          <div id="shiftPickerList"></div>
+        </div>
+        <div class="btns">
+          <button id="shiftPickerClear" type="button">Clear</button>
+          <button id="shiftPickerClose" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Published Details / Actions Modal (desktop: right-click, mobile: tap) -->
+    <!-- Published Details / Actions Modal (desktop: right-click, mobile: tap) -->
+    <div class="modal-backdrop" id="publishedDetailsModal" aria-hidden="true">
+      <div class="published-modal" role="dialog" aria-modal="true" aria-labelledby="publishedDetailsTitle">
+        <div class="modal-head">
+          <div class="modal-title" id="publishedDetailsTitle">Shift Details</div>
+          <div class="modal-sub" id="publishedDetailsSubtitle"></div>
+        </div>
+
+        <div class="modal-bubble">
+          <div class="shift-display">
+            <span class="shift-code" id="publishedShiftCode"></span>
+            <span class="shift-name" id="publishedShiftName"></span>
+          </div>
+          <div class="rest-day" id="restDayLabel" style="display:none; margin-top:8px; font-size:13px; color:#64748b; font-style:italic;">Rest day</div>
+          <div class="kv" style="margin-top:12px">
+            <div class="k">Times</div>
+            <div class="v" id="publishedShiftTimes"></div>
+          </div>
+          <div class="kv" id="hoursRow" style="margin-top:10px; display:none;">
+            <div class="k">Hours</div>
+            <div class="v" id="publishedShiftHours"></div>
+          </div>
+        </div>
+
+        <div class="btns">
+          <button id="publishedChangeBtn" class="primary" type="button">Change shift</button>
+          <button id="publishedCommentsBtn" type="button">View comments</button>
+          <button id="publishedSwapBtn" type="button">Swap shift</button>
+          <button id="publishedHistoryBtn" type="button">View history</button>
+          <div class="close-row">
+            <button id="publishedDetailsClose" type="button">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script>
+    console.log("ROTA.HTML LOADING - VERSION 3");
+    // Supabase Config (inline for file:// compatibility)
+    const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // ========== SESSION RESTORATION ==========
+    const WINDOW_SESSION_PREFIX = "calpeward:";
+    const STORAGE_KEY = "calpeward.current_user_id";
+    
+    function getWindowSession() {
+      if (!window.name || !window.name.startsWith(WINDOW_SESSION_PREFIX)) {
+        return null;
+      }
+      try {
+        const raw = window.name.slice(WINDOW_SESSION_PREFIX.length);
+        const session = JSON.parse(atob(raw));
+        return session;
+      } catch (e) {
+        console.warn("Failed to parse window session", e);
+        return null;
+      }
+    }
+
+    function restoreSessionFromWindow() {
+      const data = getWindowSession();
+      console.log("[ROTA DEBUG] restoreSessionFromWindow - data:", data);
+      if (!data || !data.userId) return null;
+      
+      // Store userId in localStorage and PIN in sessionStorage
+      console.log("[ROTA DEBUG] Storing userId in localStorage:", data.userId);
+      localStorage.setItem(STORAGE_KEY, data.userId);
+      if (data.pin) {
+        sessionStorage.setItem(`calpeward.pin.${data.userId}`, data.pin);
+        console.log("[ROTA DEBUG] Stored PIN for user:", data.userId);
+      }
+      return data;
+    }
+
+    // Restore session on page load
+    console.log("[ROTA DEBUG] Calling restoreSessionFromWindow...");
+    restoreSessionFromWindow();
+
+    let currentPeriod = null;
+    let allUsers = [];
+    let allWeeks = [];
+    let shiftMap = new Map(); // id -> shift_catalogue row
+    let assignmentsMap = new Map(); // user_id_date -> rota_assignment
+    let overridesMap = new Map(); // rota_assignment_id -> rota_assignment_override
+    let requestsMap = new Map(); // user_id_date -> request
+    let patterns = new Map(); // pattern_id -> pattern_definitions
+    let userPatterns = new Map(); // user_id -> user_patterns row
+    let periodData = null;
+    let showRequests = false;
+    
+    // Permission flags (set during auth)
+    let canViewAllRequests = false;
+    let canViewOwnRequests = false;
+    let canEditDraft = false;
+    let canEditPublished = false;
+    let currentEditContext = "draft";
+    let lastPublishedCell = null;
+    
+    // Load staffing defaults from localStorage (set in admin panel)
+    function getStaffingDefaults() {
+      const defaults = JSON.parse(localStorage.getItem("calpeward.staffing_defaults") || 
+        '{"day_sn_required":3,"day_na_required":3,"night_sn_required":2,"night_na_required":2}');
+      return defaults;
+    }
+    
+
+
+    // ========== AUTH ==========
+    async function checkAuth() {
+      console.log("[ROTA DEBUG] ===== CHECKAUTH STARTED =====");
+      console.log("[ROTA DEBUG] localStorage available?", typeof localStorage !== 'undefined');
+      console.log("[ROTA DEBUG] PermissionsModule available?", typeof window.PermissionsModule !== 'undefined');
+      console.log("[ROTA DEBUG] checkAuth starting...");
+      
+      // Use permissions module to load user and permissions
+      const profile = await window.PermissionsModule.loadCurrentUserPermissions();
+      
+      console.log("[ROTA DEBUG] Profile returned:", profile);
+      
+      if (!profile) {
+        console.log("[ROTA DEBUG] No profile, redirecting to index.html");
+        window.location.href = "index.html";
+        return null;
+      }
+
+      // Get the user from permissions module and store in global for rota.html
+      const currentUser = window.PermissionsModule.getCurrentUser();
+      window.currentUser = currentUser;
+      
+      console.log("[ROTA DEBUG] User loaded:", currentUser);
+      
+      // Update display with correct user name
+      const userNameEl = document.getElementById("userName");
+      if (userNameEl) {
+        userNameEl.textContent = currentUser.name;
+        if (currentUser.is_admin) {
+          userNameEl.classList.add("admin");
+        } else {
+          userNameEl.classList.remove("admin");
+        }
+      }
+      
+      // Show navigation admin link only for admins
+      const navAdminLink = document.getElementById("navAdminLink");
+      if (navAdminLink) navAdminLink.style.display = currentUser.is_admin ? "inline" : "none";
+
+      // Everyone can access rota.html
+      // Permissions control what they can see/do, not whether they can access the page
+      return currentUser;
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.clear();
+      window.name = ""; // Clear window.name to prevent stale session restoration
+      window.location.href = "index.html";
+    });
+
+    function navigateToRequests() {
+      // Preserve session when navigating back to requests
+      if (window.currentUser) {
+        const pin = sessionStorage.getItem(`calpeward.pin.${window.currentUser.id}`);
+        if (pin) {
+          const sessionData = { userId: window.currentUser.id, pin: pin };
+          window.name = "calpeward:" + btoa(JSON.stringify(sessionData));
+        }
+      }
+      window.location.href = "index.html";
+    }
+
+    function navigateToAdmin() {
+      // Preserve session when navigating to admin
+      if (!window.currentUser) {
+        alert("Not logged in.");
+        return;
+      }
+      const pin = sessionStorage.getItem(`calpeward.pin.${window.currentUser.id}`);
+      if (!pin) {
+        alert("No session PIN. Log in again.");
+        return;
+      }
+      const sessionData = { userId: window.currentUser.id, pin: pin };
+      window.name = "calpeward:" + btoa(JSON.stringify(sessionData));
+      window.location.href = "admin.html";
+    }
+
+    // ========== HELPERS ==========
+    function getWeekStart(date) {
+      const d = new Date(date);
+      const day = d.getDay(); // 0 = Sunday
+      d.setDate(d.getDate() - day);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function fmt(date) {
+      const d = new Date(date);
+      return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    }
+
+    // ========== LOAD PERIODS ==========
+    async function loadPeriods() {
+      const { data, error } = await supabaseClient
+        .from("rota_periods")
+        .select("*")
+        .order("start_date", { ascending: false });
+
+      if (error) {
+        console.error("Error loading periods:", error);
+        alert("Failed to load rota periods: " + error.message);
+        return;
+      }
+
+      const select = document.getElementById("periodSelect");
+      select.innerHTML = '<option value="">Select period...</option>';
+      
+      if (!data || data.length === 0) {
+        select.innerHTML = '<option value="">No periods available</option>';
+        console.warn("No rota periods found in database");
+        return;
+      }
+      
+      data.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = `${fmt(new Date(p.start_date))} – ${fmt(new Date(p.end_date))}`;
+        select.appendChild(opt);
+      });
+
+      if (data.length > 0) {
+        select.value = data[0].id;
+        await loadPeriod(data[0].id);
+      }
+    }
+
+    // ========== LOAD PERIOD DATA ==========
+    async function loadPeriod(periodId) {
+      if (!periodId) return;
+      currentPeriod = periodId;
+
+      try {
+        // Load period info
+        const { data: period } = await supabaseClient
+          .from("rota_periods")
+          .select("*")
+          .eq("id", periodId)
+          .single();
+
+        if (!period) throw new Error("Period not found");
+        periodData = period;
+        displayPeriodStatus(period);
+
+        // Generate dates from period start_date to end_date
+        const dates = generateDatesForPeriod(period.start_date, period.end_date);
+        allWeeks = groupDatesIntoWeeks(dates);
+
+        // Load users (active only) using same ordering as main app (role -> display_order -> created_at)
+        const { data: users, error: uErr } = await supabaseClient
+          .from("users")
+          .select("id, name, role_id, is_admin, display_order")
+          .eq("is_active", true)
+          .order("role_id", { ascending: true })
+          .order("display_order", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        if (uErr) throw uErr;
+        allUsers = (users || []).map(u => ({ ...u, name: u.name }));
+
+        // Load shift catalogue
+        const { data: shifts, error: sErr } = await supabaseClient
+          .from("shifts")
+          .select("*");
+
+        if (sErr) throw sErr;
+        shiftMap.clear();
+        (shifts || []).forEach(s => shiftMap.set(s.id, s));
+
+        // Load assignments for this date range
+        // Only show assignments if user has draft permission OR period is published
+        const canViewDraft = window.PermissionsModule.hasPermission("rota.view_draft");
+        const isPeriodPublished = period.status === "published";
+        
+        assignmentsMap.clear();
+        if (canViewDraft || isPeriodPublished) {
+          const { data: assignments, error: aErr } = await supabaseClient
+            .from("rota_assignments")
+            .select("*")
+            .gte("date", period.start_date)
+            .lte("date", period.end_date);
+
+          if (aErr) throw aErr;
+          (assignments || []).forEach(a => {
+            assignmentsMap.set(`${a.user_id}_${a.date}`, a);
+          });
+        }
+
+        // Load requests for this date range
+        // Filter based on permissions: view_all shows all, view_own shows only current user's
+        let requestsQuery = supabaseClient
+          .from("requests")
+          .select("*")
+          .gte("date", period.start_date)
+          .lte("date", period.end_date);
+        
+        // If user can only view own, filter to their requests
+        if (!canViewAllRequests && canViewOwnRequests && window.currentUser) {
+          requestsQuery = requestsQuery.eq("user_id", window.currentUser.id);
+        }
+        
+        const { data: requests, error: rErr } = await requestsQuery;
+
+        if (rErr) throw rErr;
+        requestsMap.clear();
+        (requests || []).forEach(r => {
+          requestsMap.set(`${r.user_id}_${r.date}`, r);
+        });
+
+        // Load assignment overrides
+        const { data: overrides, error: oErr } = await supabaseClient
+          .from("rota_assignment_overrides")
+          .select("*");
+
+        if (oErr) throw oErr;
+        overridesMap.clear();
+        (overrides || []).forEach(o => {
+          overridesMap.set(o.rota_assignment_id, o);
+        });
+
+        // Load patterns
+        const { data: pats } = await supabaseClient
+          .from("pattern_definitions")
+          .select("*");
+
+        patterns.clear();
+        (pats || []).forEach(p => patterns.set(p.id, p));
+
+        const { data: upats } = await supabaseClient
+          .from("user_patterns")
+          .select("*");
+
+        userPatterns.clear();
+        (upats || []).forEach(up => userPatterns.set(up.user_id, up));
+
+        // Load all shifts for admin editing from the shifts table
+        const { data: draftShiftsData, error: dsErr } = await supabaseClient
+          .from("shifts")
+          .select("*")
+          .order("code", { ascending: true });
+
+        if (dsErr) throw dsErr;
+        draftShifts = draftShiftsData || [];
+        console.log("[ROTA] Loaded draftShifts:", draftShifts);
+        console.log("[ROTA] Sample shift object:", draftShifts[0]);
+
+        // Configure editing context for this period
+        updateEditingControls(period);
+
+        // Render
+        if (allWeeks.length) {
+          const periodText = `${fmt(allWeeks[0].weekStart)} – ${fmt(allWeeks[allWeeks.length - 1].weekEnd)}`;
+          document.getElementById("periodLabel").textContent = periodText;
+          // Update page title with period dates
+          document.getElementById("pageTitle").textContent = `Calpe Ward - ${periodText}`;
+        }
+
+        renderRota();
+        generatePatternWarnings();
+
+      } catch (err) {
+        console.error("Load error:", err);
+        alert("Error loading rota: " + err.message);
+      }
+    }
+
+    // ========== GENERATE DATES FOR PERIOD ==========
+    function generateDatesForPeriod(startDateStr, endDateStr) {
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+      const dates = [];
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        dates.push({ date: dateStr });
+      }
+
+      return dates;
+    }
+
+    // ========== GROUP DATES INTO WEEKS ==========
+    function groupDatesIntoWeeks(dates) {
+      const weekMap = new Map();
+      
+      dates.forEach(d => {
+        const dt = new Date(d.date);
+        const sun = getWeekStart(dt);
+        const key = sun.toISOString().split('T')[0];
+        
+        if (!weekMap.has(key)) {
+          weekMap.set(key, {
+            weekStart: sun,
+            weekEnd: new Date(sun.getTime() + 6 * 24 * 60 * 60 * 1000),
+            days: []
+          });
+        }
+        
+        weekMap.get(key).days.push(d);
+      });
+      
+      return Array.from(weekMap.values()).sort((a, b) => a.weekStart - b.weekStart);
+    }
+
+    // ========== RENDER ROTA ==========
+    function renderRota() {
+      const table = document.getElementById("rota");
+      table.innerHTML = "";
+
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+      table.appendChild(thead);
+      table.appendChild(tbody);
+
+      // Row 1: Week labels
+      const r1 = document.createElement("tr");
+      const h1 = document.createElement("th");
+      h1.className = "name-col";
+      h1.textContent = "Name";
+      r1.appendChild(h1);
+
+      allWeeks.forEach(w => {
+        const th = document.createElement("th");
+        th.className = "week-head";
+        th.colSpan = 7;
+        th.innerHTML = `<span class="week-label">${fmt(w.weekStart)} – ${fmt(w.weekEnd)}</span>`;
+        r1.appendChild(th);
+
+        const sep = document.createElement("th");
+        sep.className = "week-sep";
+        r1.appendChild(sep);
+      });
+      thead.appendChild(r1);
+
+      // Row 2: Day letters
+      const r2 = document.createElement("tr");
+      const h2 = document.createElement("th");
+      h2.className = "name-col";
+      r2.appendChild(h2);
+
+      const dayLetters = ["S", "M", "T", "W", "T", "F", "S"];
+      allWeeks.forEach(w => {
+        for (let i = 0; i < 7; i++) {
+          const th = document.createElement("th");
+          th.className = "day";
+          th.textContent = dayLetters[i];
+          r2.appendChild(th);
+        }
+        const sep = document.createElement("th");
+        sep.className = "week-sep";
+        r2.appendChild(sep);
+      });
+      thead.appendChild(r2);
+
+      // Row 3: Dates
+      const r3 = document.createElement("tr");
+      const h3 = document.createElement("th");
+      h3.className = "name-col";
+      r3.appendChild(h3);
+
+      allWeeks.forEach(w => {
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(w.days[i].date);
+          const isWeekend = (d.getDay() === 0 || d.getDay() === 6);
+          const th = document.createElement("th");
+          th.className = "date" + (isWeekend ? " weekend" : "");
+          th.textContent = d.getDate();
+          r3.appendChild(th);
+        }
+        const sep = document.createElement("th");
+        sep.className = "week-sep";
+        r3.appendChild(sep);
+      });
+      thead.appendChild(r3);
+
+      // Body: group by role
+      const groups = groupUsers(allUsers);
+
+      for (const g of groups) {
+        // Section header
+        const sectionTr = document.createElement("tr");
+        sectionTr.className = "section-row";
+        const sectionTd = document.createElement("td");
+        sectionTd.className = `name-col ${g.className}`;
+        sectionTd.colSpan = 1 + (allWeeks.length * 7) + allWeeks.length;
+        sectionTd.innerHTML = `<span>${g.title}</span>`;
+        sectionTr.appendChild(sectionTd);
+        tbody.appendChild(sectionTr);
+
+        // User rows
+        for (const u of g.items) {
+          const tr = document.createElement("tr");
+          tr.dataset.userId = u.id;
+
+          const nameTd = document.createElement("td");
+          nameTd.className = "name-col";
+          nameTd.textContent = u.name;
+          tr.appendChild(nameTd);
+
+          allWeeks.forEach(w => {
+            w.days.forEach(day => {
+              const isWeekend = day.date && (new Date(day.date).getDay() === 0 || new Date(day.date).getDay() === 6);
+              const dateStr = day.date;
+
+              const td = document.createElement("td");
+              td.className = "cell" + (isWeekend ? " weekend" : "");
+              td.dataset.userId = u.id;
+              td.dataset.date = dateStr;
+
+              // Get assignment
+              const key = `${u.id}_${dateStr}`;
+              const assignment = assignmentsMap.get(key);
+              
+              if (assignment) {
+                const shift = shiftMap.get(assignment.shift_id);
+                if (shift) {
+                  td.textContent = shift.code;
+
+                  console.log('[ROTA] Applying shift metadata for', shift.code, ':', {
+                    text_bold: shift.text_bold,
+                    text_italic: shift.text_italic,
+                    text_color: shift.text_color,
+                    fill_color: shift.fill_color
+                  });
+
+                  // Apply shift metadata styling from catalogue
+                  if (shift.text_bold) {
+                    td.style.fontWeight = "700";
+                  }
+                  if (shift.text_italic) {
+                    td.style.fontStyle = "italic";
+                  }
+                  if (shift.text_color) {
+                    td.style.color = shift.text_color;
+                  }
+                  if (shift.fill_color) {
+                    td.style.backgroundColor = shift.fill_color;
+                  }
+
+                  // Add request hint if exists (only if showRequests is enabled)
+                  if (showRequests) {
+                    const request = requestsMap.get(key);
+                    if (request) {
+                      const hint = document.createElement("div");
+                      hint.className = "request-hint";
+                      hint.textContent = request.value || "";
+                      td.appendChild(hint);
+                    }
+                  }
+                }
+              } else {
+                // Show requests only when toggle is on
+                if (showRequests) {
+                  const request = requestsMap.get(key);
+                  if (request) {
+                    const requestValue = request.value?.trim();
+                    const isImportant = request.important_rank && (request.important_rank === 1 || request.important_rank === 2);
+
+                    if (isImportant) {
+                      // Important requests (O¹/O²) show in RED (not bold)
+                      const superscript = request.important_rank === 1 ? "¹" : "²";
+                      td.textContent = `${requestValue}${superscript}`;
+                      td.style.color = "#e57373"; // paler red to mirror lighter gray emphasis
+                    } else {
+                      // Other requests show in faint gray italic
+                      td.textContent = requestValue || "";
+                      td.style.color = "#d1d5db";
+                      td.style.fontStyle = "italic";
+                    }
+                  }
+                }
+              }
+
+              tr.appendChild(td);
+              // Event delegation handled by shift-editor.js
+            });
+
+            // Week separator (pattern target)
+            const sep = document.createElement("td");
+            sep.className = "week-sep";
+            sep.dataset.userId = u.id;
+            sep.dataset.weekStart = w.weekStart.toISOString().split('T')[0];
+
+            // Pattern-first separator display
+            // 1) If the user has an assigned pattern, prefer using it.
+            //    - Anchored patterns: show `weekly_targets` aligned from the user's anchor.
+            //    - Non-anchored patterns: show flexible baseline for that pattern (e.g., nurses baseline 3),
+            //      and highlight weeks where assigned shifts exceed baseline.
+            // 2) If no pattern is assigned, leave the separator blank (no assumptions).
+            const upat = userPatterns.get(u.id);
+            const assignedCount = w.days.reduce((acc, d) => acc + (assignmentsMap.get(`${u.id}_${d.date}`) ? 1 : 0), 0);
+
+            if (upat && upat.pattern_id) {
+              const pat = patterns.get(upat.pattern_id);
+              if (pat && pat.requires_anchor && upat.anchor_week_start_date && Array.isArray(pat.weekly_targets) && pat.weekly_targets.length) {
+                // Anchored pattern: compute target based on cycle and anchor
+                const weekStart = new Date(sep.dataset.weekStart);
+                const anchorDateRaw = new Date(upat.anchor_week_start_date);
+                const anchorDate = getWeekStart(anchorDateRaw);
+                const weeksDiff = Math.floor((weekStart - anchorDate) / (7 * 24 * 60 * 60 * 1000));
+                const cycleLen = pat.weekly_targets.length;
+                const weekInCycle = ((weeksDiff % cycleLen) + cycleLen) % cycleLen;
+                const target = pat.weekly_targets[weekInCycle];
+                sep.textContent = String(target);
+                const baseline = Math.min(...pat.weekly_targets);
+                if (target > baseline) {
+                  sep.style.color = "#dc2626";
+                  sep.style.fontWeight = "700";
+                }
+              } else {
+                // Non-anchored or undefined weekly targets: treat as flexible
+                // Use pattern weekly_targets (if present) to infer baseline, else fallback for nurses
+                const baselineCandidates = Array.isArray(pat?.weekly_targets) && pat.weekly_targets.length ? pat.weekly_targets : [];
+                let baseline = baselineCandidates.length ? Math.min(...baselineCandidates) : null;
+                if (baseline == null && (u.role_id === 1 || u.role_id === 2)) baseline = 3; // nurse baseline if pattern implies flexibility
+                // Display assigned count if any, otherwise show baseline where known
+                sep.textContent = String(assignedCount > 0 ? assignedCount : (baseline ?? ""));
+                if (baseline != null && assignedCount > baseline) {
+                  sep.style.color = "#dc2626";
+                  sep.style.fontWeight = "700";
+                }
+              }
+            } else {
+              // No pattern assigned: do not apply role defaults; leave blank
+              sep.textContent = "";
+            }
+            
+            tr.appendChild(sep);
+          });
+
+          tbody.appendChild(tr);
+        }
+      }
+      
+      // Render totals at the end
+      renderTotals();
+    }
+
+    // ========== GET ROLE GROUP KEY (resilient mapping) ==========
+    function getRoleGroupKey(user) {
+      // Deterministic mapping from role_id to canonical group key
+      const roleId = user.role_id;
+      if (roleId === 1) return "charge_nurse";
+      if (roleId === 2) return "staff_nurse";
+      if (roleId === 3) return "nursing_assistant";
+      return "staff_nurse"; // fallback
+    }
+
+    // ========== GROUP USERS BY ROLE ==========
+    function groupUsers(users) {
+      const buckets = { charge_nurse: [], staff_nurse: [], nursing_assistant: [] };
+
+      users.forEach(u => {
+        const groupKey = getRoleGroupKey(u);
+        (buckets[groupKey] || buckets.staff_nurse).push(u);
+      });
+
+      return [
+        { title: "Charge Nurses", className: "section-cn", items: buckets.charge_nurse },
+        { title: "Staff Nurses", className: "section-sn", items: buckets.staff_nurse },
+        { title: "Nursing Assistants", className: "section-na", items: buckets.nursing_assistant }
+      ].filter(g => g.items.length > 0);
+    }
+
+    // ========== PATTERN WARNINGS ==========
+    function generatePatternWarnings() {
+      if (!window.currentUser?.is_admin) return;
+
+      const warnings = [];
+
+      allUsers.forEach(u => {
+        const upat = userPatterns.get(u.id);
+        if (!upat || !upat.pattern_id) return; // Only validate users with an assigned pattern
+
+        const pat = patterns.get(upat.pattern_id);
+        if (!pat) return;
+
+        // Compute total assigned shifts in the 5-week period
+        const totalAssigned = allWeeks.reduce((acc, w) => {
+          const wkCount = w.days.reduce((c, d) => c + (assignmentsMap.get(`${u.id}_${d.date}`) ? 1 : 0), 0);
+          return acc + wkCount;
+        }, 0);
+
+        // Determine expected total based on the assigned pattern
+        let expectedTotal = null;
+        if (pat.requires_anchor && upat.anchor_week_start_date && Array.isArray(pat.weekly_targets) && pat.weekly_targets.length) {
+          // Anchored cycle: sum targets over the 5 weeks using anchor alignment
+          expectedTotal = allWeeks.reduce((sum, w) => {
+            const weekStart = getWeekStart(w.weekStart);
+            const anchorDate = getWeekStart(new Date(upat.anchor_week_start_date));
+            const weeksDiff = Math.floor((weekStart - anchorDate) / (7 * 24 * 60 * 60 * 1000));
+            const cycleLen = pat.weekly_targets.length;
+            const weekInCycle = ((weeksDiff % cycleLen) + cycleLen) % cycleLen;
+            const target = Number(pat.weekly_targets[weekInCycle]) || 0;
+            return sum + target;
+          }, 0);
+        } else {
+          // Non-anchored or flexible patterns: infer baseline from weekly_targets if present
+          const baselineCandidates = Array.isArray(pat.weekly_targets) && pat.weekly_targets.length ? pat.weekly_targets : [];
+          const baseline = baselineCandidates.length ? Math.min(...baselineCandidates) : null;
+          if (baseline != null) {
+            expectedTotal = baseline * allWeeks.length; // baseline across 5 weeks
+          }
+          // Recognize nurse flexible 16 pattern explicitly by type
+          if (String(pat.pattern_type || "").includes("nurse_flexible_16")) {
+            expectedTotal = 16;
+          }
+          // If still unknown and user is CN/SN, default to 16 as flexible guidance
+          if (expectedTotal == null && (u.role_id === 1 || u.role_id === 2)) {
+            expectedTotal = 16; // CN/SN flexible pattern: total 16 across 5 weeks
+          }
+        }
+
+        if (expectedTotal != null) {
+          if (totalAssigned < expectedTotal) {
+            warnings.push({ level: "error", user: u.name, msg: `Assigned ${totalAssigned} shifts; require ${expectedTotal}` });
+          } else if (totalAssigned > expectedTotal) {
+            warnings.push({ level: "warning", user: u.name, msg: `Assigned ${totalAssigned} (> ${expectedTotal})` });
+          }
+        }
+      });
+
+      if (warnings.length === 0) {
+        document.getElementById("patternWarnings").classList.remove("visible");
+        return;
+      }
+
+      const list = document.getElementById("warningsList");
+      list.innerHTML = "";
+      warnings.forEach(w => {
+        const div = document.createElement("div");
+        div.className = `warning-item ${w.level === "error" ? "error" : ""}`;
+        div.textContent = `${w.user}: ${w.msg}`;
+        list.appendChild(div);
+      });
+
+      document.getElementById("patternWarnings").classList.add("visible");
+    }
+
+    // ========== TOTALS ==========
+    function renderTotals() {
+      const table = document.getElementById("rota");
+      const existingTfoot = table.querySelector("tfoot");
+      if (existingTfoot) existingTfoot.remove();
+      
+      const tfoot = document.createElement("tfoot");
+      const STAFFING_DEFAULTS = getStaffingDefaults();
+
+      // Calculate shift value based on code
+      // Formula: LD and 8-8 = 1.0, 8-5 and 11-20 = 0.5, N = 1.0
+      function getShiftValue(shiftCode) {
+        if (!shiftCode) return 0;
+        const code = shiftCode.toUpperCase().trim();
+        if (code === "LD" || code === "8-8") return 1.0;
+        if (code === "8-5" || code === "11-20") return 0.5;
+        if (code === "N") return 1.0;
+        return 0;
+      }
+
+      function isNightShift(shiftCode) {
+        if (!shiftCode) return false;
+        return shiftCode.toUpperCase().trim() === "N";
+      }
+
+      // Add separator
+      const separatorTr = document.createElement("tr");
+      separatorTr.className = "totals-separator";
+      const separatorTd = document.createElement("td");
+      separatorTd.className = "name-col";
+      separatorTd.colSpan = 1 + (allWeeks.length * 7) + allWeeks.length;
+      separatorTd.style.background = "#e0e0e0";
+      separatorTd.style.height = "8px";
+      separatorTr.appendChild(separatorTd);
+      tfoot.appendChild(separatorTr);
+
+      // Row grouping: Day Shift, Night Shift
+      const sections = [
+        {
+          sectionLabel: "Day Shift",
+          rows: [
+            { label: "Staff Nurse", roleIds: [1, 2], isNight: false, reqField: "day_sn_required" },
+            { label: "Nursing Assistant", roleIds: [3], isNight: false, reqField: "day_na_required" }
+          ]
+        },
+        {
+          sectionLabel: "Night Shift",
+          rows: [
+            { label: "Staff Nurse", roleIds: [1, 2], isNight: true, reqField: "night_sn_required" },
+            { label: "Nursing Assistant", roleIds: [3], isNight: true, reqField: "night_na_required" }
+          ]
+        }
+      ];
+
+      sections.forEach(section => {
+        // Section header
+        const sectionTr = document.createElement("tr");
+        sectionTr.className = "totals-section-row";
+        const sectionTd = document.createElement("td");
+        sectionTd.className = "name-col";
+        sectionTd.colSpan = 1 + (allWeeks.length * 7) + allWeeks.length;
+        sectionTd.textContent = section.sectionLabel;
+        sectionTr.appendChild(sectionTd);
+        tfoot.appendChild(sectionTr);
+
+        // Each row in section
+        section.rows.forEach(rowDef => {
+          const tr = document.createElement("tr");
+          tr.className = "totals-row";
+
+          const labelTd = document.createElement("td");
+          labelTd.className = "name-col";
+          labelTd.textContent = rowDef.label;
+          labelTd.style.fontWeight = "600";
+          labelTd.style.paddingLeft = "16px";
+          tr.appendChild(labelTd);
+
+          allWeeks.forEach(w => {
+            w.days.forEach(day => {
+              const cell = document.createElement("td");
+              cell.className = "totals-cell";
+
+              // Calculate total for this role and shift type
+              let total = 0;
+              allUsers
+                .filter(u => rowDef.roleIds.includes(u.role_id))
+                .forEach(u => {
+                  const assignment = assignmentsMap.get(`${u.id}_${day.date}`);
+                  if (assignment) {
+                    const shift = shiftMap.get(assignment.shift_id);
+                    if (shift) {
+                      const shiftNight = isNightShift(shift.code);
+                      if (shiftNight === rowDef.isNight) {
+                        const value = getShiftValue(shift.code);
+                        total += value;
+                      }
+                    }
+                  }
+                });
+
+              // Get required (from defaults)
+              const required = STAFFING_DEFAULTS[rowDef.reqField];
+
+              // Display total
+              const displayValue = total % 1 === 0 ? total.toString() : total.toFixed(1);
+              cell.textContent = displayValue;
+
+              // Softer orange if short
+              if (total < required) {
+                cell.style.backgroundColor = "#ffc599";
+                cell.style.color = "#5d3e1f";
+                cell.style.fontWeight = "600";
+              }
+
+              cell.style.textAlign = "center";
+              tr.appendChild(cell);
+            });
+
+            // Week separator
+            const sep = document.createElement("td");
+            sep.className = "week-sep";
+            tr.appendChild(sep);
+          });
+
+          tfoot.appendChild(tr);
+        });
+      });
+
+      table.appendChild(tfoot);
+    }
+
+    // ========== DISPLAY & EVENT HANDLERS ==========
+
+    function describeAssignment(userId, date) {
+      const assignment = assignmentsMap.get(`${userId}_${date}`);
+      if (!assignment) return { text: "No planned shift", shift: null };
+      const shift = shiftMap.get(assignment.shift_id);
+      if (!shift) return { text: "Planned shift", shift: null };
+      const label = shift.label ? ` ${shift.label}` : "";
+      return { text: `${shift.code}${label}`, shift };
+    }
+
+    function openPublishedDetails({ userId, date }) {
+      if (!periodData || periodData.status !== "published") return;
+      lastPublishedCell = { userId, date };
+
+      const modal = document.getElementById("publishedDetailsModal");
+      const subtitleEl = document.getElementById("publishedDetailsSubtitle");
+      const codeEl = document.getElementById("publishedShiftCode");
+      const nameEl = document.getElementById("publishedShiftName");
+      const timesEl = document.getElementById("publishedShiftTimes");
+      const hoursEl = document.getElementById("publishedShiftHours");
+      const hoursRow = document.getElementById("hoursRow");
+      const timesRow = timesEl.closest(".kv");
+      const restDayLabel = document.getElementById("restDayLabel");
+
+      const btnChange = document.getElementById("publishedChangeBtn");
+      const btnComments = document.getElementById("publishedCommentsBtn");
+      const btnSwap = document.getElementById("publishedSwapBtn");
+      const btnHistory = document.getElementById("publishedHistoryBtn");
+
+      const user = allUsers.find(u => u.id === userId);
+      const assignmentInfo = describeAssignment(userId, date);
+
+      const dateStr = new Date(date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      subtitleEl.textContent = `${user?.name || "Staff"} — ${dateStr}`;
+      
+      // Build shift display with metadata styling
+      if (assignmentInfo.shift) {
+        const s = assignmentInfo.shift;
+        
+        // Apply code with metadata styling
+        codeEl.textContent = s.code || '';
+        if (s.fill_color) {
+          codeEl.style.backgroundColor = s.fill_color;
+        }
+        if (s.text_color) {
+          codeEl.style.color = s.text_color;
+        }
+        
+        // Show label as shift name
+        nameEl.textContent = s.label ? ` ${s.label}` : '';
+        
+        // Build time + duration
+        if (s.start_time && s.end_time) {
+          timesEl.textContent = `${s.start_time}–${s.end_time}`;
+          timesRow.style.display = '';
+          restDayLabel.style.display = 'none';
+        } else {
+          timesRow.style.display = 'none';
+          restDayLabel.style.display = '';
+        }
+        
+        // Show hours only if they exist
+        if (s.hours_value) {
+          hoursEl.textContent = `${s.hours_value}hours`;
+          hoursRow.style.display = '';
+        } else {
+          hoursRow.style.display = 'none';
+        }
+      } else {
+        codeEl.textContent = assignmentInfo.text;
+        codeEl.style.backgroundColor = '';
+        codeEl.style.color = '';
+        nameEl.textContent = '';
+        timesEl.textContent = '';
+        hoursEl.textContent = '';
+      }
+
+      const isAdmin = !!window.currentUser?.is_admin;
+      const canHistory = isAdmin || window.PermissionsModule?.hasPermission("rota.view_history");
+
+      if (btnChange) btnChange.style.display = canEditPublished ? "" : "none";
+      // View comments always visible; comments filter by visibility flag internally
+      if (btnComments) btnComments.style.display = "";
+      // Swap shift always visible; functionality differs for admin vs staff
+      if (btnSwap) btnSwap.style.display = "";
+      if (btnHistory) btnHistory.style.display = canHistory ? "" : "none";
+
+      modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closePublishedDetails() {
+      const modal = document.getElementById("publishedDetailsModal");
+      if (modal) modal.setAttribute("aria-hidden", "true");
+    }
+
+    function handlePublishedChange() {
+      if (!lastPublishedCell) return;
+      if (!canEditPublished) {
+        alert("You don't have permission to edit published rotas.");
+        return;
+      }
+      closePublishedDetails();
+      if (typeof window.openShiftPickerForPublished === "function") {
+        window.openShiftPickerForPublished(lastPublishedCell.userId, lastPublishedCell.date);
+      } else {
+        alert("Editor not ready yet. Try again.");
+      }
+    }
+
+    function handlePublishedHistory() {
+      alert("History view coming soon.");
+    }
+
+    function handlePublishedComments() {
+      alert("Comments view coming soon.");
+    }
+
+    function handlePublishedSwap() {
+      alert("Swap flow coming soon.");
+    }
+
+    function displayPeriodStatus(period) {
+      const status = document.getElementById("periodStatus");
+      const badge = document.getElementById("statusBadge");
+      const text = document.getElementById("statusText");
+
+      // Normalize status (treat null/unknown as draft)
+      const rawStatus = (period?.status || "draft").toString().toLowerCase();
+      const isPublished = rawStatus === "published";
+
+      badge.textContent = isPublished ? "Published" : "Draft";
+      badge.className = `status-badge status-${isPublished ? "published" : "draft"}`;
+      
+      // Format dates
+      const start = new Date(period.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      const end = new Date(period.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      text.textContent = `${period.label || 'Period'} (${start} - ${end})`;
+
+      status.style.display = "flex";
+      
+      // Show publish/unpublish buttons based on status and permission
+      const publishBtn = document.getElementById("publishBtn");
+      const unpublishBtn = document.getElementById("unpublishBtn");
+      const canPublish = window.PermissionsModule.hasPermission("rota.publish");
+      if (canPublish) {
+        publishBtn.style.display = isPublished ? "none" : "inline-block";
+        unpublishBtn.style.display = isPublished ? "inline-block" : "none";
+      } else {
+        publishBtn.style.display = "none";
+        unpublishBtn.style.display = "none";
+      }
+    }
+
+    function updateEditingControls(period) {
+      const toggleEditingBtn = document.getElementById("toggleEditingBtn");
+      const metadataDisplay = document.getElementById("metadataDisplay");
+      const publishedBanner = document.getElementById("publishedEditBanner");
+      const isPublished = period?.status === "published";
+      const canEditCurrent = isPublished ? canEditPublished : canEditDraft;
+
+      if (toggleEditingBtn) {
+        if (isPublished) {
+          // No global toggle in published mode; actions go through Change Shift
+          toggleEditingBtn.style.display = "none";
+        } else {
+          toggleEditingBtn.style.display = canEditCurrent ? "inline-block" : "none";
+          toggleEditingBtn.textContent = "🔒 Locked";
+          toggleEditingBtn.classList.remove("primary");
+        }
+      }
+
+      // Configure shift editor context (falls back silently if shift-editor not ready yet)
+      if (typeof window.setShiftEditContext === "function") {
+        if (isPublished) {
+          window.setShiftEditContext({
+            permissionKey: "rota.edit_published",
+            contextLabel: "published rota",
+            mode: "published",
+            lockedLabelText: "🔒 Published Locked",
+            unlockedLabelText: "🔓 Published Editing",
+            shiftFilter: (shift) => shift?.allow_post_publish === true
+          });
+          currentEditContext = "published";
+        } else {
+          window.setShiftEditContext({
+            permissionKey: "rota.edit_draft",
+            contextLabel: "draft rota",
+            mode: "draft",
+            lockedLabelText: "🔒 Locked",
+            unlockedLabelText: "🔓 Editing",
+            shiftFilter: (shift) => shift?.allow_draft !== false
+          });
+          currentEditContext = "draft";
+        }
+      }
+
+      if (typeof window.resetEditingLock === "function") {
+        window.resetEditingLock();
+      }
+
+      // Banners: draft editing or published editing (only if permitted)
+      if (metadataDisplay) metadataDisplay.style.display = "none";
+      if (publishedBanner) publishedBanner.style.display = (isPublished && canEditPublished) ? "block" : "none";
+    }
+
+    async function publishPeriod() {
+      if (!window.PermissionsModule.hasPermission("rota.publish")) {
+        alert("You don't have permission to publish periods.");
+        return;
+      }
+      
+      if (!periodData) {
+        alert("No period selected.");
+        return;
+      }
+
+      if (!periodData.id) {
+        alert("Period ID missing; reload and try again.");
+        return;
+      }
+      
+      const confirmed = confirm(
+        `Publish ${periodData.label}?\n\n` +
+        `This will make the rota visible to all staff. Draft assignments will become final.\n\n` +
+        `Are you sure you want to publish?`
+      );
+      
+      if (!confirmed) return;
+      
+      try {
+        const nowIso = new Date().toISOString();
+        const publishedBy = window.currentUser?.id || null;
+
+        const { error: updErr } = await supabaseClient
+          .from("rota_periods")
+          .update({
+            status: "published",
+            published_at: nowIso,
+            published_by: publishedBy,
+            published_version: (periodData.published_version || 0) + 1
+          })
+          .eq("id", periodData.id);
+
+        if (updErr) throw updErr;
+
+        // Re-fetch to confirm state and update UI
+        const { data: refreshed, error: fetchErr } = await supabaseClient
+          .from("rota_periods")
+          .select("*")
+          .eq("id", periodData.id)
+          .maybeSingle();
+
+        if (fetchErr) throw fetchErr;
+        if (!refreshed) throw new Error("Publish succeeded but refetch returned no row (check RLS)");
+
+        periodData = refreshed;
+        displayPeriodStatus(periodData);
+        updateEditingControls(periodData);
+        
+        // Reload the rota to show published assignments
+        await loadPeriod(periodData.id);
+        
+        alert("Period published successfully!");
+      } catch (e) {
+        console.error("Error publishing period:", e);
+        alert("Failed to publish period: " + e.message);
+      }
+    }
+
+    async function unpublishPeriod() {
+      if (!window.PermissionsModule.hasPermission("rota.publish")) {
+        alert("You don't have permission to unpublish periods.");
+        return;
+      }
+      
+      if (!periodData) {
+        alert("No period selected.");
+        return;
+      }
+
+      if (!periodData.id) {
+        alert("Period ID missing; reload and try again.");
+        return;
+      }
+      
+      const confirmed = confirm(
+        `⚠️ WARNING: Unpublish ${periodData.label}?\n\n` +
+        `This will REVERT the period back to draft status.\n\n` +
+        `⚠️ IMPORTANT:\n` +
+        `• Only use this if you need to make changes BEFORE staff see the rota\n` +
+        `• DO NOT use this once the rota is in active use\n` +
+        `• For changes to published rotas, use post-publish editing instead\n\n` +
+        `Are you absolutely sure you want to unpublish?`
+      );
+      
+      if (!confirmed) return;
+      
+      // Second confirmation
+      const doubleCheck = confirm(
+        `Final confirmation:\n\n` +
+        `You are about to unpublish ${periodData.label}.\n` +
+        `This should only be used for testing or emergency corrections.\n\n` +
+        `Proceed?`
+      );
+      
+      if (!doubleCheck) return;
+      
+      try {
+        const { error: updErr } = await supabaseClient
+          .from("rota_periods")
+          .update({
+            status: "draft",
+            published_at: null,
+            published_by: null
+          })
+          .eq("id", periodData.id);
+
+        if (updErr) throw updErr;
+
+        const { data: refreshed, error: fetchErr } = await supabaseClient
+          .from("rota_periods")
+          .select("*")
+          .eq("id", periodData.id)
+          .maybeSingle();
+
+        if (fetchErr) throw fetchErr;
+        if (!refreshed) throw new Error("Unpublish succeeded but refetch returned no row (check RLS)");
+
+        periodData = refreshed;
+        displayPeriodStatus(periodData);
+        updateEditingControls(periodData);
+        
+        // Reload the rota
+        await loadPeriod(periodData.id);
+        
+        alert("Period unpublished. Status reverted to draft.");
+      } catch (e) {
+        console.error("Error unpublishing period:", e);
+        alert("Failed to unpublish period: " + e.message);
+      }
+    }
+
+    // ========== DRAFT EDITING ==========
+
+    function toggleRequests() {
+      const canViewAll = window.PermissionsModule.hasPermission("requests.view_all");
+      const canViewOwn = window.PermissionsModule.hasPermission("requests.view_own");
+      
+      if (!canViewAll && !canViewOwn) {
+        alert("You don't have permission to view requests.");
+        return;
+      }
+      
+      showRequests = !showRequests;
+      const btn = document.getElementById("toggleRequestsBtn");
+      btn.textContent = showRequests ? "👁️ Hide Requests" : "👁️ Show Requests";
+      btn.classList.toggle("primary", showRequests);
+      
+      // Re-render the table to apply request visibility
+      renderRota();
+    }
+
+    function toggleEditing() {
+      if (!window.PermissionsModule.hasPermission("rota.edit_draft")) {
+        alert("You don't have permission to edit draft rotas.");
+        return;
+      }
+
+      isEditingUnlocked = !isEditingUnlocked;
+      const btn = document.getElementById("toggleEditingBtn");
+      const metadataDisplay = document.getElementById("metadataDisplay");
+      
+      btn.textContent = isEditingUnlocked ? "🔓 Editing" : "🔒 Locked";
+      btn.classList.toggle("primary", isEditingUnlocked);
+      
+      // Show/hide metadata display
+      if (metadataDisplay) {
+        metadataDisplay.style.display = isEditingUnlocked ? "block" : "none";
+      }
+
+      // Update cell editability
+      document.querySelectorAll("#rota td.cell").forEach(td => {
+        td.classList.toggle("editable", isEditingUnlocked);
+      });
+    }
+
+
+
+    // ========== INIT ==========
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        // Attach period change handler
+        document.getElementById("periodSelect").addEventListener("change", (e) => {
+          loadPeriod(e.target.value);
+        });
+        
+        // Attach toggle requests handler
+        document.getElementById("toggleRequestsBtn").addEventListener("click", toggleRequests);
+        
+        // Attach publish/unpublish handlers
+        document.getElementById("publishBtn").addEventListener("click", publishPeriod);
+        document.getElementById("unpublishBtn").addEventListener("click", unpublishPeriod);
+
+        // Published details modal handlers
+        document.getElementById("publishedDetailsClose").addEventListener("click", closePublishedDetails);
+        document.getElementById("publishedDetailsModal").addEventListener("click", (e) => {
+          if (e.target.id === "publishedDetailsModal") closePublishedDetails();
+        });
+        document.getElementById("publishedChangeBtn").addEventListener("click", handlePublishedChange);
+        document.getElementById("publishedHistoryBtn").addEventListener("click", handlePublishedHistory);
+        document.getElementById("publishedCommentsBtn").addEventListener("click", handlePublishedComments);
+        document.getElementById("publishedSwapBtn").addEventListener("click", handlePublishedSwap);
+
+
+        const user = await checkAuth();
+        if (!user) return;
+
+        // Apply permission-based UI visibility and store globally
+        canViewAllRequests = window.PermissionsModule.hasPermission("requests.view_all");
+        canViewOwnRequests = window.PermissionsModule.hasPermission("requests.view_own");
+        canEditDraft = window.PermissionsModule.hasPermission("rota.edit_draft");
+        canEditPublished = window.PermissionsModule.hasPermission("rota.edit_published");
+        
+        // Hide buttons if user lacks permissions
+        const toggleRequestsBtn = document.getElementById("toggleRequestsBtn");
+        const toggleEditingBtn = document.getElementById("toggleEditingBtn");
+        
+        // Show requests button if user can view all OR view own
+        if (!canViewAllRequests && !canViewOwnRequests && toggleRequestsBtn) {
+          toggleRequestsBtn.style.display = "none";
+        }
+
+        // Initialize modular draft editing (shift-editor.js) after auth
+        const bootEditing = () => {
+          if (typeof window.initDraftEditing !== "function") {
+            console.error("initDraftEditing not ready yet; retrying...");
+            setTimeout(bootEditing, 50);
+            return;
+          }
+          window.initDraftEditing({
+            onUnlock: () => {
+              const metadataDisplay = document.getElementById("metadataDisplay");
+              const publishedBanner = document.getElementById("publishedEditBanner");
+              if (currentEditContext === "draft") {
+                if (metadataDisplay) metadataDisplay.style.display = "block";
+                if (publishedBanner) publishedBanner.style.display = "none";
+              } else {
+                if (metadataDisplay) metadataDisplay.style.display = "none";
+                if (publishedBanner) publishedBanner.style.display = "block";
+              }
+            },
+            onLock: () => {
+              const metadataDisplay = document.getElementById("metadataDisplay");
+              const publishedBanner = document.getElementById("publishedEditBanner");
+              if (metadataDisplay) metadataDisplay.style.display = "none";
+              if (publishedBanner) publishedBanner.style.display = "none";
+            },
+            onPublishedCellClick: ({ userId, date }) => {
+              openPublishedDetails({ userId, date });
+            },
+            onSave: async (userId, date, shiftId) => {
+              const key = `${userId}_${date}`;
+              const shift = draftShifts.find(s => s.id === shiftId);
+              
+              // Optimistic update: update local map immediately
+              const existing = assignmentsMap.get(key);
+              if (existing) {
+                existing.shift_id = shiftId;
+              } else {
+                assignmentsMap.set(key, { user_id: userId, date, shift_id: shiftId, status: "draft" });
+              }
+              
+              // Re-render immediately
+              renderRota();
+              
+              // Sync to database in background
+              const { data: existingDb, error: getErr } = await supabaseClient
+                .from("rota_assignments")
+                .select("id")
+                .eq("user_id", userId)
+                .eq("date", date)
+                .maybeSingle();
+              
+              if (!getErr) {
+                if (existingDb?.id) {
+                  await supabaseClient
+                    .from("rota_assignments")
+                    .update({ shift_id: shiftId })
+                    .eq("id", existingDb.id);
+                } else {
+                  await supabaseClient
+                    .from("rota_assignments")
+                    .insert([{ user_id: userId, date, shift_id: shiftId, status: "draft" }]);
+                }
+              }
+            },
+            onClear: async (userId, date) => {
+              const key = `${userId}_${date}`;
+              
+              // Optimistic update: remove from local map immediately
+              assignmentsMap.delete(key);
+              
+              // Re-render immediately
+              renderRota();
+              
+              // Sync to database in background
+              const { data: existing, error: getErr } = await supabaseClient
+                .from("rota_assignments")
+                .select("id")
+                .eq("user_id", userId)
+                .eq("date", date)
+                .maybeSingle();
+              
+              if (!getErr && existing?.id) {
+                await supabaseClient
+                  .from("rota_assignments")
+                  .delete()
+                  .eq("id", existing.id);
+              }
+            },
+            getCurrentUser: () => window.currentUser,
+            getCurrentPeriod: () => currentPeriod,
+            getAllUsers: () => allUsers,
+            getDraftShifts: () => draftShifts,
+            getAssignment: (userId, date) => assignmentsMap.get(`${userId}_${date}`),
+            refreshGrid: () => {
+              renderRota();
+            },
+          });
+        };
+
+        bootEditing();
+        
+        await loadPeriods();
+      } catch (err) {
+        console.error("Rota boot failed:", err);
+        alert("Failed to load rota: " + err.message);
+      }
+    });
+  </script>
+</body>
+</html>
+
+

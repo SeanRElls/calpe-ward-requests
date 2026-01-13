@@ -419,7 +419,6 @@
           const actionButtons = []
             .concat(allowEdit ? `<button type="button" class="btn" data-act="edit" data-id="${u.id}">Edit</button>` : [])
             .concat(allowToggle ? `<button type="button" class="btn" data-act="toggle" data-id="${u.id}">${u.is_active === false ? "Reactivate" : "Deactivate"}</button>` : [])
-            .concat(currentUser?.is_admin && !isAdminAccount ? `<button type="button" class="btn" data-act="viewas" data-id="${u.id}" style="background:#667eea; color:white; border-color:#667eea;">View As</button>` : [])
             .join("");
 
           return `
@@ -549,6 +548,8 @@
         adminUserEditHelp.textContent = "You can edit this user, but PIN changes are restricted.";
       }
       if (adminEditUserSelect) adminEditUserSelect.value = String(userId);
+      loadPatternDefinitions();
+      loadUserPattern();
       showUsersPage("edit");
     }
 
@@ -724,6 +725,9 @@
       if (id === "permissions"){
         ensureCurrentUser().then(() => loadPermissionsCatalogue());
       }
+      if (id === "patterns"){
+        ensureCurrentUser().then(() => loadPatterns());
+      }
       if (id === "shift-catalogue"){
         ensureCurrentUser().then(() => loadShiftsCatalogue());
       }
@@ -845,14 +849,52 @@
         return;
       }
       try {
-        let data = null;
-        try {
-          const res = await fetch(new URL("js/permissions.json", window.location.href));
-          if (res.ok) data = await res.json();
-        } catch (fetchErr) {
-          data = null;
-        }
-        permissionsCatalogue = data || embeddedPermissionsCatalogue;
+        // Load permissions from database
+        const { data: permissions, error } = await supabaseClient
+          .from("permissions")
+          .select("key, label, description, category")
+          .order("category", { ascending: true })
+          .order("key", { ascending: true });
+        
+        if (error) throw error;
+        
+        // Group permissions by category
+        const categoryMap = new Map();
+        (permissions || []).forEach(perm => {
+          const cat = perm.category || "other";
+          if (!categoryMap.has(cat)) {
+            categoryMap.set(cat, []);
+          }
+          categoryMap.get(cat).push({
+            key: perm.key,
+            label: perm.label,
+            desc: perm.description || ""
+          });
+        });
+        
+        // Convert to catalogue format
+        const categories = [];
+        categoryMap.forEach((items, catId) => {
+          categories.push({
+            id: catId,
+            title: catId.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+            items: items
+          });
+        });
+        
+        // Load permission groups
+        const { data: groups, error: groupsError } = await supabaseClient
+          .from("permission_groups")
+          .select("name")
+          .order("name", { ascending: true });
+        
+        if (groupsError) throw groupsError;
+        
+        permissionsCatalogue = {
+          groups: (groups || []).map(g => g.name),
+          categories: categories
+        };
+        
         await loadPermissionGroups();
         renderPermissionsMatrix();
         const canEdit = hasPermission("users.edit");
@@ -868,6 +910,184 @@
         console.error(e);
         permissionsMatrix.innerHTML = `<div class="page-subtitle">Failed to load permissions catalogue.</div>`;
       }
+    }
+
+    // === PATTERNS MANAGEMENT ===
+    
+    async function loadPatterns(){
+      try {
+        const { data: patterns, error } = await supabaseClient
+          .from("pattern_definitions")
+          .select("id, name, cycle_weeks, weekly_targets, pattern_type, requires_anchor, notes")
+          .order("id", { ascending: true });
+        if (error) throw error;
+        
+        const list = document.getElementById("patternsList");
+        if (!list) return;
+        
+        if (!patterns || patterns.length === 0){
+          list.innerHTML = `<tr style="border-top:1px solid var(--line);"><td colspan="6" style="padding:12px 16px; color:var(--muted); text-align:center;">No patterns found.</td></tr>`;
+          return;
+        }
+        
+        list.innerHTML = patterns.map(p => {
+          const weeklyTargets = Array.isArray(p.weekly_targets) ? p.weekly_targets.join(" / ") : p.weekly_targets;
+          return `
+            <tr style="border-top:1px solid var(--line);">
+              <td style="padding:12px 16px;">${escapeHtml(p.name || "")}</td>
+              <td style="padding:12px 16px;">${escapeHtml(p.pattern_type || "")}</td>
+              <td style="padding:12px 16px;">${p.cycle_weeks || "-"}</td>
+              <td style="padding:12px 16px;">${escapeHtml(weeklyTargets || "-")}</td>
+              <td style="padding:12px 16px;">${p.requires_anchor ? "Yes" : "No"}</td>
+              <td style="padding:12px 16px; font-size:12px; color:var(--muted);">${escapeHtml(p.notes || "")}</td>
+            </tr>
+          `;
+        }).join("");
+      } catch (e){
+        console.error(e);
+        const list = document.getElementById("patternsList");
+        if (list) list.innerHTML = `<tr style="border-top:1px solid var(--line);"><td colspan="6" style="padding:12px 16px; color:var(--muted); text-align:center;">Failed to load patterns.</td></tr>`;
+      }
+    }
+
+    async function loadPatternDefinitions(){
+      try {
+        const { data: patterns, error } = await supabaseClient
+          .from("pattern_definitions")
+          .select("id, name, requires_anchor")
+          .order("name", { ascending: true });
+        if (error) throw error;
+        
+        console.log("[PATTERNS] Loaded pattern definitions:", patterns);
+        
+        const select = document.getElementById("adminUserPattern");
+        if (!select) {
+          console.error("[PATTERNS] Pattern selector not found!");
+          return;
+        }
+        
+        select.innerHTML = `<option value="">No fixed pattern</option>`;
+        if (patterns && patterns.length > 0){
+          patterns.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = String(p.id);
+            opt.textContent = p.name || "Unknown";
+            opt.dataset.requiresAnchor = p.requires_anchor ? "true" : "false";
+            select.appendChild(opt);
+          });
+          console.log("[PATTERNS] Populated dropdown with", patterns.length, "patterns");
+        }
+      } catch (e){
+        console.error("[PATTERNS] Failed to load pattern definitions:", e);
+      }
+    }
+
+    async function saveUserPattern(){
+      if (!requirePermission("users.edit", "Permission required.")) return;
+      
+      const userId = adminEditingUserId;
+      if (!userId) {
+        console.error("[PATTERNS] No user selected.");
+        return alert("Select a user first.");
+      }
+      
+      const patternSelect = document.getElementById("adminUserPattern");
+      const anchorDateInput = document.getElementById("adminUserAnchorDate");
+      
+      if (!patternSelect || !anchorDateInput) {
+        console.error("[PATTERNS] Form elements not found.");
+        return;
+      }
+      
+      const patternId = patternSelect.value || null;
+      const anchorDate = anchorDateInput.value || null;
+      
+      console.log("[PATTERNS] Saving pattern for user", userId, "pattern:", patternId, "anchor:", anchorDate);
+      
+      try {
+        if (patternId){
+          // Get pattern to check if anchor is required
+          const { data: pattern, error: patternErr } = await supabaseClient
+            .from("pattern_definitions")
+            .select("requires_anchor")
+            .eq("id", patternId)
+            .single();
+          if (patternErr) throw patternErr;
+          
+          console.log("[PATTERNS] Pattern found:", pattern);
+          
+          // Upsert user pattern
+          const { data: result, error: upsertErr } = await supabaseClient
+            .from("user_patterns")
+            .upsert({
+              user_id: userId,
+              pattern_id: patternId,
+              anchor_week_start_date: pattern.requires_anchor ? anchorDate : null,
+              assigned_by: currentUser.id,
+              assigned_at: new Date().toISOString()
+            }, { onConflict: "user_id" });
+          if (upsertErr) throw upsertErr;
+          console.log("[PATTERNS] Pattern saved successfully:", result);
+        } else {
+          // Delete user pattern if no pattern selected
+          const { error: deleteErr } = await supabaseClient
+            .from("user_patterns")
+            .delete()
+            .eq("user_id", userId);
+          if (deleteErr) throw deleteErr;
+          console.log("[PATTERNS] Pattern cleared.");
+        }
+      } catch (e){
+        console.error("[PATTERNS] Save failed:", e);
+        alert("Pattern save failed. Check console.");
+      }
+    }
+
+    async function loadUserPattern(){
+      const userId = adminEditingUserId;
+      if (!userId) return;
+      
+      const patternSelect = document.getElementById("adminUserPattern");
+      const anchorDateInput = document.getElementById("adminUserAnchorDate");
+      
+      if (!patternSelect || !anchorDateInput) return;
+      
+      try {
+        const { data: userPattern, error } = await supabaseClient
+          .from("user_patterns")
+          .select("pattern_id, anchor_week_start_date")
+          .eq("user_id", userId)
+          .single();
+        
+        if (error && error.code !== "PGRST116"){
+          throw error;
+        }
+        
+        if (userPattern){
+          patternSelect.value = String(userPattern.pattern_id || "");
+          anchorDateInput.value = userPattern.anchor_week_start_date || "";
+          updateAnchorDateVisibility();
+        } else {
+          patternSelect.value = "";
+          anchorDateInput.value = "";
+          updateAnchorDateVisibility();
+        }
+      } catch (e){
+        console.error(e);
+      }
+    }
+
+    function updateAnchorDateVisibility(){
+      const patternSelect = document.getElementById("adminUserPattern");
+      const anchorDateInput = document.getElementById("adminUserAnchorDate");
+      
+      if (!patternSelect || !anchorDateInput) return;
+      
+      const selectedOption = patternSelect.options[patternSelect.selectedIndex];
+      const requiresAnchor = selectedOption?.dataset?.requiresAnchor === "true";
+      
+      anchorDateInput.style.display = requiresAnchor ? "block" : "none";
+      if (!requiresAnchor) anchorDateInput.value = "";
     }
 
     async function loadPermissionGroups(){
@@ -1108,12 +1328,27 @@
         return;
       }
       try {
-        // Query NEW schema: shifts table with allowed_staff_groups and scope flags
-        const { data: shifts, error: shiftsErr } = await supabaseClient
-          .from("shifts")
-          .select("id, code, label, hours_value, start_time, end_time, day_or_night, allowed_staff_groups, allow_requests, allow_draft, allow_post_publish")
-          .order("code", { ascending: true });
-        if (shiftsErr) throw shiftsErr;
+        let styleFieldsAvailable = true;
+        let shifts;
+        // Try to include styling columns; if they don't exist, fallback without them
+        try {
+          const { data, error } = await supabaseClient
+            .from("shifts")
+            .select("id, code, label, hours_value, start_time, end_time, day_or_night, allowed_staff_groups, allow_requests, allow_draft, allow_post_publish, fill_color, text_color, text_bold, text_italic")
+            .order("code", { ascending: true });
+          if (error) throw error;
+          shifts = data;
+        } catch (e) {
+          console.warn("[SHIFTS] Styling columns not found; falling back without styling fields", e?.message);
+          styleFieldsAvailable = false;
+          const { data, error } = await supabaseClient
+            .from("shifts")
+            .select("id, code, label, hours_value, start_time, end_time, day_or_night, allowed_staff_groups, allow_requests, allow_draft, allow_post_publish")
+            .order("code", { ascending: true });
+          if (error) throw error;
+          shifts = data;
+        }
+
         allShifts = shifts || [];
 
         const list = document.getElementById("shiftsList");
@@ -1127,11 +1362,17 @@
           if (shift.allow_draft) scopes.push("draft");
           if (shift.allow_post_publish) scopes.push("post-publish");
           const shiftScopes = scopes.join(", ") || "None";
+
+          // Styling preview values (safe defaults if fields missing)
+          const fill = shift.fill_color || "#f7f7f7";
+          const text = shift.text_color || "#000000";
+          const weight = shift.text_bold ? "700" : "600";
+          const fontStyle = shift.text_italic ? "italic" : "normal";
           
           return `
             <div style="padding:12px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px;">
               <div style="flex:1;">
-                <div style="display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:8px; background:#f7f7f7; color:#000; border:1px solid #ccc; font-size:12px; font-weight:600;">
+                <div style="display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:8px; background:${fill}; color:${text}; border:1px solid #ccc; font-size:12px; font-weight:${weight}; font-style:${fontStyle};">
                   ${escapeHtml(shift.code)} – ${escapeHtml(shift.label)} (${shift.hours_value}h)
                 </div>
                 <div style="font-size:11px; color:var(--muted); margin:4px 0;">Hours: ${escapeHtml(hours)}</div>
@@ -1199,11 +1440,14 @@
 
       try {
         // NEW schema: allowed_staff_groups is comma-separated string
-        const staffGroups = (shift.allowed_staff_groups || "").split(",").map(g => g.trim());
+        const staffGroups = (shift.allowed_staff_groups || "").split(",").map(g => g.trim()).filter(Boolean);
+
+        console.log("[EDIT SHIFT] Staff groups:", staffGroups);
 
         document.getElementById("editShiftTitle").textContent = `Edit Shift: ${shift.code}`;
         document.getElementById("editShiftCode").value = shift.code;
-        document.getElementById("editShiftLabel").value = shift.label || "";
+        const labelField = document.getElementById("editShiftLabel");
+        labelField.value = shift.label || "";
         document.getElementById("editShiftStart").value = shift.start_time || "";
         document.getElementById("editShiftEnd").value = shift.end_time || "";
         document.getElementById("editShiftHours").value = shift.hours_value || "";
@@ -1213,9 +1457,19 @@
         document.getElementById("editShiftRequests").checked = shift.allow_requests || false;
         document.getElementById("editShiftRotaDraft").checked = shift.allow_draft || false;
         document.getElementById("editShiftRotaPost").checked = shift.allow_post_publish || false;
+        
+        // Load styling fields
+        document.getElementById("editShiftFill").value = shift.fill_color || "#ffffff";
+        document.getElementById("editShiftText").value = shift.text_color || "#000000";
+        document.getElementById("editShiftBold").checked = shift.text_bold || false;
+        document.getElementById("editShiftItalic").checked = shift.text_italic || false;
 
-        console.log("[EDIT SHIFT] Opening modal");
+        console.log("[EDIT SHIFT] Form fields populated, opening modal");
         document.getElementById("editShiftModal").style.display = "block";
+        // Clear selection and focus on label field for editing
+        labelField.setSelectionRange(0, 0);
+        labelField.focus();
+        updateShiftPreview();
       } catch (e) {
         console.error("[EDIT SHIFT] Error:", e);
         alert("Failed to open edit form: " + e.message);
@@ -1223,9 +1477,16 @@
     };
 
     window.saveShift = async function(){
-      if (!currentEditingShiftId) return;
-      const shift = allShifts.find(s => s.id === currentEditingShiftId);
-      if (!shift) return;
+      console.log("[SAVE SHIFT] Called, currentEditingShiftId:", currentEditingShiftId);
+      if (!currentEditingShiftId) {
+        alert("No shift selected for editing.");
+        return;
+      }
+      const shift = allShifts.find(s => s.id == currentEditingShiftId); // Use == for type coercion
+      if (!shift) {
+        alert("Shift not found in catalog.");
+        return;
+      }
 
       try {
         // NEW schema: allowed_staff_groups is comma-separated string
@@ -1234,26 +1495,42 @@
         if (document.getElementById("editShiftSN").checked) staffGroups.push("Nurse");
         if (document.getElementById("editShiftCN").checked) staffGroups.push("CN");
 
-        const { error: updateErr } = await supabaseClient
+        // Styling fields now saved (columns exist in shifts table)
+        const updateData = {
+          label: document.getElementById("editShiftLabel").value,
+          start_time: document.getElementById("editShiftStart").value || null,
+          end_time: document.getElementById("editShiftEnd").value || null,
+          hours_value: parseFloat(document.getElementById("editShiftHours").value) || 0,
+          allowed_staff_groups: staffGroups.join(","),
+          allow_requests: document.getElementById("editShiftRequests").checked,
+          allow_draft: document.getElementById("editShiftRotaDraft").checked,
+          allow_post_publish: document.getElementById("editShiftRotaPost").checked,
+          fill_color: document.getElementById("editShiftFill").value || null,
+          text_color: document.getElementById("editShiftText").value || null,
+          text_bold: document.getElementById("editShiftBold").checked,
+          text_italic: document.getElementById("editShiftItalic").checked
+        };
+        console.log("[SAVE SHIFT] Update data with styling:", updateData);
+
+        console.log("[SAVE SHIFT] Update data:", updateData);
+        console.log("[SAVE SHIFT] Shift ID:", currentEditingShiftId);
+
+        const { data: result, error: updateErr } = await supabaseClient
           .from("shifts")
-          .update({
-            label: document.getElementById("editShiftLabel").value,
-            start_time: document.getElementById("editShiftStart").value || null,
-            end_time: document.getElementById("editShiftEnd").value || null,
-            hours_value: parseFloat(document.getElementById("editShiftHours").value) || 0,
-            allowed_staff_groups: staffGroups.join(","),
-            allow_requests: document.getElementById("editShiftRequests").checked,
-            allow_draft: document.getElementById("editShiftRotaDraft").checked,
-            allow_post_publish: document.getElementById("editShiftRotaPost").checked
-          })
-          .eq("id", currentEditingShiftId);
+          .update(updateData)
+          .eq("id", currentEditingShiftId)
+          .select();
+
+        console.log("[SAVE SHIFT] Update response - data:", result, "error:", updateErr);
+
         if (updateErr) throw updateErr;
 
         alert("Shift updated successfully!");
         document.getElementById("editShiftModal").style.display = "none";
+        currentEditingShiftId = null;
         await loadShiftsCatalogue();
       } catch (e) {
-        console.error("Failed to save shift", e);
+        console.error("[SAVE SHIFT] Error:", e);
         alert("Failed to save shift: " + e.message);
       }
     };
@@ -1307,6 +1584,10 @@
             allow_requests: document.getElementById("newShiftRequests").checked,
             allow_draft: document.getElementById("newShiftRotaDraft").checked,
             allow_post_publish: document.getElementById("newShiftRotaPost").checked,
+            fill_color: document.getElementById("newShiftFill").value || null,
+            text_color: document.getElementById("newShiftText").value || null,
+            text_bold: document.getElementById("newShiftBold").checked,
+            text_italic: document.getElementById("newShiftItalic").checked,
             day_or_night: "day"
           })
           .select();
@@ -1351,6 +1632,14 @@
     adminCancelUserEditBtn?.addEventListener("click", clearUserEditor);
     adminSaveUserBtn?.addEventListener("click", saveUser);
 
+    // Pattern selector listeners
+    document.getElementById("adminUserPattern")?.addEventListener("change", () => {
+      updateAnchorDateVisibility();
+      saveUserPattern();
+    });
+    
+    document.getElementById("adminUserAnchorDate")?.addEventListener("change", saveUserPattern);
+
     adminUsersList?.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-act]");
       if (!btn) return;
@@ -1361,15 +1650,6 @@
         loadUserPermissionGroups(id);
       }
       if (act === "toggle") toggleUserActive(id);
-      if (act === "viewas") {
-        if (confirm("Switch to viewing as this user?\n\nYou'll be able to see what they see in the app, including their shift picker options.")) {
-          if (typeof startViewingAs === 'function') {
-            startViewingAs(id);
-          } else {
-            alert("View As feature not loaded. Refresh the page.");
-          }
-        }
-      }
     });
 
     adminEditUserSearch?.addEventListener("input", () => {

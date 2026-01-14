@@ -1443,6 +1443,8 @@ if (adminTabNotices) {
 let noticesCache = [];       // latest first
 let blockingNoticeIds = [];  // ids of notices not acknowledged at current version
 let unreadCount = 0;
+let notificationsCache = [];
+let notificationsUnreadCount = 0;
 
 function getNoticeBody(n){
   const wantEs = (currentLang === "es");
@@ -1465,6 +1467,25 @@ function isNoticeAcked(n){
   return true;
 }
 
+function getNotificationTitle(n){
+  const payload = n?.payload || {};
+  return escapeHtml(
+    payload.title || n.title || n.type || "Notification"
+  );
+}
+
+function getNotificationBody(n){
+  const payload = n?.payload || {};
+  const body = payload.body || payload.message || payload.text || "";
+
+  if (typeof body === "string" && body.trim()) return escapeHtml(body);
+  try {
+    return escapeHtml(JSON.stringify(payload));
+  } catch (e) {
+    return "";
+  }
+}
+
 async function fetchNoticeAcksForAdmin(noticeId){
   const { data, error } = await supabaseClient
     .rpc("admin_get_notice_acks", { p_notice_id: noticeId });
@@ -1485,33 +1506,76 @@ async function fetchNoticesForMe(){
 
   const pin = getSessionPinOrThrow();
 
-const { data, error } = await supabaseClient.rpc(
-  "get_notices_for_user",
-  {
-    p_user_id: currentUser.id
-  }
-);
+  const { data, error } = await supabaseClient.rpc(
+    "get_notices_for_user",
+    {
+      p_user_id: currentUser.id
+    }
+  );
   if (error) throw error;
 
   // De-dupe by notice id
-const map = new Map();
-for (const row of (data || [])){
-  const key = String(row.id);
-  const prev = map.get(key);
-  if (!prev) {
-    map.set(key, row);
-    continue;
+  const map = new Map();
+  for (const row of (data || [])){
+    const key = String(row.id);
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, row);
+      continue;
+    }
+
+    // Prefer the row with the newest updated_at
+    const prevT = prev.updated_at ? new Date(prev.updated_at).getTime() : 0;
+    const rowT  = row.updated_at  ? new Date(row.updated_at).getTime()  : 0;
+
+    if (rowT > prevT) map.set(key, row);
   }
 
-  // Prefer the row with the newest updated_at
-  const prevT = prev.updated_at ? new Date(prev.updated_at).getTime() : 0;
-  const rowT  = row.updated_at  ? new Date(row.updated_at).getTime()  : 0;
-
-  if (rowT > prevT) map.set(key, row);
+  return [...map.values()].sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
 }
 
+async function fetchNotificationsForMe(){
+  if (!currentUser) return [];
 
-return [...map.values()].sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+  const roleId = Number(currentUser.role_id);
+  const clauses = ["target_scope.eq.all_staff"];
+
+  if (currentUser.id) {
+    clauses.push(`and(target_scope.eq.user,target_user_id.eq.${currentUser.id})`);
+  }
+
+  if (!Number.isNaN(roleId)) {
+    clauses.push(`and(target_scope.eq.role,target_role_ids.cs.{${roleId}})`);
+  }
+
+  const { data, error } = await supabaseClient
+    .from("notifications")
+    .select(`
+      id,
+      type,
+      payload,
+      target_scope,
+      target_role_ids,
+      target_user_id,
+      requires_action,
+      status,
+      created_by,
+      created_at,
+      updated_by,
+      updated_at,
+      acted_by,
+      acted_at
+    `)
+    .or(clauses.join(","))
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+function computeNotificationState(list){
+  notificationsCache = Array.isArray(list) ? list : [];
+  notificationsUnreadCount = (notificationsCache || []).filter(n => (n.status || "pending") === "pending").length;
 }
 
 function computeNoticeState(list){
@@ -1556,7 +1620,8 @@ function updateNoticeBell(){
   }
 
   noticeBell.style.display = "inline-flex";
-  noticeBellDot.style.display = (unreadCount > 0) ? "inline" : "none";
+  const hasUnread = (unreadCount + notificationsUnreadCount) > 0;
+  noticeBellDot.style.display = hasUnread ? "inline" : "none";
 }
 
 function openUnreadModal(){
@@ -1681,42 +1746,119 @@ function renderAllNoticesList(){
     console.table((visible || []).map(n => ({ id: n.id, title: n.title, target_all: n.target_all, target_roles: n.target_roles })));
   } catch (err) { /* ignore */ }
 
-  if (!visible.length){
-    noticeAllList.innerHTML = `<div class="subtitle">No notices.</div>`;
+  // MERGE: combine visible notices + notifications
+  const combined = [];
+
+  // Add notices as "notice" items
+  visible.forEach(n => {
+    combined.push({
+      _type: "notice",
+      id: String(n.id),
+      title: n.title || "Notice",
+      body: getNoticeBody(n),
+      when: n.updated_at ? new Date(n.updated_at).toLocaleString("en-GB") : "",
+      who: n.created_by_name || "Unknown",
+      acked: isNoticeAcked(n),
+      data: n
+    });
+  });
+
+  // Add notifications as "notification" items
+  (notificationsCache || []).forEach(n => {
+    combined.push({
+      _type: "notification",
+      id: String(n.id),
+      title: getNotificationTitle(n),
+      body: getNotificationBody(n),
+      when: n.updated_at ? new Date(n.updated_at).toLocaleString("en-GB") : "",
+      who: "", // optional: could map created_by to user name
+      status: n.status || "pending",
+      requiresAction: !!n.requires_action,
+      data: n
+    });
+  });
+
+  // Sort combined by updated_at descending
+  combined.sort((a,b) => {
+    const aTime = a.data.updated_at ? new Date(a.data.updated_at).getTime() : 0;
+    const bTime = b.data.updated_at ? new Date(b.data.updated_at).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  if (!combined.length){
+    noticeAllList.innerHTML = `<div class="subtitle">No items.</div>`;
     return;
   }
 
-  noticeAllList.innerHTML = visible.map(n => {
-    const acked = isNoticeAcked(n);
-    const body  = getNoticeBody(n); // Already formatted as HTML from Quill
-    const when  = n.updated_at ? new Date(n.updated_at).toLocaleString("en-GB") : "";
-    const who   = escapeHtml(n.created_by_name || "Unknown");
+  noticeAllList.innerHTML = combined.map(item => {
+    if (item._type === "notice"){
+      const pill = item.acked
+        ? `<span class="notice-pill">Acknowledged</span>`
+        : `<span class="notice-pill unread">New</span>`;
 
-    const pill = acked
-      ? `<span class="notice-pill">Acknowledged</span>`
-      : `<span class="notice-pill unread">New</span>`;
-
-    return `
-      <div class="notice-card">
-        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
-          <div style="min-width:0;">
-            <div class="notice-title">${escapeHtml(n.title || "Notice")}</div>
-            <div class="notice-meta">By ${who}${when ? " Â· " + when : ""}</div>
+      return `
+        <div class="notice-card">
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+            <div style="min-width:0;">
+              <div class="notice-title">${escapeHtml(item.title)}</div>
+              <div class="notice-meta">By ${escapeHtml(item.who)}${item.when ? " · " + item.when : ""}</div>
+            </div>
+            <div>${pill}</div>
           </div>
-          <div>${pill}</div>
+
+          <div class="notice-body" style="margin-top:8px; line-height: 1.6;">${item.body}</div>
+
+          ${item.acked ? "" : `
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+              <button type="button" class="primary" data-ack="${item.id}" style="min-width:auto;">
+                Acknowledge
+              </button>
+            </div>
+          `}
         </div>
+      `;
+    }
 
-        <div class="notice-body" style="margin-top:8px; line-height: 1.6;">${body}</div>
+    if (item._type === "notification"){
+      const pill = item.status === "pending"
+        ? `<span class="notice-pill unread">New</span>`
+        : `<span class="notice-pill">${item.status}</span>`;
 
-        ${acked ? "" : `
-          <div style="display:flex; justify-content:flex-end; margin-top:10px;">
-            <button type="button" class="primary" data-ack="${n.id}" style="min-width:auto;">
-              Acknowledge
-            </button>
+      const actionButtons = (item.status === "pending" && item.requiresAction)
+        ? `
+          <div style="display:flex; gap:6px; justify-content:flex-end; margin-top:10px;">
+            <button type="button" class="primary" data-notif-accept="${item.id}">Accept</button>
+            <button type="button" data-notif-decline="${item.id}">Decline</button>
+            <button type="button" data-notif-ignore="${item.id}">Ignore</button>
           </div>
-        `}
-      </div>
-    `;
+        `
+        : (item.status === "pending" && !item.requiresAction)
+        ? `
+          <div style="display:flex; gap:6px; justify-content:flex-end; margin-top:10px;">
+            <button type="button" class="primary" data-notif-ack="${item.id}">Acknowledge</button>
+            <button type="button" data-notif-ignore="${item.id}">Ignore</button>
+          </div>
+        `
+        : "";
+
+      return `
+        <div class="notice-card">
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+            <div style="min-width:0;">
+              <div class="notice-title">${item.title}</div>
+              <div class="notice-meta">${item.when ? item.when : ""}</div>
+            </div>
+            <div>${pill}</div>
+          </div>
+
+          <div class="notice-body" style="margin-top:8px; line-height: 1.6;">${item.body}</div>
+
+          ${actionButtons}
+        </div>
+      `;
+    }
+
+    return "";
   }).join("");
 }
 
@@ -1806,10 +1948,20 @@ function renderAckList(container, list){
 
 
 async function refreshNotices(){
-const list = await fetchNoticesForMe();
-const visible = filterNoticesForUser(list);
-computeNoticeState(visible);
+  const list = await fetchNoticesForMe();
+  const visible = filterNoticesForUser(list);
+  computeNoticeState(visible);
   updateNoticeBell();
+}
+
+async function refreshNotifications(){
+  const list = await fetchNotificationsForMe();
+  computeNotificationState(list);
+  updateNoticeBell();
+}
+
+async function refreshNoticesAndNotifications(){
+  await Promise.all([refreshNotices(), refreshNotifications()]);
 }
 
 async function ackOneNotice(noticeId, noticeVersion){
@@ -1849,19 +2001,21 @@ async function refreshNoticesAndMaybeBlock(){
     noticesCache = [];
     blockingNoticeIds = [];
     unreadCount = 0;
+    notificationsCache = [];
+    notificationsUnreadCount = 0;
     updateNoticeBell();
     return;
   }
 
   try {
-  await refreshNotices();
+    await refreshNoticesAndNotifications();
 
-    // Block editing until unread are acknowledged
+    // Block editing until unread notices are acknowledged
     if (blockingNoticeIds.length > 0){
       openUnreadModal();
     }
   } catch (e) {
-    console.error("Notices load failed:", e);
+    console.error("Notices/notifications load failed:", e);
     // Do not brick the app if notices fail
   }
 }
@@ -1875,6 +2029,129 @@ noticeBell?.addEventListener("click", (e) => {
   if (!currentUser) return;
   openAllNoticesModal();
 });
+
+// Acknowledge notice (event delegation)
+noticeAllList?.addEventListener("click", async (e) => {
+  const ackBtn = e.target.closest("button[data-ack]");
+  if (ackBtn) {
+    const id = String(ackBtn.dataset.ack);
+
+    // Find the notice so we know the current version
+    const n = (noticesCache || []).find(x => String(x.id) === id);
+    if (!n) {
+      alert("Notice not found in cache. Reload and try again.");
+      return;
+    }
+
+    try {
+      ackBtn.disabled = true;
+
+      // Pass id + version
+      await ackOneNotice(n.id, n.version);
+
+      // Refresh local state + UI
+      await refreshNoticesAndNotifications();
+      renderAllNoticesList();
+
+      // If that cleared blocking notices, close the blocking modal
+      if (blockingNoticeIds.length === 0 && noticeUnreadModal?.style.display === "flex") {
+        closeUnreadModal();
+      }
+
+      applyUnlockState();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to acknowledge notice.");
+    } finally {
+      ackBtn.disabled = false;
+    }
+    return;
+  }
+
+  // Notification actions
+  const acceptBtn = e.target.closest("button[data-notif-accept]");
+  if (acceptBtn) {
+    const id = String(acceptBtn.dataset.notifAccept);
+    try {
+      acceptBtn.disabled = true;
+      await updateNotificationStatus(id, "accepted");
+      await refreshNotifications();
+      renderAllNoticesList();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to accept notification.");
+    } finally {
+      acceptBtn.disabled = false;
+    }
+    return;
+  }
+
+  const declineBtn = e.target.closest("button[data-notif-decline]");
+  if (declineBtn) {
+    const id = String(declineBtn.dataset.notifDecline);
+    try {
+      declineBtn.disabled = true;
+      await updateNotificationStatus(id, "declined");
+      await refreshNotifications();
+      renderAllNoticesList();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to decline notification.");
+    } finally {
+      declineBtn.disabled = false;
+    }
+    return;
+  }
+
+  const ignoreBtn = e.target.closest("button[data-notif-ignore]");
+  if (ignoreBtn) {
+    const id = String(ignoreBtn.dataset.notifIgnore);
+    try {
+      ignoreBtn.disabled = true;
+      await updateNotificationStatus(id, "ignored");
+      await refreshNotifications();
+      renderAllNoticesList();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to ignore notification.");
+    } finally {
+      ignoreBtn.disabled = false;
+    }
+    return;
+  }
+
+  const ackNotifBtn = e.target.closest("button[data-notif-ack]");
+  if (ackNotifBtn) {
+    const id = String(ackNotifBtn.dataset.notifAck);
+    try {
+      ackNotifBtn.disabled = true;
+      await updateNotificationStatus(id, "ack");
+      await refreshNotifications();
+      renderAllNoticesList();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to acknowledge notification.");
+    } finally {
+      ackNotifBtn.disabled = false;
+    }
+    return;
+  }
+});
+
+async function updateNotificationStatus(notifId, status){
+  if (!currentUser) throw new Error("Not logged in.");
+  const { error } = await supabaseClient
+    .from("notifications")
+    .update({
+      status: status,
+      acted_by: currentUser.id,
+      acted_at: new Date().toISOString(),
+      updated_by: currentUser.id
+    })
+    .eq("id", notifId);
+
+  if (error) throw error;
+}
 
 // Admin-only: load ack lists when the "Acknowledged by" row is clicked.
 // (toggle event doesn't bubble, so we use click delegation)
@@ -1922,45 +2199,6 @@ noticeAllClose?.addEventListener("click", closeAllNoticesModal);
 noticeAllModal?.addEventListener("click", (e) => {
   if (e.target === noticeAllModal) closeAllNoticesModal();
 });
-
-// Acknowledge single from ALL modal (event delegation)
-noticeAllList?.addEventListener("click", async (e) => {
-  const btn = e.target.closest("button[data-ack]");
-  if (!btn) return;
-
-  const id = String(btn.dataset.ack);
-
-  // Find the notice so we know the current version
-  const n = (noticesCache || []).find(x => String(x.id) === id);
-  if (!n) {
-    alert("Notice not found in cache. Reload and try again.");
-    return;
-  }
-
-  try {
-    btn.disabled = true;
-
-    // Pass id + version
-    await ackOneNotice(n.id, n.version);
-
-    // Refresh local state + UI
-await refreshNotices();
-    renderAllNoticesList();
-
-    // If that cleared blocking notices, close the blocking modal
-    if (blockingNoticeIds.length === 0 && noticeUnreadModal?.style.display === "flex") {
-      closeUnreadModal();
-    }
-
-    applyUnlockState();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to acknowledge notice.");
-  } finally {
-    btn.disabled = false;
-  }
-});
-
 
 // Blocking modal: acknowledge ALL
 noticeUnreadAcknowledge?.addEventListener("click", async () => {
@@ -3335,6 +3573,7 @@ if(ok !== true){
 }
 
   currentUser = selectedUser;
+  window.currentUser = currentUser; // Expose to window for other scripts
 setSessionPin(selectedUser.id, pin); // âœ… critical (used for saving requests)
 localStorage.setItem(STORAGE_KEY, currentUser.id);
 
@@ -5299,6 +5538,77 @@ window.addEventListener('load',function(){requestAnimationFrame(function(){reque
     reportRequestsUsage?.addEventListener("click",generateRequestsUsageReport);
     reportComments?.addEventListener("click",generateCommentsReport);
     printModal?.addEventListener("click",(e)=>{if(e.target===printModal)closePrintModal()});
+
+/* =========================================================
+       SHIFT SWAPS (Post-publish only)
+       ========================================================= */
+
+    async function adminExecuteShiftSwap(counterpartyUserId, counterpartyDate){
+      if (!currentUser?.is_admin) throw new Error("Admin only");
+      if (!activeCell) throw new Error("No active cell");
+
+      const pin = getSessionPinOrThrow();
+      const periodId = currentPeriod?.id;
+      if (!periodId) throw new Error("No active period");
+
+      const { data, error } = await supabaseClient.rpc("admin_execute_shift_swap", {
+        p_admin_id: currentUser.id,
+        p_pin: pin,
+        p_period_id: periodId,
+        p_initiator_user_id: activeCell.userId,
+        p_initiator_shift_date: activeCell.date,
+        p_counterparty_user_id: counterpartyUserId,
+        p_counterparty_shift_date: counterpartyDate
+      });
+
+      if (error) throw error;
+      if (!data[0]?.success) throw new Error(data[0]?.error_message || "Swap failed");
+
+      return data[0];
+    }
+
+    async function staffRequestShiftSwap(counterpartyUserId, counterpartyDate){
+      if (!currentUser || currentUser.is_admin) throw new Error("Staff only");
+      if (!currentUser.rota?.swap) throw new Error("Permission denied: rota.swap");
+      if (!activeCell) throw new Error("No active cell");
+
+      const periodId = currentPeriod?.id;
+      if (!periodId) throw new Error("No active period");
+
+      const { data, error } = await supabaseClient.rpc("staff_request_shift_swap", {
+        p_user_id: currentUser.id,
+        p_period_id: periodId,
+        p_initiator_shift_date: activeCell.date,
+        p_counterparty_user_id: counterpartyUserId,
+        p_counterparty_shift_date: counterpartyDate
+      });
+
+      if (error) throw error;
+      if (!data[0]?.success) throw new Error(data[0]?.error_message || "Request failed");
+
+      return data[0];
+    }
+
+    async function staffRespondToSwapRequest(swapRequestId, response){
+      if (!currentUser || currentUser.is_admin) throw new Error("Staff only");
+      if (!['accepted', 'declined', 'ignored'].includes(response)) throw new Error("Invalid response");
+
+      const { data, error } = await supabaseClient.rpc("staff_respond_to_swap_request", {
+        p_user_id: currentUser.id,
+        p_swap_request_id: swapRequestId,
+        p_response: response
+      });
+
+      if (error) throw error;
+      if (!data[0]?.success) throw new Error(data[0]?.error_message || "Response failed");
+
+      return data[0];
+    }
+
+    // Expose swap functions to window for rota.html
+    window.adminExecuteShiftSwap = adminExecuteShiftSwap;
+    window.staffRequestShiftSwap = staffRequestShiftSwap;
+    window.staffRespondToSwapRequest = staffRespondToSwapRequest;
 
 /* =========================================================
        10) BOOT

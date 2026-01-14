@@ -66,14 +66,20 @@ const ROLE_TO_STAFF_GROUP = {
 // Dynamically populate shift picker from database (NEW SCHEMA)
 async function populateShiftGrid(){
   // Check if supabaseClient is available
-  if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+  if (typeof window.supabaseClient === 'undefined' || !window.supabaseClient) {
     console.warn("[SHIFT-FUNCTIONS] supabaseClient not yet available, skipping shift grid population");
+    return;
+  }
+  
+  // Check if currentUser is available
+  if (!window.currentUser) {
+    console.warn("[SHIFT-FUNCTIONS] currentUser not yet available, skipping shift grid population");
     return;
   }
   
   try {
     // Get shifts with scope flags and allowed_staff_groups
-    const { data: shifts, error: shiftsErr } = await supabaseClient
+    const { data: shifts, error: shiftsErr } = await window.supabaseClient
       .from("shifts")
       .select("id, code, label, hours_value, allowed_staff_groups, start_time, end_time")
       .eq("allow_requests", true)
@@ -84,8 +90,8 @@ async function populateShiftGrid(){
     
     // Filter by current user's role (admin sees all)
     let requestShifts = shifts || [];
-    if (currentUser && !currentUser.is_admin) {
-      const userStaffGroup = ROLE_TO_STAFF_GROUP[currentUser.role_id];
+    if (window.currentUser && !window.currentUser.is_admin) {
+      const userStaffGroup = ROLE_TO_STAFF_GROUP[window.currentUser.role_id];
       
       if (userStaffGroup) {
         requestShifts = requestShifts.filter(shift => {
@@ -248,11 +254,38 @@ function attachShiftButtonListeners(){
   }
 })();
 
-// Hook into boot sequence
-window.addEventListener("DOMContentLoaded", function() {
-  setTimeout(() => {
-    populateShiftGrid();
-  }, 1000);
-});
+// Hook into boot sequence - listen for calpe:user-ready event
+function startShiftPickerBoot() {
+  console.log("[SHIFT-FUNCTIONS] Starting shift picker boot");
+  const container = document.getElementById("shiftGridContainer");
+  if (!container) {
+    console.warn("[SHIFT-FUNCTIONS] No shiftGridContainer present; skipping boot");
+    return;
+  }
+  setTimeout(() => populateShiftGridWithRetry(), 200);
+}
+
+// Start immediately if user is already loaded, otherwise wait for signal
+if (window.currentUser) {
+  console.log("[SHIFT-FUNCTIONS] window.currentUser already set, starting immediately");
+  startShiftPickerBoot();
+} else {
+  console.log("[SHIFT-FUNCTIONS] Waiting for calpe:user-ready event");
+  window.addEventListener("calpe:user-ready", startShiftPickerBoot, { once: true });
+}
+
+// Retry wrapper - keeps trying until currentUser is available
+function populateShiftGridWithRetry(attempt = 0) {
+  if (!window.currentUser) {
+    if (attempt < 30) { // Try for up to 6 seconds (30 * 200ms)
+      setTimeout(() => populateShiftGridWithRetry(attempt + 1), 200);
+      return;
+    } else {
+      console.warn("[SHIFT-FUNCTIONS] Gave up waiting for currentUser after 6s");
+      return;
+    }
+  }
+  populateShiftGrid();
+}
 
 console.log("Shift functions loaded");

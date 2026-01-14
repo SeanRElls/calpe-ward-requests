@@ -10,7 +10,9 @@
   <link rel="stylesheet" href="css/rota.css">
   <link rel="stylesheet" href="css/rota-edit.css">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
   <script src="js/permissions.js"></script>
+  <script src="js/swap-functions.js" defer></script>
   <script src="js/shift-functions.js" defer></script>
   <script src="js/shift-editor.js" defer></script>
 </head>
@@ -41,6 +43,10 @@
         </div>
       </div>
       <div class="rightbits">
+        <!-- Bell -->
+        <button class="badge" id="noticeBell" type="button" title="Notices & notifications">
+          🔔 <span id="noticeBellDot" style="display:none;">•</span>
+        </button>
         <span id="userName" class="badge"></span>
         <button id="logoutBtn">Logout</button>
       </div>
@@ -95,7 +101,77 @@
         <div class="modal-bubble">
           <div id="shiftPickerList"></div>
         </div>
+        
+        <!-- Override times/hours (shown only for published edits) -->
+        <div id="overrideSection" class="modal-bubble" style="display: none; margin-top: 12px; padding: 16px;">
+          <div style="font-size: 13px; color: #64748b; margin-bottom: 12px; font-weight: 600;">Override Actual Times</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <label style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">Start</label>
+              <input type="time" id="overrideStartTime" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">End</label>
+              <input type="time" id="overrideEndTime" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">Hours</label>
+              <input type="number" id="overrideHours" step="0.25" min="0" max="24" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+          </div>
+          <button type="button" id="clearOverrideBtn" style="padding: 6px 12px; font-size: 12px; color: #64748b; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer;">Clear Override</button>
+        </div>
+        
+        <script>
+          // Auto-calculate hours when times change
+          (function() {
+            function calculateHours() {
+              const startInput = document.getElementById('overrideStartTime');
+              const endInput = document.getElementById('overrideEndTime');
+              const hoursInput = document.getElementById('overrideHours');
+              
+              if (!startInput?.value || !endInput?.value) return;
+              
+              const [startHour, startMin] = startInput.value.split(':').map(Number);
+              const [endHour, endMin] = endInput.value.split(':').map(Number);
+              
+              let hours = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+              if (hours < 0) hours += 24 * 60; // Handle overnight shifts
+              
+              const decimalHours = Math.round((hours / 60) * 4) / 4; // Round to nearest 0.25
+              if (hoursInput) hoursInput.value = decimalHours;
+            }
+            
+            // Attach listeners when DOM ready
+            document.addEventListener('DOMContentLoaded', () => {
+              const startInput = document.getElementById('overrideStartTime');
+              const endInput = document.getElementById('overrideEndTime');
+              
+              if (startInput) startInput.addEventListener('change', calculateHours);
+              if (endInput) endInput.addEventListener('change', calculateHours);
+            });
+          })();
+        </script>
+        
+        <!-- Admin Note (internal only, shown for published edits) -->
+        <div id="commentSection" class="modal-bubble" style="display: none; margin-top: 12px; padding: 16px;">
+          <label style="font-size: 13px; color: #dc2626; display: block; margin-bottom: 8px; font-weight: 600;">Admin Note (override)</label>
+          <textarea id="shiftComment" rows="3" placeholder="Note about time/hours override..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; box-sizing: border-box; margin-bottom: 8px;"></textarea>
+          
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <label for="commentVisibilitySelect" style="font-size: 12px; color: #64748b;">Who can see:</label>
+            <select id="commentVisibilitySelect" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer;">
+              <option value="admin_only">Admin only</option>
+              <option value="all_staff">All staff</option>
+              <option value="user_only">User only</option>
+            </select>
+          </div>
+          
+          <div style="font-size: 11px; color: #64748b; margin-top: 6px;">For general comments, use View Comments button.</div>
+        </div>
+        
         <div class="btns">
+          <button id="shiftPickerSave" type="button" class="primary" style="display: none;">Save</button>
           <button id="shiftPickerClear" type="button">Clear</button>
           <button id="shiftPickerClose" type="button">Cancel</button>
         </div>
@@ -117,13 +193,29 @@
             <span class="shift-name" id="publishedShiftName"></span>
           </div>
           <div class="rest-day" id="restDayLabel" style="display:none; margin-top:8px; font-size:13px; color:#64748b; font-style:italic;">Rest day</div>
-          <div class="kv" style="margin-top:12px">
-            <div class="k">Times</div>
-            <div class="v" id="publishedShiftTimes"></div>
+          
+          <!-- Scheduled times (original from shift) -->
+          <div class="kv" id="scheduledTimesRow" style="margin-top:12px; display:none;">
+            <div class="k">Scheduled</div>
+            <div class="v" id="scheduledTimes"></div>
           </div>
+          
+          <!-- Actual times (override) -->
+          <div class="kv" id="actualTimesRow" style="margin-top:10px; display:none;">
+            <div class="k" style="color: #dc2626; font-weight: 600;">Actual</div>
+            <div class="v" id="actualTimes" style="color: #dc2626; font-weight: 600;"></div>
+          </div>
+          
+          <!-- Hours (scheduled or override) -->
           <div class="kv" id="hoursRow" style="margin-top:10px; display:none;">
             <div class="k">Hours</div>
             <div class="v" id="publishedShiftHours"></div>
+          </div>
+          
+          <!-- Admin Note display (internal only) -->
+          <div id="commentDisplay" style="display:none; margin-top:12px; padding:10px; background:#fef2f2; border-left:3px solid #dc2626; border-radius:4px;">
+            <div style="font-size:12px; color:#dc2626; margin-bottom:4px; font-weight:600;">Admin Note (internal)</div>
+            <div id="commentText" style="font-size:13px; color:#0f172a; white-space:pre-wrap;"></div>
           </div>
         </div>
 
@@ -139,16 +231,96 @@
       </div>
     </div>
 
+    <!-- Comments Modal -->
+    <div class="modal-backdrop" id="commentsModalBackdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="commentsModalTitle">
+        <h2 id="commentsModalTitle">Comments</h2>
+        <p id="commentsModalSubtitle" class="subtitle"></p>
+        
+        <div class="modal-bubble" style="max-height: 400px; overflow-y: auto;">
+          <div id="commentsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
+        
+        <!-- Add comment section -->
+        <div class="modal-bubble" style="margin-top: 12px; padding: 16px;">
+          <label style="font-size: 13px; display: block; margin-bottom: 8px; font-weight: 600;">Add Comment</label>
+          <textarea id="newCommentText" rows="3" placeholder="Type your comment..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; box-sizing: border-box; margin-bottom: 8px;"></textarea>
+          
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <label for="commentVisibilityDropdown" style="font-size: 12px; color: #64748b;">Who can see:</label>
+            <select id="commentVisibilityDropdown" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer;">
+              <option value="admin_only">Admin only</option>
+              <option value="all_staff" selected>All staff</option>
+              <option value="user_only">User only</option>
+            </select>
+          </div>
+          
+          <button id="addCommentBtn" type="button" class="primary" style="margin-top: 12px; width: 100%;">Add Comment</button>
+        </div>
+        
+        <div class="btns">
+          <button id="commentsModalClose" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notices Modal (merged feed) -->
+    <div class="modal-backdrop" id="noticeAllModal" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h2>Notices & Notifications</h2>
+        <div class="modal-bubble" style="max-height: 500px; overflow-y: auto;">
+          <div id="noticeAllList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
+        <div class="btns">
+          <button id="noticeAllClose" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shift Swap Modal -->
+    <div class="modal-backdrop" id="shiftSwapModal" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shiftSwapTitle">
+        <h2 id="shiftSwapTitle">Propose Shift Swap</h2>
+        <p id="shiftSwapSubtitle" class="subtitle"></p>
+
+        <div class="modal-bubble">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Your shift:</label>
+            <div id="swapYourShift" style="padding: 10px; background: #f3f4f6; border-radius: 6px; font-size: 13px;"></div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label for="swapPeerSelect" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Swap with:</label>
+            <select id="swapPeerSelect" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit;">
+              <option value="">Select staff member...</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label for="swapDateSelect" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Their shift on:</label>
+            <select id="swapDateSelect" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit;" disabled>
+              <option value="">Select their shift date...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="btns">
+          <button id="swapSubmitBtn" type="button" class="primary">Send Request</button>
+          <button id="swapCancelBtn" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- close .wrap -->
+
   <script>
-    console.log("ROTA.HTML LOADING - VERSION 3");
-    // Supabase Config (inline for file:// compatibility)
-    const SUPABASE_URL = "https://tbclufdtyefexwwitfsz.supabase.co";
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiY2x1ZmR0eWVmZXh3d2l0ZnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODA4ODksImV4cCI6MjA4MjY1Njg4OX0.OYnj44QQCTD-5tqR2XSVt4oQso9Ol8ZLH2tLsRGIreA";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    console.log("ROTA.HTML LOADING - VERSION 3", "readyState=", document.readyState);
+    // Supabase + storage accessors (tolerate early execution before defer scripts)
+    const getSupabase = () => window.supabaseClient;
+    const getStorageKey = () => window.STORAGE_KEY || "calpeward.loggedInUserId";
 
     // ========== SESSION RESTORATION ==========
     const WINDOW_SESSION_PREFIX = "calpeward:";
-    const STORAGE_KEY = "calpeward.current_user_id";
     
     function getWindowSession() {
       if (!window.name || !window.name.startsWith(WINDOW_SESSION_PREFIX)) {
@@ -171,7 +343,7 @@
       
       // Store userId in localStorage and PIN in sessionStorage
       console.log("[ROTA DEBUG] Storing userId in localStorage:", data.userId);
-      localStorage.setItem(STORAGE_KEY, data.userId);
+      localStorage.setItem(getStorageKey(), data.userId);
       if (data.pin) {
         sessionStorage.setItem(`calpeward.pin.${data.userId}`, data.pin);
         console.log("[ROTA DEBUG] Stored PIN for user:", data.userId);
@@ -179,9 +351,7 @@
       return data;
     }
 
-    // Restore session on page load
-    console.log("[ROTA DEBUG] Calling restoreSessionFromWindow...");
-    restoreSessionFromWindow();
+    // Restore session happens later, after DOMContentLoaded once config is ready
 
     let currentPeriod = null;
     let allUsers = [];
@@ -189,6 +359,7 @@
     let shiftMap = new Map(); // id -> shift_catalogue row
     let assignmentsMap = new Map(); // user_id_date -> rota_assignment
     let overridesMap = new Map(); // rota_assignment_id -> rota_assignment_override
+    let commentsMap = new Map(); // rota_assignment_id -> [comments array]
     let requestsMap = new Map(); // user_id_date -> request
     let patterns = new Map(); // pattern_id -> pattern_definitions
     let userPatterns = new Map(); // user_id -> user_patterns row
@@ -214,27 +385,35 @@
 
     // ========== AUTH ==========
     async function checkAuth() {
-      console.log("[ROTA DEBUG] ===== CHECKAUTH STARTED =====");
-      console.log("[ROTA DEBUG] localStorage available?", typeof localStorage !== 'undefined');
-      console.log("[ROTA DEBUG] PermissionsModule available?", typeof window.PermissionsModule !== 'undefined');
       console.log("[ROTA DEBUG] checkAuth starting...");
-      
-      // Use permissions module to load user and permissions
-      const profile = await window.PermissionsModule.loadCurrentUserPermissions();
-      
-      console.log("[ROTA DEBUG] Profile returned:", profile);
-      
-      if (!profile) {
-        console.log("[ROTA DEBUG] No profile, redirecting to index.html");
+
+      // Try to restore session from window.name first (writes localStorage + sessionStorage)
+      restoreSessionFromWindow();
+
+      console.log("[ROTA DEBUG] STORAGE_KEY getter returns", getStorageKey());
+      console.log("[ROTA DEBUG] localStorage userId", localStorage.getItem(getStorageKey()));
+      console.log("[ROTA DEBUG] supabaseClient available?", !!getSupabase());
+
+      if (!window.PermissionsModule || typeof window.PermissionsModule.loadCurrentUserPermissions !== "function") {
+        console.error("[ROTA DEBUG] PermissionsModule not available");
         window.location.href = "index.html";
         return null;
       }
 
-      // Get the user from permissions module and store in global for rota.html
+      console.log("[ROTA DEBUG] Calling PermissionsModule.loadCurrentUserPermissions...");
+      await window.PermissionsModule.loadCurrentUserPermissions();
       const currentUser = window.PermissionsModule.getCurrentUser();
+      console.log("[ROTA DEBUG] PermissionsModule currentUser:", currentUser);
+
+      if (!currentUser) {
+        console.warn("[ROTA DEBUG] No current user after permissions load; redirecting");
+        window.location.href = "index.html";
+        return null;
+      }
+
+      // Store globally for rota.html and other scripts
       window.currentUser = currentUser;
-      
-      console.log("[ROTA DEBUG] User loaded:", currentUser);
+      console.log("[ROTA DEBUG] User loaded:", currentUser.name);
       
       // Update display with correct user name
       const userNameEl = document.getElementById("userName");
@@ -251,17 +430,20 @@
       const navAdminLink = document.getElementById("navAdminLink");
       if (navAdminLink) navAdminLink.style.display = currentUser.is_admin ? "inline" : "none";
 
-      // Everyone can access rota.html
-      // Permissions control what they can see/do, not whether they can access the page
       return currentUser;
     }
 
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      localStorage.removeItem(STORAGE_KEY);
-      sessionStorage.clear();
-      window.name = ""; // Clear window.name to prevent stale session restoration
-      window.location.href = "index.html";
-    });
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async () => {
+        localStorage.removeItem(getStorageKey());
+        sessionStorage.clear();
+        window.name = ""; // Clear window.name to prevent stale session restoration
+        window.location.href = "index.html";
+      });
+    } else {
+      console.warn("[ROTA BOOT] logoutBtn not found; skipping logout binding");
+    }
 
     function navigateToRequests() {
       // Preserve session when navigating back to requests
@@ -343,7 +525,11 @@
     // ========== LOAD PERIOD DATA ==========
     async function loadPeriod(periodId) {
       if (!periodId) return;
-      currentPeriod = periodId;
+      const periodIdNum = Number(periodId);
+      const periodKey = Number.isFinite(periodIdNum) ? periodIdNum : periodId;
+      currentPeriod = periodKey;
+      // Expose to window for swap-functions/admin operations
+      window.currentPeriod = { id: periodKey };
 
       try {
         // Load period info
@@ -388,6 +574,7 @@
         const isPeriodPublished = period.status === "published";
         
         assignmentsMap.clear();
+        overridesMap.clear();
         if (canViewDraft || isPeriodPublished) {
           const { data: assignments, error: aErr } = await supabaseClient
             .from("rota_assignments")
@@ -396,9 +583,27 @@
             .lte("date", period.end_date);
 
           if (aErr) throw aErr;
+          
+          const assignmentIds = [];
           (assignments || []).forEach(a => {
             assignmentsMap.set(`${a.user_id}_${a.date}`, a);
+            if (a.id) assignmentIds.push(a.id);
           });
+          
+          // Load overrides ONLY for published periods
+          if (isPeriodPublished && assignmentIds.length > 0) {
+            const { data: overrides, error: oErr } = await supabaseClient
+              .from("rota_assignment_overrides")
+              .select("*")
+              .in("rota_assignment_id", assignmentIds);
+
+            if (oErr) console.error("Error loading overrides:", oErr);
+            else {
+              (overrides || []).forEach(o => {
+                overridesMap.set(o.rota_assignment_id, o);
+              });
+            }
+          }
         }
 
         // Load requests for this date range
@@ -432,6 +637,29 @@
         (overrides || []).forEach(o => {
           overridesMap.set(o.rota_assignment_id, o);
         });
+
+        // Load assignment comments (for published periods only)
+        commentsMap.clear();
+        if (isPeriodPublished) {
+          console.log('[COMMENTS LOAD] Loading comments for published period...');
+          const { data: comments, error: cErr } = await supabaseClient
+            .from("rota_assignment_comments")
+            .select("*");
+
+          if (!cErr) {
+            console.log('[COMMENTS LOAD] Loaded comments:', comments);
+            (comments || []).forEach(c => {
+              const existing = commentsMap.get(c.rota_assignment_id) || [];
+              existing.push(c);
+              commentsMap.set(c.rota_assignment_id, existing);
+            });
+            console.log('[COMMENTS LOAD] CommentsMap populated:', commentsMap.size, 'assignments with comments');
+          } else {
+            console.error('[COMMENTS LOAD] Error loading comments:', cErr);
+          }
+        } else {
+          console.log('[COMMENTS LOAD] Skipping - period not published');
+        }
 
         // Load patterns
         const { data: pats } = await supabaseClient
@@ -627,8 +855,78 @@
               
               if (assignment) {
                 const shift = shiftMap.get(assignment.shift_id);
+                const override = (periodData?.status === "published" && assignment.id) ? overridesMap.get(assignment.id) : null;
+                
                 if (shift) {
-                  td.textContent = shift.code;
+                  console.log('[ROTA RENDER] Cell:', shift.code, 'assignmentId:', assignment.id, 'override:', override);
+                  
+                  // Wrap cell content in a container for positioning badges
+                  const wrapper = document.createElement("div");
+                  wrapper.style.position = "relative";
+                  wrapper.style.width = "100%";
+                  wrapper.style.height = "100%";
+                  wrapper.style.display = "flex";
+                  wrapper.style.alignItems = "center";
+                  wrapper.style.justifyContent = "center";
+                  
+                  const codeSpan = document.createElement("span");
+                  codeSpan.textContent = shift.code;
+                  wrapper.appendChild(codeSpan);
+                  
+                  // Add badges container (for published periods only)
+                  if (periodData?.status === "published" && assignment.id) {
+                    const badges = document.createElement("div");
+                    badges.style.position = "absolute";
+                    badges.style.top = "2px";
+                    badges.style.right = "2px";
+                    badges.style.display = "flex";
+                    badges.style.gap = "2px";
+                    
+                    // Override indicator (red dot) - show if ANY override field is set
+                    if (override) {
+                      const hasOverride = override.override_start_time || override.override_end_time || override.override_hours;
+                      if (hasOverride) {
+                        const overrideBadge = document.createElement("span");
+                        overrideBadge.style.width = "6px";
+                        overrideBadge.style.height = "6px";
+                        overrideBadge.style.borderRadius = "50%";
+                        overrideBadge.style.backgroundColor = "#dc2626";
+                        overrideBadge.title = "Actual times/hours differ from scheduled";
+                        badges.appendChild(overrideBadge);
+                      }
+                    }
+                    
+                    // Comment indicator (blue dot) - show if there are any comments for this assignment
+                    const assignmentComments = commentsMap.get(assignment.id);
+                    console.log('[BADGE DEBUG] Assignment ID:', assignment.id, 'Comments:', assignmentComments);
+                    if (assignmentComments && assignmentComments.length > 0) {
+                      // Filter comments based on visibility
+                      const visibleComments = assignmentComments.filter(c => {
+                        const visibility = c.comment_visibility || (c.is_admin_only ? 'admin_only' : 'all_staff');
+                        if (visibility === 'admin_only') return window.currentUser?.is_admin;
+                        if (visibility === 'all_staff') return true;
+                        if (visibility === 'user_only') return window.currentUser?.id === userId;
+                        return false;
+                      });
+                      console.log('[BADGE DEBUG] Visible comments:', visibleComments.length);
+                      
+                      if (visibleComments.length > 0) {
+                        const commentBadge = document.createElement("span");
+                        commentBadge.style.width = "6px";
+                        commentBadge.style.height = "6px";
+                        commentBadge.style.borderRadius = "50%";
+                        commentBadge.style.backgroundColor = "#3b82f6";
+                        commentBadge.title = "Has comments";
+                        badges.appendChild(commentBadge);
+                      }
+                    }
+                    
+                    if (badges.children.length > 0) {
+                      wrapper.appendChild(badges);
+                    }
+                  }
+                  
+                  td.appendChild(wrapper);
 
                   console.log('[ROTA] Applying shift metadata for', shift.code, ':', {
                     text_bold: shift.text_bold,
@@ -996,16 +1294,22 @@
     function openPublishedDetails({ userId, date }) {
       if (!periodData || periodData.status !== "published") return;
       lastPublishedCell = { userId, date };
+      // Expose as activeCell so swap-functions can operate
+      window.activeCell = { userId, date };
 
       const modal = document.getElementById("publishedDetailsModal");
       const subtitleEl = document.getElementById("publishedDetailsSubtitle");
       const codeEl = document.getElementById("publishedShiftCode");
       const nameEl = document.getElementById("publishedShiftName");
-      const timesEl = document.getElementById("publishedShiftTimes");
+      const scheduledTimesRow = document.getElementById("scheduledTimesRow");
+      const scheduledTimes = document.getElementById("scheduledTimes");
+      const actualTimesRow = document.getElementById("actualTimesRow");
+      const actualTimes = document.getElementById("actualTimes");
       const hoursEl = document.getElementById("publishedShiftHours");
       const hoursRow = document.getElementById("hoursRow");
-      const timesRow = timesEl.closest(".kv");
       const restDayLabel = document.getElementById("restDayLabel");
+      const commentDisplay = document.getElementById("commentDisplay");
+      const commentText = document.getElementById("commentText");
 
       const btnChange = document.getElementById("publishedChangeBtn");
       const btnComments = document.getElementById("publishedCommentsBtn");
@@ -1014,6 +1318,8 @@
 
       const user = allUsers.find(u => u.id === userId);
       const assignmentInfo = describeAssignment(userId, date);
+      const assignment = assignmentsMap.get(`${userId}_${date}`);
+      const override = assignment?.id ? overridesMap.get(assignment.id) : null;
 
       const dateStr = new Date(date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
       subtitleEl.textContent = `${user?.name || "Staff"} — ${dateStr}`;
@@ -1034,19 +1340,39 @@
         // Show label as shift name
         nameEl.textContent = s.label ? ` ${s.label}` : '';
         
-        // Build time + duration
+        // Build time display with override support
         if (s.start_time && s.end_time) {
-          timesEl.textContent = `${s.start_time}–${s.end_time}`;
-          timesRow.style.display = '';
           restDayLabel.style.display = 'none';
+          
+          if (override && override.override_start_time && override.override_end_time) {
+            // Show both scheduled and actual
+            scheduledTimes.textContent = `${s.start_time}–${s.end_time}`;
+            scheduledTimesRow.style.display = '';
+            actualTimes.textContent = `${override.override_start_time}–${override.override_end_time}`;
+            actualTimesRow.style.display = '';
+          } else {
+            // Show only scheduled
+            scheduledTimes.textContent = `${s.start_time}–${s.end_time}`;
+            scheduledTimesRow.style.display = '';
+            actualTimesRow.style.display = 'none';
+          }
         } else {
-          timesRow.style.display = 'none';
+          scheduledTimesRow.style.display = 'none';
+          actualTimesRow.style.display = 'none';
           restDayLabel.style.display = '';
         }
         
-        // Show hours only if they exist
-        if (s.hours_value) {
-          hoursEl.textContent = `${s.hours_value}hours`;
+        // Show hours (override takes precedence)
+        const displayHours = override?.override_hours ?? s.hours_value;
+        if (displayHours) {
+          hoursEl.textContent = `${displayHours} hours`;
+          if (override?.override_hours) {
+            hoursEl.style.color = '#dc2626';
+            hoursEl.style.fontWeight = '600';
+          } else {
+            hoursEl.style.color = '';
+            hoursEl.style.fontWeight = '';
+          }
           hoursRow.style.display = '';
         } else {
           hoursRow.style.display = 'none';
@@ -1056,18 +1382,41 @@
         codeEl.style.backgroundColor = '';
         codeEl.style.color = '';
         nameEl.textContent = '';
-        timesEl.textContent = '';
-        hoursEl.textContent = '';
+        scheduledTimesRow.style.display = 'none';
+        actualTimesRow.style.display = 'none';
+        hoursRow.style.display = 'none';
+      }
+      
+      // Show comment if exists AND user has permission to see it
+      const isAdmin = !!window.currentUser?.is_admin;
+      let canSeeComment = false;
+      
+      if (override?.comment) {
+        const visibility = override.comment_visibility || 'admin_only';
+        if (visibility === 'admin_only') {
+          canSeeComment = isAdmin;
+        } else if (visibility === 'all_staff') {
+          canSeeComment = true;
+        } else if (visibility === 'user_only') {
+          canSeeComment = (window.currentUser?.id === userId);
+        }
+      }
+      
+      if (override?.comment && canSeeComment) {
+        commentText.textContent = override.comment;
+        commentDisplay.style.display = '';
+      } else {
+        commentDisplay.style.display = 'none';
       }
 
-      const isAdmin = !!window.currentUser?.is_admin;
       const canHistory = isAdmin || window.PermissionsModule?.hasPermission("rota.view_history");
+      const isOwnCell = (window.currentUser?.id === userId);
 
       if (btnChange) btnChange.style.display = canEditPublished ? "" : "none";
       // View comments always visible; comments filter by visibility flag internally
       if (btnComments) btnComments.style.display = "";
-      // Swap shift always visible; functionality differs for admin vs staff
-      if (btnSwap) btnSwap.style.display = "";
+      // Swap shift: admin can swap any shift; staff can only swap their own
+      if (btnSwap) btnSwap.style.display = (isAdmin || isOwnCell) ? "" : "none";
       if (btnHistory) btnHistory.style.display = canHistory ? "" : "none";
 
       modal.setAttribute("aria-hidden", "false");
@@ -1096,13 +1445,306 @@
       alert("History view coming soon.");
     }
 
-    function handlePublishedComments() {
-      alert("Comments view coming soon.");
+    async function handlePublishedSwap() {
+      if (!lastPublishedCell) return;
+      if (!window.currentUser) return;
+
+      const { userId, date } = lastPublishedCell;
+      // Allow all logged-in staff; admins can still act. Permission gate removed for staff.
+      const isAdmin = !!window.currentUser.is_admin;
+
+      // Get initiator's user data and shift
+      const initiatorUser = allUsers.find(u => u.id === userId);
+      const initiatorAssignment = assignmentsMap.get(`${userId}_${date}`);
+      const initiatorShift = shiftMap.get(initiatorAssignment?.shift_id);
+      
+      if (!initiatorUser || !initiatorShift) {
+        alert("Could not load your shift details.");
+        return;
+      }
+
+      const initiatorRoleId = initiatorUser.role_id;
+      const initiatorDate = new Date(date);
+      const initiatorWeekStart = new Date(initiatorDate);
+      initiatorWeekStart.setDate(initiatorDate.getDate() - initiatorDate.getDay() + 1); // Monday
+
+      // Helper: check if two dates are in the same week
+      function isSameWeek(date1Str, date2Str) {
+        const d1 = new Date(date1Str);
+        const d2 = new Date(date2Str);
+        const week1 = new Date(d1);
+        week1.setDate(d1.getDate() - d1.getDay() + 1);
+        const week2 = new Date(d2);
+        week2.setDate(d2.getDate() - d2.getDay() + 1);
+        return week1.getTime() === week2.getTime();
+      }
+
+      // Get list of other staff with shifts on other dates
+      const candidates = allUsers
+        .filter(u => u.id !== userId) // Remove is_active check - it's not in the users selection
+        .map(u => ({
+          id: u.id,
+          name: u.name,
+          role_id: u.role_id,
+          dates: Array.from(assignmentsMap.entries())
+            .filter(([key, asn]) => {
+              if (!key.startsWith(u.id + "_")) return false;
+              const shift = shiftMap.get(asn.shift_id);
+              if (!shift || shift.code === "O") return false;
+
+              const shiftDate = key.split("_")[1];
+              
+              // Nursing Assistants (role_id 3) can only swap within same week and with same role
+              if (initiatorRoleId === 3 || u.role_id === 3) {
+                // Must be same week
+                if (!isSameWeek(date, shiftDate)) return false;
+                
+                // Both must be Nursing Assistants
+                if (initiatorRoleId !== 3 || u.role_id !== 3) return false;
+              }
+
+              return true;
+            })
+            .map(([key, asn]) => {
+              const d = key.split("_")[1];
+              const shift = shiftMap.get(asn.shift_id);
+              const code = shift?.code || "?";
+              return {
+                date: d,
+                code: code,
+                label: new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) + ` (${code})`
+              };
+            })
+        }))
+        .filter(c => c.dates.length > 0);
+
+      if (!candidates.length) {
+        alert("No compatible staff with shifts to swap with.");
+        return;
+      }
+
+      // Show swap picker modal
+      const swapModal = document.getElementById("shiftSwapModal");
+      if (!swapModal) {
+        alert("Swap interface not ready.");
+        return;
+      }
+
+      // Display current shift info
+      const currentShift = shiftMap.get(assignmentsMap.get(`${userId}_${date}`)?.shift_id);
+      const currentCode = currentShift?.code || "?";
+      const dateStr = new Date(date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+      document.getElementById("swapYourShift").textContent = `${currentCode} on ${dateStr}`;
+
+      // Store context for swap submission
+      window.swapInitiatorContext = { userId, date, isAdmin };
+      window.swapCandidates = candidates;
+
+      // Populate peer dropdown
+      const peerSelect = document.getElementById("swapPeerSelect");
+      peerSelect.innerHTML = `<option value="">Select staff member...</option>` +
+        candidates.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+
+      // Clear date dropdown
+      const dateSelect = document.getElementById("swapDateSelect");
+      dateSelect.innerHTML = `<option value="">Select their shift date...</option>`;
+      dateSelect.disabled = true;
+
+      // Wire peer change event
+      peerSelect.onchange = () => {
+        const peerId = peerSelect.value;
+        if (!peerId) {
+          dateSelect.innerHTML = `<option value="">Select their shift date...</option>`;
+          dateSelect.disabled = true;
+          return;
+        }
+        const peer = candidates.find(c => c.id === peerId);
+        if (peer) {
+          dateSelect.innerHTML = `<option value="">Select their shift date...</option>` +
+            peer.dates.map(d => `<option value="${d.date}">${d.label} (${d.code})</option>`).join("");
+          dateSelect.disabled = false;
+        }
+      };
+
+      swapModal.setAttribute("aria-hidden", "false");
+      closePublishedDetails();
     }
 
-    function handlePublishedSwap() {
-      alert("Swap flow coming soon.");
+    async function handlePublishedComments() {
+      if (!lastPublishedCell) return;
+      
+      const { userId, date } = lastPublishedCell;
+      const user = allUsers.find(u => u.id === userId);
+      const assignment = assignmentsMap.get(`${userId}_${date}`);
+      
+      console.log("[COMMENTS DEBUG] lastPublishedCell:", lastPublishedCell);
+      console.log("[COMMENTS DEBUG] Looking up assignment for key:", `${userId}_${date}`);
+      console.log("[COMMENTS DEBUG] Found assignment:", assignment);
+      
+      if (!assignment) {
+        alert("No assignment for this date.");
+        return;
+      }
+      
+      // Load comments for this assignment
+      console.log("[COMMENTS DEBUG] Loading comments for assignment ID:", assignment.id);
+      const { data: comments, error } = await supabaseClient
+        .from("rota_assignment_comments")
+        .select("*")
+        .eq("rota_assignment_id", assignment.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        console.error("Error loading comments:", error);
+        alert("Failed to load comments.");
+        return;
+      }
+      
+      console.log("[COMMENTS DEBUG] Loaded comments:", comments);
+      
+      // Filter comments based on visibility
+      const isAdmin = window.currentUser?.is_admin;
+      const visibleComments = (comments || []).filter(c => {
+        const visibility = c.comment_visibility || (c.is_admin_only ? 'admin_only' : 'all_staff');
+        if (visibility === 'admin_only') return isAdmin;
+        if (visibility === 'all_staff') return true;
+        if (visibility === 'user_only') return window.currentUser?.id === userId;
+        return false;
+      });
+      
+      // Populate modal
+      const modal = document.getElementById("commentsModalBackdrop");
+      const subtitle = document.getElementById("commentsModalSubtitle");
+      const commentsList = document.getElementById("commentsList");
+      const newCommentText = document.getElementById("newCommentText");
+      const isAdminCheckbox = document.getElementById("isAdminOnlyCheckbox");
+      const addBtn = document.getElementById("addCommentBtn");
+      
+      const dateStr = new Date(date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      subtitle.textContent = `${user?.name || "Staff"} — ${dateStr}`;
+      
+      // Render comments
+      commentsList.innerHTML = "";
+      if (visibleComments.length === 0) {
+        const empty = document.createElement("p");
+        empty.style.color = "#9ca3af";
+        empty.style.fontSize = "13px";
+        empty.textContent = "No comments yet.";
+        commentsList.appendChild(empty);
+      } else {
+        visibleComments.forEach(comment => {
+          const div = document.createElement("div");
+          div.style.padding = "12px";
+          div.style.borderLeft = "3px solid #3b82f6";
+          div.style.backgroundColor = "#f0f9ff";
+          div.style.borderRadius = "4px";
+          
+          // User info
+          const header = document.createElement("div");
+          header.style.fontSize = "12px";
+          header.style.color = "#64748b";
+          header.style.marginBottom = "6px";
+          header.style.display = "flex";
+          header.style.justifyContent = "space-between";
+          header.style.alignItems = "center";
+          
+          const userTime = document.createElement("span");
+          const createdUser = allUsers.find(u => u.id === comment.created_by);
+          console.log("[COMMENTS RENDER] comment.created_by:", comment.created_by, "createdUser found:", createdUser, "allUsers:", allUsers);
+          const createdAt = new Date(comment.created_at).toLocaleString("en-GB");
+          userTime.textContent = `${createdUser?.name || "Unknown"} • ${createdAt}`;
+          header.appendChild(userTime);
+          
+          // Show visibility badge
+          const visibility = comment.comment_visibility || (comment.is_admin_only ? 'admin_only' : 'all_staff');
+          if (visibility !== 'all_staff') {
+            const badge = document.createElement("span");
+            badge.style.fontSize = "11px";
+            badge.style.fontWeight = "600";
+            if (visibility === 'admin_only') {
+              badge.style.color = "#dc2626";
+              badge.textContent = "ADMIN ONLY";
+            } else if (visibility === 'user_only') {
+              badge.style.color = "#2563eb";
+              badge.textContent = "USER ONLY";
+            }
+            header.appendChild(badge);
+          }
+          
+          div.appendChild(header);
+          
+          // Comment text
+          const text = document.createElement("div");
+          text.style.fontSize = "13px";
+          text.style.color = "#0f172a";
+          text.style.whiteSpace = "pre-wrap";
+          text.textContent = comment.comment;
+          div.appendChild(text);
+          
+          commentsList.appendChild(div);
+        });
+      }
+      
+      // Clear form
+      newCommentText.value = "";
+      const visibilityDropdown = document.getElementById("commentVisibilityDropdown");
+      if (visibilityDropdown) visibilityDropdown.value = 'all_staff';
+      
+      // Store current cell for add handler
+      window._commentsModalCell = { userId, assignmentId: assignment.id, date };
+      
+      // Clear old listeners and attach new
+      addBtn.onclick = null;
+      addBtn.addEventListener("click", async () => {
+        const commentText = newCommentText.value.trim();
+        if (!commentText) {
+          alert("Comment cannot be empty.");
+          return;
+        }
+        
+        console.log("[COMMENTS] window.currentUser:", window.currentUser);
+        console.log("[COMMENTS] window.currentUser?.id:", window.currentUser?.id);
+        
+        const visibilityDropdown = document.getElementById("commentVisibilityDropdown");
+        const commentVisibility = visibilityDropdown?.value || 'all_staff';
+        
+        console.log("[COMMENTS] Saving comment:", { assignmentId: assignment.id, commentText, commentVisibility, userId: window.currentUser?.id });
+        
+        const { error: insertErr, data: newComment } = await supabaseClient
+          .from("rota_assignment_comments")
+          .insert([{
+            rota_assignment_id: assignment.id,
+            comment: commentText,
+            comment_visibility: commentVisibility,
+            created_by: window.currentUser?.id,
+            updated_by: window.currentUser?.id
+          }])
+          .select()
+          .single();
+        
+        if (insertErr) {
+          console.error("[COMMENTS] Error saving:", insertErr);
+          alert("Failed to save comment.");
+          return;
+        }
+        
+        console.log("[COMMENTS] Comment saved successfully");
+        
+        // Update commentsMap with the new comment
+        if (newComment) {
+          const existing = commentsMap.get(assignment.id) || [];
+          existing.push(newComment);
+          commentsMap.set(assignment.id, existing);
+          renderRota(); // Re-render to show blue dot
+        }
+        
+        // Reload comments in modal
+        await handlePublishedComments();
+      });
+      
+      modal.setAttribute("aria-hidden", "false");
     }
+
 
     function displayPeriodStatus(period) {
       const status = document.getElementById("periodStatus");
@@ -1215,6 +1857,7 @@
         const nowIso = new Date().toISOString();
         const publishedBy = window.currentUser?.id || null;
 
+        // Update period status
         const { error: updErr } = await supabaseClient
           .from("rota_periods")
           .update({
@@ -1226,6 +1869,19 @@
           .eq("id", periodData.id);
 
         if (updErr) throw updErr;
+
+        // Update all rota_assignments for this period from draft to published
+        const { error: assignErr } = await supabaseClient
+          .from("rota_assignments")
+          .update({ status: "published" })
+          .gte("date", periodData.start_date)
+          .lte("date", periodData.end_date)
+          .eq("status", "draft");
+
+        if (assignErr) {
+          console.error("Error updating assignment status:", assignErr);
+          // Don't throw - period is already published, this is just cleanup
+        }
 
         // Re-fetch to confirm state and update UI
         const { data: refreshed, error: fetchErr } = await supabaseClient
@@ -1290,6 +1946,7 @@
       if (!doubleCheck) return;
       
       try {
+        // Update period status
         const { error: updErr } = await supabaseClient
           .from("rota_periods")
           .update({
@@ -1300,6 +1957,19 @@
           .eq("id", periodData.id);
 
         if (updErr) throw updErr;
+
+        // Update all rota_assignments for this period from published back to draft
+        const { error: assignErr } = await supabaseClient
+          .from("rota_assignments")
+          .update({ status: "draft" })
+          .gte("date", periodData.start_date)
+          .lte("date", periodData.end_date)
+          .eq("status", "published");
+
+        if (assignErr) {
+          console.error("Error updating assignment status:", assignErr);
+          // Don't throw - period is already unpublished, this is just cleanup
+        }
 
         const { data: refreshed, error: fetchErr } = await supabaseClient
           .from("rota_periods")
@@ -1371,47 +2041,150 @@
 
 
     // ========== INIT ==========
-    document.addEventListener("DOMContentLoaded", async () => {
+    async function bootRotaPage(){
       try {
+        console.log("[ROTA BOOT] Starting boot sequence.");
+        
+        // Safe element getter with null check logging
+        const getElement = (id) => {
+          const el = document.getElementById(id);
+          if (!el) console.warn(`[ROTA BOOT] Element not found: ${id}`);
+          return el;
+        };
+
         // Attach period change handler
-        document.getElementById("periodSelect").addEventListener("change", (e) => {
+        const periodSelect = getElement("periodSelect");
+        if (periodSelect) periodSelect.addEventListener("change", (e) => {
           loadPeriod(e.target.value);
         });
         
         // Attach toggle requests handler
-        document.getElementById("toggleRequestsBtn").addEventListener("click", toggleRequests);
+        const toggleRequestsBtn = getElement("toggleRequestsBtn");
+        if (toggleRequestsBtn) toggleRequestsBtn.addEventListener("click", toggleRequests);
         
         // Attach publish/unpublish handlers
-        document.getElementById("publishBtn").addEventListener("click", publishPeriod);
-        document.getElementById("unpublishBtn").addEventListener("click", unpublishPeriod);
+        const publishBtn = getElement("publishBtn");
+        if (publishBtn) publishBtn.addEventListener("click", publishPeriod);
+        const unpublishBtn = getElement("unpublishBtn");
+        if (unpublishBtn) unpublishBtn.addEventListener("click", unpublishPeriod);
 
         // Published details modal handlers
-        document.getElementById("publishedDetailsClose").addEventListener("click", closePublishedDetails);
-        document.getElementById("publishedDetailsModal").addEventListener("click", (e) => {
+        const publishedDetailsClose = getElement("publishedDetailsClose");
+        if (publishedDetailsClose) publishedDetailsClose.addEventListener("click", closePublishedDetails);
+        const publishedDetailsModal = getElement("publishedDetailsModal");
+        if (publishedDetailsModal) publishedDetailsModal.addEventListener("click", (e) => {
           if (e.target.id === "publishedDetailsModal") closePublishedDetails();
         });
-        document.getElementById("publishedChangeBtn").addEventListener("click", handlePublishedChange);
-        document.getElementById("publishedHistoryBtn").addEventListener("click", handlePublishedHistory);
-        document.getElementById("publishedCommentsBtn").addEventListener("click", handlePublishedComments);
-        document.getElementById("publishedSwapBtn").addEventListener("click", handlePublishedSwap);
+        const publishedChangeBtn = getElement("publishedChangeBtn");
+        if (publishedChangeBtn) publishedChangeBtn.addEventListener("click", handlePublishedChange);
+        const publishedHistoryBtn = getElement("publishedHistoryBtn");
+        if (publishedHistoryBtn) publishedHistoryBtn.addEventListener("click", handlePublishedHistory);
+        const publishedCommentsBtn = getElement("publishedCommentsBtn");
+        if (publishedCommentsBtn) publishedCommentsBtn.addEventListener("click", handlePublishedComments);
+        const publishedSwapBtn = getElement("publishedSwapBtn");
+        if (publishedSwapBtn) publishedSwapBtn.addEventListener("click", handlePublishedSwap);
 
+        // Comments modal handlers
+        const commentsModalClose = getElement("commentsModalClose");
+        if (commentsModalClose) commentsModalClose.addEventListener("click", () => {
+          const backdrop = getElement("commentsModalBackdrop");
+          if (backdrop) backdrop.setAttribute("aria-hidden", "true");
+        });
+        const commentsModalBackdrop = getElement("commentsModalBackdrop");
+        if (commentsModalBackdrop) commentsModalBackdrop.addEventListener("click", (e) => {
+          if (e.target.id === "commentsModalBackdrop") {
+            commentsModalBackdrop.setAttribute("aria-hidden", "true");
+          }
+        });
+
+        // Shift swap modal handlers
+        const swapCancelBtn = getElement("swapCancelBtn");
+        if (swapCancelBtn) swapCancelBtn.addEventListener("click", () => {
+          const modal = getElement("shiftSwapModal");
+          if (modal) modal.setAttribute("aria-hidden", "true");
+        });
+        const shiftSwapModal = getElement("shiftSwapModal");
+        if (shiftSwapModal) shiftSwapModal.addEventListener("click", (e) => {
+          if (e.target.id === "shiftSwapModal") {
+            e.target.setAttribute("aria-hidden", "true");
+          }
+        });
+        const swapSubmitBtn = getElement("swapSubmitBtn");
+        if (swapSubmitBtn) swapSubmitBtn.addEventListener("click", async () => {
+          if (!window.swapInitiatorContext) return;
+
+          const { userId: initiatorId, date: initiatorDate, isAdmin } = window.swapInitiatorContext;
+          const peerId = document.getElementById("swapPeerSelect").value;
+          const peerDate = document.getElementById("swapDateSelect").value;
+
+          if (!peerId || !peerDate) {
+            alert("Please select both staff member and their shift date.");
+            return;
+          }
+
+          try {
+            const btn = swapSubmitBtn;
+            btn.disabled = true;
+
+            if (isAdmin) {
+              // Admin direct swap - call directly from window context
+              if (typeof window.adminExecuteShiftSwap === "function") {
+                await window.adminExecuteShiftSwap(peerId, peerDate);
+                closePublishedDetails();
+                // Reload the rota to show the swapped shifts
+                if (currentPeriod?.id) {
+                  await loadPeriod(currentPeriod.id);
+                }
+                alert("Swap executed successfully.");
+              } else {
+                alert("Admin swap function not ready.");
+              }
+            } else {
+              // Staff propose swap
+              if (typeof window.staffRequestShiftSwap === "function") {
+                await window.staffRequestShiftSwap(peerId, peerDate);
+                alert("Swap request sent. Awaiting peer and admin approval.");
+              } else {
+                alert("Swap function not ready.");
+              }
+            }
+
+            const modal = getElement("shiftSwapModal");
+            if (modal) modal.setAttribute("aria-hidden", "true");
+            window.swapInitiatorContext = null;
+          } catch (err) {
+            console.error(err);
+            alert(`Swap failed: ${err.message}`);
+          } finally {
+            swapSubmitBtn.disabled = false;
+          }
+        });
 
         const user = await checkAuth();
-        if (!user) return;
+        console.log("[ROTA BOOT] checkAuth returned:", user);
+        if (!user) {
+          console.error("[ROTA BOOT] No user, returning");
+          return;
+        }
 
+        // Signal other deferred modules (e.g., shift-functions.js) that auth is complete
+        window.dispatchEvent(new Event("calpe:user-ready"));
+
+        console.log("[ROTA BOOT] User authenticated, loading periods...");
         // Apply permission-based UI visibility and store globally
-        canViewAllRequests = window.PermissionsModule.hasPermission("requests.view_all");
-        canViewOwnRequests = window.PermissionsModule.hasPermission("requests.view_own");
-        canEditDraft = window.PermissionsModule.hasPermission("rota.edit_draft");
-        canEditPublished = window.PermissionsModule.hasPermission("rota.edit_published");
+        // For now, default to true if PermissionsModule not available (will be replaced with real permission system)
+        canViewAllRequests = window.PermissionsModule?.hasPermission("requests.view_all") ?? true;
+        canViewOwnRequests = window.PermissionsModule?.hasPermission("requests.view_own") ?? true;
+        canEditDraft = window.PermissionsModule?.hasPermission("rota.edit_draft") ?? true;
+        canEditPublished = window.PermissionsModule?.hasPermission("rota.edit_published") ?? true;
         
         // Hide buttons if user lacks permissions
-        const toggleRequestsBtn = document.getElementById("toggleRequestsBtn");
+        const toggleRequestsBtnPerm = document.getElementById("toggleRequestsBtn");
         const toggleEditingBtn = document.getElementById("toggleEditingBtn");
         
         // Show requests button if user can view all OR view own
-        if (!canViewAllRequests && !canViewOwnRequests && toggleRequestsBtn) {
-          toggleRequestsBtn.style.display = "none";
+        if (!canViewAllRequests && !canViewOwnRequests && toggleRequestsBtnPerm) {
+          toggleRequestsBtnPerm.style.display = "none";
         }
 
         // Initialize modular draft editing (shift-editor.js) after auth
@@ -1437,7 +2210,9 @@
             onPublishedCellClick: ({ userId, date }) => {
               openPublishedDetails({ userId, date });
             },
-            onSave: async (userId, date, shiftId) => {
+            onSave: async (userId, date, shiftId, overrideData) => {
+              console.log("[ROTA ONSAVE] Called with:", { userId, date, shiftId, overrideData });
+              
               const key = `${userId}_${date}`;
               const shift = draftShifts.find(s => s.id === shiftId);
               
@@ -1460,16 +2235,88 @@
                 .eq("date", date)
                 .maybeSingle();
               
+              let assignmentId = existingDb?.id;
+              
               if (!getErr) {
                 if (existingDb?.id) {
+                  assignmentId = existingDb.id;
                   await supabaseClient
                     .from("rota_assignments")
                     .update({ shift_id: shiftId })
                     .eq("id", existingDb.id);
+                  // Update assignmentsMap with the ID
+                  const existing = assignmentsMap.get(key);
+                  if (existing) existing.id = existingDb.id;
                 } else {
-                  await supabaseClient
+                  const { data: newAssignment } = await supabaseClient
                     .from("rota_assignments")
-                    .insert([{ user_id: userId, date, shift_id: shiftId, status: "draft" }]);
+                    .insert([{ user_id: userId, date, shift_id: shiftId, status: "draft" }])
+                    .select()
+                    .single();
+                  assignmentId = newAssignment?.id;
+                  // Update assignmentsMap with the new ID
+                  const existing = assignmentsMap.get(key);
+                  if (existing && assignmentId) existing.id = assignmentId;
+                }
+                
+                // Save override data if provided (published mode only)
+                if (overrideData && assignmentId) {
+                  console.log("[ROTA ONSAVE] Saving override for assignmentId:", assignmentId, overrideData);
+                  const { data: existingOverride } = await supabaseClient
+                    .from("rota_assignment_overrides")
+                    .select("id")
+                    .eq("rota_assignment_id", assignmentId)
+                    .maybeSingle();
+                  
+                  const overridePayload = {
+                    rota_assignment_id: assignmentId,
+                    override_start_time: overrideData.override_start_time,
+                    override_end_time: overrideData.override_end_time,
+                    override_hours: overrideData.override_hours,
+                    comment: overrideData.comment,
+                    comment_visibility: overrideData.comment_visibility || 'admin_only'
+                  };
+                  
+                  console.log("[ROTA ONSAVE] Override payload:", overridePayload);
+                  
+                  if (existingOverride?.id) {
+                    console.log("[ROTA ONSAVE] Updating existing override:", existingOverride.id);
+                    const { data: updateData, error: updateErr } = await supabaseClient
+                      .from("rota_assignment_overrides")
+                      .update(overridePayload)
+                      .eq("id", existingOverride.id);
+                    if (updateErr) {
+                      console.error("[ROTA ONSAVE] Error updating override:", updateErr);
+                    } else {
+                      console.log("[ROTA ONSAVE] Override updated successfully");
+                      overridesMap.set(assignmentId, { ...existingOverride, ...overridePayload });
+                      renderRota(); // Re-render to show override badge
+                    }
+                  } else {
+                    console.log("[ROTA ONSAVE] Inserting new override");
+                    const { data: newOverride, error: insertErr } = await supabaseClient
+                      .from("rota_assignment_overrides")
+                      .insert([overridePayload])
+                      .select()
+                      .single();
+                    if (insertErr) {
+                      console.error("[ROTA ONSAVE] Error inserting override:", insertErr);
+                      console.error("[ROTA ONSAVE] Error details:", {
+                        message: insertErr.message,
+                        status: insertErr.status,
+                        code: insertErr.code,
+                        hint: insertErr.hint
+                      });
+                    } else if (newOverride) {
+                      console.log("[ROTA ONSAVE] Override inserted successfully:", newOverride);
+                      overridesMap.set(assignmentId, newOverride);
+                    }
+                  }
+                  
+                  // Re-render to show override badges
+                  renderRota();
+                } else {
+                  console.log("[ROTA ONSAVE] No override data to save");
                 }
               }
             },
@@ -1502,6 +2349,7 @@
             getAllUsers: () => allUsers,
             getDraftShifts: () => draftShifts,
             getAssignment: (userId, date) => assignmentsMap.get(`${userId}_${date}`),
+            getOverride: (assignmentId) => overridesMap.get(assignmentId),
             refreshGrid: () => {
               renderRota();
             },
@@ -1510,14 +2358,586 @@
 
         bootEditing();
         
-        await loadPeriods();
+        console.log("[ROTA BOOT] Calling loadPeriods...");
+        try {
+          const loadPeriodsPromise = loadPeriods();
+          await Promise.race([
+            loadPeriodsPromise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error("loadPeriods timeout after 10s")), 10000))
+          ]);
+          console.log("[ROTA BOOT] loadPeriods completed");
+        } catch (err) {
+          console.error("[ROTA BOOT] loadPeriods failed:", err);
+          throw err;
+        }
+        
+        // Initialize notices/notifications (from app.js)
+        console.log("[ROTA BOOT] Loading notices bell...");
+        try {
+          await loadNoticesBell();
+          console.log("[ROTA BOOT] Notices bell loaded");
+        } catch (err) {
+          console.error("[ROTA BOOT] Failed to load notices bell:", err);
+          // Don't throw - notices are not critical to showing the rota
+        }
+        console.log("[ROTA BOOT] Boot complete!");
       } catch (err) {
         console.error("Rota boot failed:", err);
         alert("Failed to load rota: " + err.message);
       }
+    }
+
+    console.log("[ROTA BOOT] installing boot hooks, readyState=", document.readyState);
+
+    // Kick off boot when ready. If DOMContentLoaded already fired, start immediately.
+    async function startBoot() {
+      console.log("[ROTA BOOT] startBoot invoked");
+      restoreSessionFromWindow();
+      await bootRotaPage();
+    }
+
+    if (document.readyState === "loading") {
+      window.addEventListener("DOMContentLoaded", () => {
+        console.log("[ROTA BOOT] DOMContentLoaded - initializing session and boot");
+        startBoot();
+      }, { once: true });
+    } else {
+      console.log("[ROTA BOOT] DOMContentLoaded already fired - starting boot now");
+      startBoot();
+    }
+
+    // ========== NOTICES/NOTIFICATIONS BELL ==========
+    const noticeBell = document.getElementById("noticeBell");
+    const noticeBellDot = document.getElementById("noticeBellDot");
+    const noticeAllModal = document.getElementById("noticeAllModal");
+    const noticeAllClose = document.getElementById("noticeAllClose");
+    const noticeAllList = document.getElementById("noticeAllList");
+
+    let noticesCache = [];
+    let notificationsCache = [];
+    let unreadCount = 0;
+    let notificationsUnreadCount = 0;
+
+    function escapeHtml(str){
+      return String(str || "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll("\"","&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function getNoticeBody(n){
+      return n.body_en || "";
+    }
+
+    function isNoticeAcked(n){
+      if (!n.acknowledged_at) return false;
+      if (
+        n.ack_version != null &&
+        Number(n.ack_version) !== Number(n.version)
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    function getNotificationTitle(n){
+      const payload = n?.payload || {};
+      return escapeHtml(
+        payload.title || n.title || n.type || "Notification"
+      );
+    }
+
+    function getNotificationBody(n){
+      const payload = n?.payload || {};
+      const body = payload.body || payload.message || payload.text || "";
+
+      if (typeof body === "string" && body.trim()) return escapeHtml(body);
+      try {
+        return escapeHtml(JSON.stringify(payload));
+      } catch (e) {
+        return "";
+      }
+    }
+
+    async function fetchNoticesForMe(){
+      if (!window.currentUser) return [];
+
+      const { data, error } = await supabaseClient.rpc(
+        "get_notices_for_user",
+        {
+          p_user_id: window.currentUser.id
+        }
+      );
+      if (error) throw error;
+
+      const map = new Map();
+      for (const row of (data || [])){
+        const key = String(row.id);
+        const prev = map.get(key);
+        if (!prev) {
+          map.set(key, row);
+          continue;
+        }
+
+        const prevT = prev.updated_at ? new Date(prev.updated_at).getTime() : 0;
+        const rowT  = row.updated_at  ? new Date(row.updated_at).getTime()  : 0;
+
+        if (rowT > prevT) map.set(key, row);
+      }
+
+      return [...map.values()].sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+    }
+
+    async function fetchNotificationsForMe(){
+      if (!window.currentUser) return [];
+
+      const roleId = Number(window.currentUser.role_id);
+      const clauses = ["target_scope.eq.all_staff"];
+
+      if (window.currentUser.id) {
+        clauses.push(`and(target_scope.eq.user,target_user_id.eq.${window.currentUser.id})`);
+      }
+
+      if (!Number.isNaN(roleId)) {
+        clauses.push(`and(target_scope.eq.role,target_role_ids.cs.{${roleId}})`);
+      }
+
+      const { data, error } = await supabaseClient
+        .from("notifications")
+        .select(`
+          id,
+          type,
+          payload,
+          target_scope,
+          target_role_ids,
+          target_user_id,
+          requires_action,
+          status,
+          created_by,
+          created_at,
+          updated_by,
+          updated_at,
+          acted_by,
+          acted_at
+        `)
+        .or(clauses.join(","))
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Add pending swap requests as notifications
+      let swapRequests = [];
+      try {
+        const { data: swaps, error: swapError } = await supabaseClient.rpc(
+          "get_pending_swap_requests_for_me",
+          { p_user_id: window.currentUser.id }
+        );
+        if (!swapError && swaps) {
+          swapRequests = swaps.map(sr => ({
+            id: sr.id,
+            type: "swap_request",
+            payload: sr,
+            target_scope: "user",
+            requires_action: true,
+            status: "pending",
+            created_at: sr.created_at,
+            updated_at: sr.created_at,
+            _is_swap_request: true
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch swap requests:", e);
+      }
+
+      return [...(data || []), ...swapRequests];
+    }
+
+    function computeNoticeState(list){
+      noticesCache = Array.isArray(list) ? list : [];
+      unreadCount = 0;
+
+      for (const n of noticesCache){
+        if (n.is_active === false) continue;
+
+        const acked = isNoticeAcked(n);
+
+        if (!acked){
+          unreadCount++;
+        }
+      }
+    }
+
+    function computeNotificationState(list){
+      notificationsCache = Array.isArray(list) ? list : [];
+      notificationsUnreadCount = (notificationsCache || []).filter(n => (n.status || "pending") === "pending").length;
+    }
+
+    function updateNoticeBell(){
+      if (!noticeBell || !noticeBellDot) return;
+
+      if (!window.currentUser){
+        noticeBell.style.display = "none";
+        noticeBellDot.style.display = "none";
+        return;
+      }
+
+      noticeBell.style.display = "inline-flex";
+      const hasUnread = (unreadCount + notificationsUnreadCount) > 0;
+      noticeBellDot.style.display = hasUnread ? "inline" : "none";
+    }
+
+    function renderAllNoticesList(){
+      if (!noticeAllList) return;
+
+      const combined = [];
+
+      noticesCache.forEach(n => {
+        combined.push({
+          _type: "notice",
+          id: String(n.id),
+          title: n.title || "Notice",
+          body: getNoticeBody(n),
+          when: n.updated_at ? new Date(n.updated_at).toLocaleString("en-GB") : "",
+          who: n.created_by_name || "Unknown",
+          acked: isNoticeAcked(n),
+          data: n
+        });
+      });
+
+      (notificationsCache || []).forEach(n => {
+        let title, body;
+        
+        // Handle swap request notifications specially
+        if (n._is_swap_request && n.payload) {
+          const sr = n.payload;
+          title = `Swap Request from ${escapeHtml(sr.initiator_name || "Unknown")}`;
+          body = `${escapeHtml(sr.initiator_name)} wants to swap their <strong>${escapeHtml(sr.initiator_shift_code)}</strong> on <strong>${sr.initiator_shift_date}</strong> for your <strong>${escapeHtml(sr.counterparty_shift_code)}</strong> on <strong>${sr.counterparty_shift_date}</strong>`;
+        } else {
+          title = getNotificationTitle(n);
+          body = getNotificationBody(n);
+        }
+
+        combined.push({
+          _type: "notification",
+          id: String(n.id),
+          title: title,
+          body: body,
+          when: n.updated_at ? new Date(n.updated_at).toLocaleString("en-GB") : "",
+          who: "",
+          status: n.status || "pending",
+          requiresAction: !!n.requires_action,
+          isSwapRequest: !!n._is_swap_request,
+          data: n
+        });
+      });
+
+      combined.sort((a,b) => {
+        const aTime = a.data.updated_at ? new Date(a.data.updated_at).getTime() : 0;
+        const bTime = b.data.updated_at ? new Date(b.data.updated_at).getTime() : 0;
+        return bTime - aTime;
+      });
+
+      if (!combined.length){
+        noticeAllList.innerHTML = `<div class="subtitle">No items.</div>`;
+        return;
+      }
+
+      noticeAllList.innerHTML = combined.map(item => {
+        if (item._type === "notice"){
+          const pill = item.acked
+            ? `<span class="notice-pill">Acknowledged</span>`
+            : `<span class="notice-pill unread">New</span>`;
+
+          return `
+            <div class="notice-card">
+              <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+                <div style="min-width:0;">
+                  <div class="notice-title">${escapeHtml(item.title)}</div>
+                  <div class="notice-meta">By ${escapeHtml(item.who)}${item.when ? " · " + item.when : ""}</div>
+                </div>
+                <div>${pill}</div>
+              </div>
+
+              <div class="notice-body" style="margin-top:8px; line-height: 1.6;">${item.body}</div>
+
+              ${item.acked ? "" : `
+                <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                  <button type="button" class="primary" data-ack="${item.id}" style="min-width:auto;">
+                    Acknowledge
+                  </button>
+                </div>
+              `}
+            </div>
+          `;
+        }
+
+        if (item._type === "notification"){
+          const pill = item.status === "pending"
+            ? `<span class="notice-pill unread">New</span>`
+            : `<span class="notice-pill">${item.status}</span>`;
+
+          const actionButtons = (item.status === "pending" && item.requiresAction)
+            ? `
+              <div style="display:flex; gap:6px; justify-content:flex-end; margin-top:10px;">
+                <button type="button" class="primary" data-notif-accept="${item.id}">Accept</button>
+                <button type="button" data-notif-decline="${item.id}">Decline</button>
+                <button type="button" data-notif-ignore="${item.id}">Ignore</button>
+              </div>
+            `
+            : (item.status === "pending" && !item.requiresAction)
+            ? `
+              <div style="display:flex; gap:6px; justify-content:flex-end; margin-top:10px;">
+                <button type="button" class="primary" data-notif-ack="${item.id}">Acknowledge</button>
+                <button type="button" data-notif-ignore="${item.id}">Ignore</button>
+              </div>
+            `
+            : "";
+
+          return `
+            <div class="notice-card">
+              <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+                <div style="min-width:0;">
+                  <div class="notice-title">${item.title}</div>
+                  <div class="notice-meta">${item.when ? item.when : ""}</div>
+                </div>
+                <div>${pill}</div>
+              </div>
+
+              <div class="notice-body" style="margin-top:8px; line-height: 1.6;">${item.body}</div>
+
+              ${actionButtons}
+            </div>
+          `;
+        }
+
+        return "";
+      }).join("");
+    }
+
+    async function refreshNotices(){
+      const list = await fetchNoticesForMe();
+      computeNoticeState(list);
+      updateNoticeBell();
+    }
+
+    async function refreshNotifications(){
+      const list = await fetchNotificationsForMe();
+      computeNotificationState(list);
+      updateNoticeBell();
+    }
+
+    async function refreshNoticesAndNotifications(){
+      await Promise.all([refreshNotices(), refreshNotifications()]);
+    }
+
+    async function ackOneNotice(noticeId, noticeVersion){
+      if (!window.currentUser) return;
+
+      const { error } = await supabaseClient.rpc("ack_notice", {
+        p_notice_id: noticeId,
+        p_user_id: window.currentUser.id,
+        p_version: noticeVersion
+      });
+
+      if (error) throw error;
+
+      await refreshNotices();
+    }
+
+    async function updateNotificationStatus(notifId, status){
+      if (!window.currentUser) throw new Error("Not logged in.");
+      const { error } = await supabaseClient
+        .from("notifications")
+        .update({
+          status: status,
+          acted_by: window.currentUser.id,
+          acted_at: new Date().toISOString(),
+          updated_by: window.currentUser.id
+        })
+        .eq("id", notifId);
+
+      if (error) throw error;
+    }
+
+    async function loadNoticesBell(){
+      try {
+        // Race against 5 second timeout - notices are non-critical
+        await Promise.race([
+          refreshNoticesAndNotifications(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Notices timeout")), 5000))
+        ]);
+      } catch (e) {
+        console.warn("Failed to load notices/notifications:", e);
+      }
+    }
+
+    function openAllNoticesModal(){
+      if (!noticeAllModal) return;
+
+      renderAllNoticesList();
+
+      document.body.classList.add("modal-open");
+      noticeAllModal.style.display = "flex";
+      noticeAllModal.setAttribute("aria-hidden","false");
+    }
+
+    function closeAllNoticesModal(){
+      if (!noticeAllModal) return;
+
+      noticeAllModal.style.display = "none";
+      noticeAllModal.setAttribute("aria-hidden","true");
+      document.body.classList.remove("modal-open");
+    }
+
+    noticeBell?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!window.currentUser) return;
+      openAllNoticesModal();
     });
+
+    noticeAllClose?.addEventListener("click", closeAllNoticesModal);
+    noticeAllModal?.addEventListener("click", (e) => {
+      if (e.target === noticeAllModal) closeAllNoticesModal();
+    });
+
+    noticeAllList?.addEventListener("click", async (e) => {
+      const ackBtn = e.target.closest("button[data-ack]");
+      if (ackBtn) {
+        const id = String(ackBtn.dataset.ack);
+
+        const n = (noticesCache || []).find(x => String(x.id) === id);
+        if (!n) {
+          alert("Notice not found in cache. Reload and try again.");
+          return;
+        }
+
+        try {
+          ackBtn.disabled = true;
+
+          await ackOneNotice(n.id, n.version);
+
+          await refreshNoticesAndNotifications();
+          renderAllNoticesList();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to acknowledge notice.");
+        } finally {
+          ackBtn.disabled = false;
+        }
+        return;
+      }
+
+      const acceptBtn = e.target.closest("button[data-notif-accept]");
+      if (acceptBtn) {
+        const id = String(acceptBtn.dataset.notifAccept);
+        try {
+          acceptBtn.disabled = true;
+          
+          // Check if this is a swap request notification
+          const notification = notificationsCache.find(n => String(n.id) === id);
+          if (notification && notification._is_swap_request) {
+            // Call staff_respond_to_swap_request for swap acceptance
+            const { data, error } = await supabaseClient.rpc(
+              "staff_respond_to_swap_request",
+              {
+                p_user_id: window.currentUser.id,
+                p_swap_request_id: id,
+                p_response: "accepted"
+              }
+            );
+            if (error) throw error;
+            alert("Swap request accepted!");
+          } else {
+            // Standard notification acceptance
+            await updateNotificationStatus(id, "accepted");
+          }
+          
+          await refreshNotifications();
+          renderAllNoticesList();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to accept notification.");
+        } finally {
+          acceptBtn.disabled = false;
+        }
+        return;
+      }
+
+      const declineBtn = e.target.closest("button[data-notif-decline]");
+      if (declineBtn) {
+        const id = String(declineBtn.dataset.notifDecline);
+        try {
+          declineBtn.disabled = true;
+          
+          // Check if this is a swap request notification
+          const notification = notificationsCache.find(n => String(n.id) === id);
+          if (notification && notification._is_swap_request) {
+            // Call staff_respond_to_swap_request for swap decline
+            const { data, error } = await supabaseClient.rpc(
+              "staff_respond_to_swap_request",
+              {
+                p_user_id: window.currentUser.id,
+                p_swap_request_id: id,
+                p_response: "declined"
+              }
+            );
+            if (error) throw error;
+            alert("Swap request declined!");
+          } else {
+            // Standard notification decline
+            await updateNotificationStatus(id, "declined");
+          }
+          
+          await refreshNotifications();
+          renderAllNoticesList();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to decline notification.");
+        } finally {
+          declineBtn.disabled = false;
+        }
+        return;
+      }
+
+      const ignoreBtn = e.target.closest("button[data-notif-ignore]");
+      if (ignoreBtn) {
+        const id = String(ignoreBtn.dataset.notifIgnore);
+        try {
+          ignoreBtn.disabled = true;
+          await updateNotificationStatus(id, "ignored");
+          await refreshNotifications();
+          renderAllNoticesList();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to ignore notification.");
+        } finally {
+          ignoreBtn.disabled = false;
+        }
+        return;
+      }
+
+      const ackNotifBtn = e.target.closest("button[data-notif-ack]");
+      if (ackNotifBtn) {
+        const id = String(ackNotifBtn.dataset.notifAck);
+        try {
+          ackNotifBtn.disabled = true;
+          await updateNotificationStatus(id, "ack");
+          await refreshNotifications();
+          renderAllNoticesList();
+        } catch (err) {
+          console.error(err);
+          alert("Failed to acknowledge notification.");
+        } finally {
+          ackNotifBtn.disabled = false;
+        }
+        return;
+      }
+    });
+
   </script>
 </body>
 </html>
-
 

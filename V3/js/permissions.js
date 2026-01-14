@@ -13,7 +13,7 @@
  * @returns {Promise<Object|null>} User object or null
  */
 async function loadCurrentUserPermissions() {
-  const STORAGE_KEY = "calpeward.current_user_id";
+  const STORAGE_KEY = "calpeward.loggedInUserId";
   const savedId = localStorage.getItem(STORAGE_KEY);
   
   if (!savedId) {
@@ -23,7 +23,7 @@ async function loadCurrentUserPermissions() {
 
   try {
     // Load user profile
-    const { data: profile, error: profileError } = await supabaseClient
+    const { data: profile, error: profileError } = await window.supabaseClient
       .from("users")
       .select("id, name, role_id, is_admin, is_active")
       .eq("id", savedId)
@@ -44,7 +44,7 @@ async function loadCurrentUserPermissions() {
     }
 
     // Load user's permission groups
-    const { data: groups, error: groupsError } = await supabaseClient
+    const { data: groups, error: groupsError } = await window.supabaseClient
       .from("user_permission_groups")
       .select("group_id")
       .eq("user_id", profile.id);
@@ -57,7 +57,7 @@ async function loadCurrentUserPermissions() {
     // Load permissions for those groups
     if (groups && groups.length > 0) {
       const groupIds = groups.map(g => g.group_id);
-      const { data: perms, error: permsError } = await supabaseClient
+      const { data: perms, error: permsError } = await window.supabaseClient
         .from("permission_group_permissions")
         .select("permission_key")
         .in("group_id", groupIds);

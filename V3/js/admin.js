@@ -37,6 +37,8 @@
     const usersPageTabs = Array.from(document.querySelectorAll(".subtab[data-users-page]"));
     const shiftsPages = Array.from(document.querySelectorAll(".shifts-page"));
     const shiftsPageTabs = Array.from(document.querySelectorAll(".subtab[data-shifts-page]"));
+    const swapsPages = Array.from(document.querySelectorAll(".swaps-page"));
+    const swapsPageTabs = Array.from(document.querySelectorAll(".subtab[data-swaps-page]"));
     const adminUserPermissionGroups = document.getElementById("adminUserPermissionGroups");
     const adminUserStatus = document.getElementById("adminUserStatus");
     const permissionGroupSelect = document.getElementById("permissionGroupSelect");
@@ -140,6 +142,7 @@
         return null;
       }
       currentUser = data;
+      window.currentUser = currentUser; // Expose to window for other scripts
       await loadUserPermissions();
       if (!hasPermission("system.admin_panel")){
         adminUserAuthNotice.style.display = "block";
@@ -248,6 +251,7 @@
         sessionStorage.setItem(pinKey(user.id), pin);
         setWindowSession(user.id, pin);
         currentUser = user;
+        window.currentUser = currentUser; // Expose to window for other scripts
         await loadUserPermissions();
         const canAccess = hasPermission("system.admin_panel");
         updateUserStatus(currentUser, canAccess);
@@ -730,6 +734,13 @@
       }
       if (id === "shift-catalogue"){
         ensureCurrentUser().then(() => loadShiftsCatalogue());
+      }
+      if (id === "notices"){
+        ensureCurrentUser().then(() => {
+          if (hasPermission("notices.view_admin")) {
+            loadAdminNotices();
+          }
+        });
       }
     }
 
@@ -1739,6 +1750,468 @@
       if (e.key === "Enter") adminLogin();
     });
 
+    // === NOTICES ADMIN WIRING ===
+    const adminNoticeSearch = document.getElementById("adminNoticeSearch");
+    const adminShowInactiveNotices = document.getElementById("adminShowInactiveNotices");
+    const adminNewNoticeBtn = document.getElementById("adminNewNoticeBtn");
+    const adminNoticesList = document.getElementById("adminNoticesList");
+    const adminNoticeModal = document.getElementById("adminNoticeModal");
+    const adminNoticeTitle = document.getElementById("adminNoticeTitle");
+    const adminNoticeTitleInput = document.getElementById("adminNoticeTitleInput");
+    const adminNoticeSave = document.getElementById("adminNoticeSave");
+    const adminNoticeCancel = document.getElementById("adminNoticeCancel");
+    const noticeTargetAll = document.getElementById("noticeTargetAll");
+    const noticeRoleChks = Array.from(document.querySelectorAll(".notice-role-chk"));
+    const noticesPages = Array.from(document.querySelectorAll(".notices-page"));
+    const noticesPageTabs = Array.from(document.querySelectorAll(".subtab[data-notices-page]"));
+
+    let adminNoticesCache = [];
+    let editingNotice = null;
+    let quillEnglish = null;
+    let quillSpanish = null;
+
+    // Initialize Quill editors
+    function initQuillEditors() {
+      if (!window.Quill) {
+        console.warn("Quill not loaded yet");
+        return;
+      }
+      if (!quillEnglish && document.getElementById("quillEnglish")) {
+        quillEnglish = new Quill('#quillEnglish', { theme: 'snow' });
+      }
+      if (!quillSpanish && document.getElementById("quillSpanish")) {
+        quillSpanish = new Quill('#quillSpanish', { theme: 'snow' });
+      }
+    }
+
+    // Initialize Quill after admin page load
+    setTimeout(() => {
+      if (document.getElementById("quillEnglish")) {
+        initQuillEditors();
+      }
+    }, 500);
+
+    function showNoticesPage(id){
+      noticesPages.forEach(page => {
+        page.style.display = page.id === `noticesPage${id[0].toUpperCase()}${id.slice(1)}` ? "block" : "none";
+      });
+      noticesPageTabs.forEach(tab => {
+        tab.classList.toggle("is-active", tab.dataset.noticesPage === id);
+      });
+      if (id === "edit" && (!quillEnglish || !quillSpanish)) {
+        initQuillEditors();
+      }
+    }
+
+    noticesPageTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        showNoticesPage(tab.dataset.noticesPage);
+      });
+    });
+
+    adminNewNoticeBtn?.addEventListener("click", () => {
+      if (!requirePermission("notices.create", "Permission required to create notices.")) return;
+      clearNoticeEditor();
+      showNoticesPage("edit");
+    });
+
+    adminNoticeSearch?.addEventListener("input", () => renderAdminNotices());
+    adminShowInactiveNotices?.addEventListener("change", () => renderAdminNotices());
+
+    adminNoticeSave?.addEventListener("click", async () => {
+      if (!requirePermission("notices.edit", "Permission required to save notices.")) return;
+      
+      const title = adminNoticeTitleInput.value.trim();
+      const body_en = quillEnglish ? quillEnglish.root.innerHTML.trim() : "";
+      const body_es = quillSpanish ? quillSpanish.root.innerHTML.trim() : "";
+
+      if (!title) return alert("Title required.");
+
+      const targets = readNoticeTargetsFromUI();
+
+      try {
+        adminNoticeSave.disabled = true;
+
+        const payload = {
+          id: editingNotice?.id || null,
+          title: title,
+          body_en: body_en,
+          body_es: body_es,
+          target_all: targets.target_all,
+          target_roles: targets.target_roles
+        };
+
+        await adminUpsertNotice(payload);
+
+        await loadAdminNotices();
+        showNoticesPage("view");
+        alert("Notice saved.");
+      } catch (e) {
+        console.error(e);
+        alert("Failed to save notice. Check console.");
+      } finally {
+        adminNoticeSave.disabled = false;
+      }
+    });
+
+    adminNoticeCancel?.addEventListener("click", () => {
+      showNoticesPage("view");
+    });
+
+    // Ack expansion toggle handler
+    adminNoticesList?.addEventListener("click", async (e) => {
+      const ackBtn = e.target.closest("[data-ack-toggle]");
+      if (ackBtn) {
+        e.preventDefault();
+
+        const noticeId = ackBtn.dataset.ackToggle;
+        const box = document.getElementById(`ack-list-${noticeId}`);
+        if (!box) return;
+
+        const isOpen = box.style.display === "block";
+        box.style.display = isOpen ? "none" : "block";
+
+        if (ackBtn && ackBtn.setAttribute) ackBtn.setAttribute('aria-expanded', String(!isOpen));
+
+        if (isOpen) return;
+
+        if (box.dataset.loaded === "1") return;
+
+        box.innerHTML = `<div class="subtitle">Loading…</div>`;
+
+        try {
+          const rows = await fetchNoticeAcksForAdmin(noticeId);
+
+          if (!rows.length) {
+            box.innerHTML = `<div class="subtitle">Nobody yet.</div>`;
+          } else {
+            box.innerHTML = `
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                ${rows.map(r => `
+                  <span class="ack-pill"
+                        style="padding:6px 10px; border:1px solid #e5e7eb; border-radius:999px; font-size:12px;">
+                    ${escapeHtml(r.name || "Unknown")}
+                    <span class="muted" style="margin-left:6px;">
+                      ${r.acknowledged_at
+                        ? new Date(r.acknowledged_at).toLocaleString("en-GB")
+                        : ""}
+                    </span>
+                  </span>
+                `).join("")}
+              </div>
+            `;
+
+            try {
+              const countSpan = document.querySelector(`[data-ack-count="${noticeId}"]`);
+              if (countSpan && Number(countSpan.textContent) !== rows.length) {
+                console.debug('Mismatch detected: fixing ack count for', noticeId, 'to', rows.length);
+                countSpan.textContent = String(rows.length);
+                const noticeObj = adminNoticesCache.find(n => String(n.id) === String(noticeId));
+                if (noticeObj) noticeObj.ack_count = rows.length;
+              }
+            } catch (e) { console.warn('failed to update count fallback', e); }
+          }
+
+          box.dataset.loaded = "1";
+        } catch (err) {
+          console.error(err);
+          box.innerHTML = `<div class="subtitle">Failed to load.</div>`;
+        }
+
+        return;
+      }
+
+      // Handle row action buttons
+      const row = e.target.closest(".notice-row");
+      if (!row) return;
+
+      const act = e.target.closest("button")?.dataset.act;
+      if (!act) return;
+
+      const id = row.dataset.id;
+      const notice = adminNoticesCache.find(n => String(n.id) === String(id));
+      if (!notice) return;
+
+      if (act === "edit") {
+        if (!requirePermission("notices.edit", "Permission required to edit notices.")) return;
+        openAdminNoticeEditor(notice);
+      }
+
+      if (act === "toggle") {
+        if (!requirePermission("notices.toggle_active", "Permission required to toggle notice visibility.")) return;
+        await toggleAdminNoticeActive(notice);
+      }
+
+      if (act === "delete") {
+        if (!requirePermission("notices.delete", "Permission required to delete notices.")) return;
+        await deleteAdminNotice(notice);
+      }
+    });
+
+    function clearNoticeEditor(){
+      editingNotice = null;
+
+      if (adminNoticeTitleInput) adminNoticeTitleInput.value = "";
+      if (quillEnglish) quillEnglish.setContents([]);
+      if (quillSpanish) quillSpanish.setContents([]);
+
+      if (noticeTargetAll) noticeTargetAll.checked = true;
+      noticeRoleChks.forEach(chk => chk.checked = false);
+    }
+
+    async function adminFetchNoticeAcks(noticeId){
+      const { data, error } = await supabaseClient
+        .rpc("admin_get_notice_acks", { p_notice_id: noticeId });
+
+      if (error) throw error;
+
+      const res = Array.isArray(data) ? (data[0] || { acked: [], pending: [] }) : (data || { acked: [], pending: [] });
+      return res.acked || [];
+    }
+
+    async function fetchNoticeAcksForAdmin(noticeId){
+      return adminFetchNoticeAcks(noticeId);
+    }
+
+    function hydrateNoticeTargetsFromNotice(notice){
+      const targetAll = !!notice.target_all;
+      const roles = Array.isArray(notice.target_roles) ? notice.target_roles.map(Number) : [];
+
+      if (noticeTargetAll) noticeTargetAll.checked = targetAll;
+      noticeRoleChks.forEach(chk => {
+        chk.checked = roles.includes(Number(chk.value));
+      });
+    }
+
+    function readNoticeTargetsFromUI(){
+      let targetAll = !!noticeTargetAll?.checked;
+      const roles = noticeRoleChks
+        .filter(chk => chk.checked)
+        .map(chk => Number(chk.value))
+        .filter(n => [1,2,3].includes(n));
+
+      if (roles.length > 0) targetAll = false;
+
+      return { target_all: targetAll, target_roles: roles };
+    }
+
+    function openAdminNoticeEditor(notice){
+      if (!currentUser?.is_admin && !hasPermission("notices.edit")) {
+        alert("Permission required to edit notices.");
+        return;
+      }
+
+      if (!notice){
+        clearNoticeEditor();
+        editingNotice = null;
+        showNoticesPage("edit");
+        return;
+      }
+
+      editingNotice = notice;
+
+      if (adminNoticeTitleInput) adminNoticeTitleInput.value = notice.title || "";
+      
+      if (quillEnglish) quillEnglish.root.innerHTML = notice.body_en || "";
+      if (quillSpanish) quillSpanish.root.innerHTML = notice.body_es || "";
+
+      hydrateNoticeTargetsFromNotice(notice);
+
+      showNoticesPage("edit");
+    }
+
+    function renderAdminNotices(){
+      if (!adminNoticesList) return;
+
+      const q = (adminNoticeSearch?.value || "").trim().toLowerCase();
+      const showInactive = !!adminShowInactiveNotices?.checked;
+
+      let rows = adminNoticesCache.slice();
+      if (!showInactive) rows = rows.filter(n => n.is_active !== false);
+      if (q) rows = rows.filter(n => (n.title || "").toLowerCase().includes(q));
+
+      if (!rows.length){
+        adminNoticesList.innerHTML =
+          `<div class="subtitle" style="padding:12px;">No notices.</div>`;
+        return;
+      }
+
+      adminNoticesList.innerHTML = rows.map(n => {
+        const createdBy = escapeHtml(n.users?.name || "Unknown");
+        const when = n.updated_at
+          ? new Date(n.updated_at).toLocaleDateString("en-GB")
+          : "";
+
+        const ackCount = n.ack_count ?? 0;
+        const ackTotal = n.ack_total ?? 0;
+
+        return `
+          <div class="notice-row"
+               data-id="${n.id}"
+               style="padding:12px; border-bottom:1px solid #eee;">
+
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <div style="flex:1; min-width:0;">
+                <div style="font-weight:800;">${escapeHtml(n.title)}</div>
+
+                <div style="font-size:11px; color:#667085; margin-top:4px;">
+                  v${n.version}
+                  · ${createdBy}
+                  · ${when}
+                  ${!n.is_active
+                    ? `<span class="notice-pill" style="margin-left:6px;">Inactive</span>`
+                    : ``}
+                </div>
+              </div>
+
+              <div style="display:flex; gap:6px;">
+                <button data-act="edit">Edit</button>
+                <button data-act="toggle">${n.is_active ? "Hide" : "Unhide"}</button>
+                <button data-act="delete">Delete</button>
+              </div>
+            </div>
+
+            <!-- Acknowledged By (expandable) -->
+            <div class="ack-summary" style="margin-top:8px;">
+              <button type="button"
+                      class="ghost"
+                      data-ack-toggle="${n.id}"
+                      style="padding:6px 10px; border-radius:999px; font-size:12px; background:transparent; border:none; cursor:pointer; color:#64748b;">
+                Acknowledged:
+                <span data-ack-count="${n.id}">${ackCount ?? "–"}</span>
+                <span class="muted"> / </span>
+                <span data-ack-total="${n.id}">${ackTotal ?? "–"}</span>
+                <span class="muted"> · View</span>
+              </button>
+
+              <div id="ack-list-${n.id}"
+                   class="ack-list"
+                   style="display:none; margin-top:8px; padding:10px; border:1px solid #e5e7eb; border-radius:12px;">
+                <div class="subtitle">Loading…</div>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function loadAdminNotices(){
+      if (!currentUser?.is_admin && !hasPermission("notices.view_admin")) return;
+
+      const { data, error } = await supabaseClient
+        .from("notices")
+        .select(`
+          id,
+          title,
+          body_en,
+          body_es,
+          version,
+          is_active,
+          updated_at,
+          created_by,
+          target_all,
+          target_roles,
+          users:created_by ( name )
+        `)
+        .order("updated_at", { ascending: false });
+
+      if (error){
+        console.error(error);
+        alert("Failed to load notices");
+        return;
+      }
+
+      adminNoticesCache = data || [];
+
+      // Fetch ack counts
+      try {
+        const ids = (adminNoticesCache || []).map(n => n.id).filter(Boolean);
+        if (ids.length) {
+          const counts = await adminFetchNoticeAckCounts(ids);
+          const map = new Map((counts || []).map(r => [String(r.notice_id), { ack_count: Number(r.ack_count), ack_total: Number(r.ack_total) }]));
+          adminNoticesCache.forEach(n => {
+            const c = map.get(String(n.id));
+            n.ack_count = c?.ack_count ?? 0;
+            n.ack_total = c?.ack_total ?? 0;
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch notice ack counts', err);
+      }
+
+      renderAdminNotices();
+    }
+
+    async function adminFetchNoticeAckCounts(noticeIds){
+      if (!Array.isArray(noticeIds) || noticeIds.length === 0) return [];
+
+      const { data, error } = await supabaseClient.rpc("admin_notice_ack_counts", {
+        p_notice_ids: noticeIds
+      });
+
+      if (error) throw error;
+
+      return data || [];
+    }
+
+    async function adminUpsertNotice(payload){
+      const pin = getSessionPinOrThrow();
+
+      const targetRoles = Array.isArray(payload.target_roles) ? payload.target_roles : [];
+      const targetAll = !!payload.target_all && targetRoles.length === 0;
+
+      const { data, error } = await supabaseClient.rpc("admin_upsert_notice", {
+        p_admin_id: currentUser.id,
+        p_pin: pin,
+        p_notice_id: payload.id || null,
+        p_title: payload.title,
+        p_body_en: payload.body_en,
+        p_body_es: payload.body_es,
+        p_target_all: targetAll,
+        p_target_roles: targetRoles
+      });
+
+      if (error) throw error;
+      return data;
+    }
+
+    async function toggleAdminNoticeActive(notice){
+      const pin = getSessionPinOrThrow();
+
+      const next = (notice.is_active === false) ? true : false;
+      const ok = confirm(`${next ? "Unhide" : "Hide"} "${notice.title}"?`);
+      if (!ok) return;
+
+      const { error } = await supabaseClient.rpc("admin_set_notice_active", {
+        p_admin_id: currentUser.id,
+        p_pin: pin,
+        p_notice_id: notice.id,
+        p_active: next
+      });
+
+      if (error) throw error;
+
+      await loadAdminNotices();
+    }
+
+    async function deleteAdminNotice(notice){
+      const pin = getSessionPinOrThrow();
+
+      const ok = confirm(`Delete "${notice.title}"?\n\nThis cannot be undone.`);
+      if (!ok) return;
+
+      const { error } = await supabaseClient.rpc("admin_delete_notice", {
+        p_admin_id: currentUser.id,
+        p_pin: pin,
+        p_notice_id: notice.id
+      });
+
+      if (error) throw error;
+
+      await loadAdminNotices();
+    }
+
     adminUsersReorderList?.addEventListener("dragstart", (e) => {
       const userRow = e.target.closest('.user-row[draggable="true"]');
       if (!userRow) return;
@@ -1781,4 +2254,229 @@
         targetRow.parentNode.insertBefore(draggedElement, targetRow);
       }
       await updateUserDisplayOrder(draggedRoleId);
+    });
+
+    // ===== SHIFT SWAPS =====
+    const adminSwapSearch = document.getElementById("adminSwapSearch");
+    const adminSwapStatusFilter = document.getElementById("adminSwapStatusFilter");
+    const adminSwapsPendingList = document.getElementById("adminSwapsPendingList");
+    const adminSwapHistorySearch = document.getElementById("adminSwapHistorySearch");
+    const adminSwapMethodFilter = document.getElementById("adminSwapMethodFilter");
+    const adminSwapsExecutedList = document.getElementById("adminSwapsExecutedList");
+
+    let adminSwapsPendingCache = [];
+    let adminSwapsExecutedCache = [];
+
+    function showSwapsPage(id){
+      swapsPages.forEach(page => {
+        page.style.display = page.id === `swaps${id[0].toUpperCase()}${id.slice(1)}Page` ? "block" : "none";
+      });
+      swapsPageTabs.forEach(tab => {
+        tab.classList.toggle("is-active", tab.dataset.swapsPage === id);
+      });
+    }
+
+    swapsPageTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        showSwapsPage(tab.dataset.swapsPage);
+        if (tab.dataset.swapsPage === "pending") loadAdminSwapsPending();
+        if (tab.dataset.swapsPage === "executed") loadAdminSwapsExecuted();
+      });
+    });
+
+    async function loadAdminSwapsPending(){
+      if (!requirePermission("rota.swap", "Permission required to view swaps.")) return;
+      const pin = getSessionPinOrThrow();
+
+      try {
+        const { data, error } = await supabaseClient.rpc("admin_get_swap_requests", {
+          p_admin_id: currentUser.id,
+          p_pin: pin
+        });
+
+        if (error) throw error;
+
+        adminSwapsPendingCache = (data || []).filter(s => s.status !== 'executed');
+        renderAdminSwapsPending();
+      } catch (err) {
+        console.error(err);
+        adminSwapsPendingList.innerHTML = `<div class="subtitle" style="padding:12px; color:#dc2626;">Error loading swaps.</div>`;
+      }
+    }
+
+    async function loadAdminSwapsExecuted(){
+      if (!requirePermission("rota.swap", "Permission required to view swaps.")) return;
+      const pin = getSessionPinOrThrow();
+
+      try {
+        const { data, error } = await supabaseClient.rpc("admin_get_swap_executions", {
+          p_admin_id: currentUser.id,
+          p_pin: pin,
+          p_period_id: null
+        });
+
+        if (error) throw error;
+
+        adminSwapsExecutedCache = data || [];
+        renderAdminSwapsExecuted();
+      } catch (err) {
+        console.error(err);
+        adminSwapsExecutedList.innerHTML = `<div class="subtitle" style="padding:12px; color:#dc2626;">Error loading history.</div>`;
+      }
+    }
+
+    function renderAdminSwapsPending(){
+      if (!adminSwapsPendingList) return;
+
+      const q = (adminSwapSearch?.value || "").trim().toLowerCase();
+      const filter = adminSwapStatusFilter?.value || "";
+
+      let rows = adminSwapsPendingCache.slice();
+      if (filter) rows = rows.filter(s => s.status === filter);
+      if (q) {
+        rows = rows.filter(s =>
+          (s.initiator_name || "").toLowerCase().includes(q) ||
+          (s.counterparty_name || "").toLowerCase().includes(q)
+        );
+      }
+
+      if (!rows.length){
+        adminSwapsPendingList.innerHTML = `<div class="subtitle" style="padding:12px;">No pending swaps.</div>`;
+        return;
+      }
+
+      adminSwapsPendingList.innerHTML = rows.map(s => {
+        const statusLabel = {
+          'pending': 'Pending counterparty response',
+          'accepted_by_counterparty': 'Accepted (awaiting admin approval)',
+          'declined_by_counterparty': 'Declined by counterparty'
+        }[s.status] || s.status;
+
+        const dateStr1 = new Date(s.initiator_shift_date).toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
+        const dateStr2 = new Date(s.counterparty_shift_date).toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
+
+        return `
+          <div style="padding:12px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:flex-start;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; margin-bottom:4px;">
+                ${escapeHtml(s.initiator_name)} ${dateStr1} (${s.initiator_shift_code})
+              </div>
+              <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">↔ ${escapeHtml(s.counterparty_name)} ${dateStr2} (${s.counterparty_shift_code})</div>
+              <div style="font-size:12px; color:var(--muted);">${statusLabel}</div>
+            </div>
+            ${s.status === 'accepted_by_counterparty' ? `
+              <div style="display:flex; gap:6px;">
+                <button class="btn small primary" data-swap-approve="${s.id}" type="button">Approve</button>
+                <button class="btn small" data-swap-decline="${s.id}" type="button">Decline</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderAdminSwapsExecuted(){
+      if (!adminSwapsExecutedList) return;
+
+      const q = (adminSwapHistorySearch?.value || "").trim().toLowerCase();
+      const filter = adminSwapMethodFilter?.value || "";
+
+      let rows = adminSwapsExecutedCache.slice();
+      if (filter) rows = rows.filter(s => s.method === filter);
+      if (q) {
+        rows = rows.filter(s =>
+          (s.initiator_name || "").toLowerCase().includes(q) ||
+          (s.counterparty_name || "").toLowerCase().includes(q)
+        );
+      }
+
+      if (!rows.length){
+        adminSwapsExecutedList.innerHTML = `<div class="subtitle" style="padding:12px;">No executed swaps.</div>`;
+        return;
+      }
+
+      adminSwapsExecutedList.innerHTML = rows.map(s => {
+        const methodLabel = s.method === 'admin_direct' ? 'Admin Direct' : 'Staff Approved';
+        const dateStr1 = new Date(s.initiator_date).toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
+        const dateStr2 = new Date(s.counterparty_date).toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
+        const execStr = new Date(s.executed_at).toLocaleString('en-GB');
+
+        return `
+          <div style="padding:12px; border-bottom:1px solid var(--line);">
+            <div style="font-weight:600; margin-bottom:4px;">
+              ${escapeHtml(s.initiator_name)} ${dateStr1} (${s.initiator_old_shift} → ${s.initiator_new_shift})
+            </div>
+            <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">
+              ↔ ${escapeHtml(s.counterparty_name)} ${dateStr2} (${s.counterparty_old_shift} → ${s.counterparty_new_shift})
+            </div>
+            <div style="font-size:11px; color:var(--muted);">
+              ${methodLabel} · Authorised by ${escapeHtml(s.authoriser_name)} · ${execStr}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    adminSwapSearch?.addEventListener("input", renderAdminSwapsPending);
+    adminSwapStatusFilter?.addEventListener("change", renderAdminSwapsPending);
+    adminSwapHistorySearch?.addEventListener("input", renderAdminSwapsExecuted);
+    adminSwapMethodFilter?.addEventListener("change", renderAdminSwapsExecuted);
+
+    adminSwapsPendingList?.addEventListener("click", async (e) => {
+      const approveBtn = e.target.closest("button[data-swap-approve]");
+      if (approveBtn) {
+        const swapId = approveBtn.dataset.swapApprove;
+        const swap = adminSwapsPendingCache.find(s => String(s.id) === String(swapId));
+        if (!swap) return;
+
+        try {
+          approveBtn.disabled = true;
+          const pin = getSessionPinOrThrow();
+          const { data, error } = await supabaseClient.rpc("admin_approve_swap_request", {
+            p_admin_id: currentUser.id,
+            p_pin: pin,
+            p_swap_request_id: swapId
+          });
+
+          if (error) throw error;
+          if (!data[0]?.success) throw new Error(data[0]?.error_message || "Failed to approve swap");
+
+          await loadAdminSwapsPending();
+          await loadAdminSwapsExecuted();
+          alert("Swap approved.");
+        } catch (err) {
+          console.error(err);
+          alert("Failed to approve swap. Check console.");
+        } finally {
+          approveBtn.disabled = false;
+        }
+        return;
+      }
+
+      const declineBtn = e.target.closest("button[data-swap-decline]");
+      if (declineBtn) {
+        const swapId = declineBtn.dataset.swapDecline;
+        if (!confirm("Decline this swap request?")) return;
+
+        try {
+          declineBtn.disabled = true;
+          const pin = getSessionPinOrThrow();
+          const { data, error } = await supabaseClient.rpc("admin_decline_swap_request", {
+            p_admin_id: currentUser.id,
+            p_pin: pin,
+            p_swap_request_id: swapId
+          });
+
+          if (error) throw error;
+          if (!data[0]?.success) throw new Error(data[0]?.error_message || "Failed to decline swap");
+
+          await loadAdminSwapsPending();
+          alert("Swap declined.");
+        } catch (err) {
+          console.error(err);
+          alert("Failed to decline swap. Check console.");
+        } finally {
+          declineBtn.disabled = false;
+        }
+      }
     });

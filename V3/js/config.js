@@ -80,3 +80,7 @@ const WINDOW_WEEKS = 5;
  *   WINDOW_WEEKS
  * };
  */
+
+// Expose to window for cross-file access
+window.supabaseClient = supabaseClient;
+window.STORAGE_KEY = STORAGE_KEY;

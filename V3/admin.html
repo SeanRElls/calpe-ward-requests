@@ -528,6 +528,7 @@
         <a data-panel="rota-periods" href="#rota-periods">Rota Periods</a>
         <a data-panel="drafting" href="#drafting">Draft Controls</a>
         <a data-panel="notices" href="#notices">Notices</a>
+        <a data-panel="shift-swaps" href="#shift-swaps">Shift Swaps</a>
         <a data-panel="shift-catalogue" href="#shift-catalogue">Shift Catalogue</a>
         <a data-panel="staffing" href="#staffing">Staffing Defaults</a>
         <a data-panel="available-shifts" href="#available-shifts">Available Shifts</a>
@@ -720,9 +721,115 @@
         <section id="notices" class="section panel" style="display:none;">
           <h2>Notices</h2>
           <p>Staff-facing notices with acknowledgements.</p>
-          <div class="actions">
-            <button class="btn primary" type="button">New Notice</button>
-            <button class="btn" type="button">View Acknowledgements</button>
+
+          <div class="subtabs" role="tablist" aria-label="Notices management pages">
+            <button class="subtab is-active" data-notices-page="view" type="button">View notices</button>
+            <button class="subtab" data-notices-page="edit" type="button">Create/Edit notice</button>
+          </div>
+
+          <!-- View Notices Page -->
+          <div id="noticesPageView" class="notices-page">
+            <div class="accordion-sub">Search and manage staff notices.</div>
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-top:10px;">
+              <div style="font-weight:700;">All Notices</div>
+              <label style="display:flex; gap:6px; align-items:center; font-size:12.5px; color:var(--muted);">
+                <input type="checkbox" id="adminShowInactiveNotices" />
+                Show inactive
+              </label>
+            </div>
+            
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+              <input id="adminNoticeSearch" class="control" placeholder="Search notices..." style="flex:1; min-width:180px;" />
+              <button id="adminNewNoticeBtn" class="btn primary" type="button">New Notice</button>
+            </div>
+            
+            <div id="adminNoticesList" style="border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff;"></div>
+          </div>
+
+          <!-- Create/Edit Notice Page -->
+          <div id="noticesPageEdit" class="notices-page" style="display:none;">
+            <div class="accordion-sub">Create or edit a notice.</div>
+            
+            <div class="field" style="margin-top:16px; margin-bottom:16px;">
+              <label style="display:block; margin-bottom:4px; font-weight:600;">Title</label>
+              <input id="adminNoticeTitleInput" class="control" placeholder="Notice title" />
+            </div>
+            
+            <div class="field" style="margin-bottom:16px;">
+              <label style="display:block; margin-bottom:4px; font-weight:600;">Visibility</label>
+              <label style="display:flex; gap:6px; align-items:center; font-size:13px; margin-bottom:6px;">
+                <input type="checkbox" id="noticeTargetAll" checked />
+                All staff
+              </label>
+              <div style="margin-left:18px; display:flex; flex-direction:column; gap:4px;">
+                <label style="display:flex; gap:6px; align-items:center; font-size:13px;">
+                  <input type="checkbox" class="notice-role-chk" value="1" />
+                  Charge Nurses
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:13px;">
+                  <input type="checkbox" class="notice-role-chk" value="2" />
+                  Staff Nurses
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size:13px;">
+                  <input type="checkbox" class="notice-role-chk" value="3" />
+                  Nursing Assistants
+                </label>
+              </div>
+            </div>
+            
+            <div class="field" style="margin-bottom:16px;">
+              <label style="display:block; margin-bottom:4px; font-weight:600;">Body (English)</label>
+              <div id="quillEnglish" style="height:200px; border:1px solid #d1d5db; border-radius:6px;"></div>
+            </div>
+            
+            <div class="field" style="margin-bottom:16px;">
+              <label style="display:block; margin-bottom:4px; font-weight:600;">Body (Spanish)</label>
+              <div id="quillSpanish" style="height:200px; border:1px solid #d1d5db; border-radius:6px;"></div>
+            </div>
+            
+            <div style="display:flex; gap:8px; justify-content:flex-start;">
+              <button id="adminNoticeSave" type="button" class="btn primary">Save Notice</button>
+              <button id="adminNoticeCancel" type="button" class="btn">Cancel</button>
+            </div>
+            
+            <div id="adminNoticeHelp" class="page-subtitle" style="margin-top:8px;">Fill in details and click Save.</div>
+          </div>
+        </section>
+
+        <section id="shift-swaps" class="section panel" style="display:none;">
+          <h2>Shift Swaps</h2>
+          <p>View pending swap requests and execute/decline them. History of all executed swaps with full audit trail.</p>
+
+          <div class="subtabs">
+            <button class="subtab is-active" data-swaps-page="pending" type="button">Pending Requests</button>
+            <button class="subtab" data-swaps-page="executed" type="button">Executed Swaps</button>
+          </div>
+
+          <!-- Pending requests view -->
+          <div id="swapsPendingPage" class="swaps-page" style="display:block;">
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+              <input id="adminSwapSearch" class="control" placeholder="Search by staff name..." style="flex:1; min-width:200px;" />
+              <select id="adminSwapStatusFilter" class="control" style="min-width:150px;">
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="accepted_by_counterparty">Accepted (awaiting admin)</option>
+                <option value="declined_by_counterparty">Declined by staff</option>
+              </select>
+            </div>
+            <div id="adminSwapsPendingList" style="border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden;"></div>
+          </div>
+
+          <!-- Executed swaps view -->
+          <div id="swapsExecutedPage" class="swaps-page" style="display:none;">
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+              <input id="adminSwapHistorySearch" class="control" placeholder="Search by staff name..." style="flex:1; min-width:200px;" />
+              <select id="adminSwapMethodFilter" class="control" style="min-width:150px;">
+                <option value="">All methods</option>
+                <option value="admin_direct">Admin Direct</option>
+                <option value="staff_approved">Staff Approved</option>
+              </select>
+            </div>
+            <div id="adminSwapsExecutedList" style="border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden;"></div>
           </div>
         </section>
 
@@ -1030,7 +1137,14 @@
     </main>
   </div>
 
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
   <script src="js/config.js"></script>
+  <script>
+    // Must be defined BEFORE admin.js loads
+    const STORAGE_KEY = "calpeward.loggedInUserId";
+  </script>
   <script src="js/admin.js"></script>
   <script>
     // Staffing defaults management

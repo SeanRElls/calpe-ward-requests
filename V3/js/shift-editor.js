@@ -27,6 +27,7 @@ let focusedCell = null;
 let lastFocusKey = null;
 let gridCodeBuffer = "";
 let gridCodeTimer = null;
+let selectedShiftId = null; // Track selected shift in picker
 
 // ========== INIT ==========
 function initDraftEditing({
@@ -40,6 +41,7 @@ function initDraftEditing({
   getAllUsers,
   getDraftShifts,
   getAssignment,
+  getOverride,
   refreshGrid
 }) {
   // Wrap callbacks to restore focus immediately after operations
@@ -55,8 +57,8 @@ function initDraftEditing({
     });
   };
 
-  const wrappedOnSave = async (userId, date, shiftId) => {
-    await onSave(userId, date, shiftId);
+  const wrappedOnSave = async (userId, date, shiftId, overrideData) => {
+    await onSave(userId, date, shiftId, overrideData);
     restoreFocusAfterOp();
   };
 
@@ -96,6 +98,8 @@ function initDraftEditing({
   if (closeBtn) closeBtn.addEventListener("click", closeShiftPicker);
   const clearBtn = document.getElementById("shiftPickerClear");
   if (clearBtn) clearBtn.addEventListener("click", clearShiftAssignment);
+  const saveBtn = document.getElementById("shiftPickerSave");
+  if (saveBtn) saveBtn.addEventListener("click", saveShiftAssignment);
 
   // Cell click handler (delegated)
   const rotaTable = document.getElementById("rota");
@@ -288,10 +292,70 @@ function initDraftEditing({
     const title = document.getElementById("shiftPickerTitle");
     const dateLabel = document.getElementById("shiftPickerDate");
     const list = document.getElementById("shiftPickerList");
+    const overrideSection = document.getElementById("overrideSection");
+    const commentSection = document.getElementById("commentSection");
+    const overrideStartTime = document.getElementById("overrideStartTime");
+    const overrideEndTime = document.getElementById("overrideEndTime");
+    const overrideHours = document.getElementById("overrideHours");
+    const shiftComment = document.getElementById("shiftComment");
+    const clearOverrideBtn = document.getElementById("clearOverrideBtn");
+    const saveBtn = document.getElementById("shiftPickerSave");
+    
     const user = getAllUsers().find(u => u.id === userId);
     const dateObj = new Date(date);
     title.textContent = user ? user.name : "Select Shift";
     dateLabel.textContent = dateObj.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    
+    // Initialize selected shift
+    selectedShiftId = currentAssignment?.shift_id || null;
+    
+    // Show override/comment sections only in published mode
+    const isPublished = editMode === "published";
+    if (overrideSection) overrideSection.style.display = isPublished ? "" : "none";
+    if (commentSection) commentSection.style.display = isPublished ? "" : "none";
+    if (saveBtn) saveBtn.style.display = isPublished ? "" : "none";
+    
+    // Load existing override data if in published mode
+    if (isPublished && typeof getOverride === "function") {
+      const override = currentAssignment?.id ? getOverride(currentAssignment.id) : null;
+      
+      // Get shift's default times/hours for prefilling
+      const currentShift = currentAssignment?.shift_id ? (getDraftShifts() || []).find(s => s.id === currentAssignment.shift_id) : null;
+      
+      const commentVisibilitySelect = document.getElementById("commentVisibilitySelect");
+      
+      if (override) {
+        // Use existing override values
+        if (overrideStartTime) overrideStartTime.value = override.override_start_time || "";
+        if (overrideEndTime) overrideEndTime.value = override.override_end_time || "";
+        if (overrideHours) overrideHours.value = override.override_hours || "";
+        if (shiftComment) shiftComment.value = override.comment || "";
+        if (commentVisibilitySelect) commentVisibilitySelect.value = override.comment_visibility || 'admin_only';
+      } else if (currentShift) {
+        // Preload with shift's default times/hours if they exist
+        if (overrideStartTime) overrideStartTime.value = currentShift.start_time || "";
+        if (overrideEndTime) overrideEndTime.value = currentShift.end_time || "";
+        if (overrideHours) overrideHours.value = currentShift.hours_value || "";
+        if (shiftComment) shiftComment.value = "";
+        if (commentVisibilitySelect) commentVisibilitySelect.value = 'admin_only';
+      } else {
+        // No assignment or shift, clear fields
+        if (overrideStartTime) overrideStartTime.value = "";
+        if (overrideEndTime) overrideEndTime.value = "";
+        if (overrideHours) overrideHours.value = "";
+        if (shiftComment) shiftComment.value = "";
+        if (commentVisibilitySelect) commentVisibilitySelect.value = 'admin_only';
+      }
+    }
+    
+    // Clear override button
+    if (clearOverrideBtn) {
+      clearOverrideBtn.onclick = () => {
+        if (overrideStartTime) overrideStartTime.value = "";
+        if (overrideEndTime) overrideEndTime.value = "";
+        if (overrideHours) overrideHours.value = "";
+      };
+    }
     
     // Populate shift options
     list.innerHTML = "";
@@ -336,8 +400,18 @@ function initDraftEditing({
         btn.classList.add("selected");
       }
       btn.addEventListener("click", () => {
-        if (onSave) onSave(userId, date, shift.id);
-        closeShiftPicker();
+        // In draft mode: save immediately (old behavior)
+        if (editMode === "draft") {
+          if (onSave) onSave(userId, date, shift.id, null);
+          closeShiftPicker();
+          return;
+        }
+        
+        // In published mode: just select the shift
+        selectedShiftId = shift.id;
+        // Update UI to show selection
+        list.querySelectorAll(".shift-card").forEach(c => c.classList.remove("selected"));
+        btn.classList.add("selected");
       });
 
       btn.appendChild(codeEl);
@@ -364,6 +438,10 @@ function initDraftEditing({
       const backdrop = document.getElementById("shiftPickerBackdrop");
       if (backdrop.getAttribute("aria-hidden") !== "false") return;
       if (["Meta", "Control", "Alt"].includes(e.key)) return;
+      
+      // Ignore all keyboard shortcuts when typing in text fields
+      const target = e.target;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
 
       // Escape closes
       if (e.key === "Escape") {
@@ -371,9 +449,9 @@ function initDraftEditing({
         return;
       }
 
-      // Backspace: if buffer empty, clear assignment
+      // Backspace: if buffer empty, clear assignment (only in draft mode)
       if (e.key === "Backspace") {
-        if (!pickerKeyBuffer) {
+        if (!pickerKeyBuffer && editMode === "draft") {
           e.preventDefault();
           if (onClear) onClear(userId, date);
           closeShiftPicker();
@@ -398,8 +476,21 @@ function initDraftEditing({
         return;
       }
 
-      if (onSave) onSave(userId, date, resolution.id);
-      closeShiftPicker();
+      // In draft mode: save immediately
+      if (editMode === "draft") {
+        if (onSave) onSave(userId, date, resolution.id, null);
+        closeShiftPicker();
+        return;
+      }
+      
+      // In published mode: just select the shift (user must click Save)
+      selectedShiftId = resolution.id;
+      const list = document.getElementById("shiftPickerList");
+      if (list) {
+        list.querySelectorAll(".shift-card").forEach(c => c.classList.remove("selected"));
+        const selectedCard = list.querySelector(`[data-shift-id="${resolution.id}"]`);
+        if (selectedCard) selectedCard.classList.add("selected");
+      }
     };
     document.addEventListener("keydown", pickerKeyHandler);
   }
@@ -438,6 +529,47 @@ function initDraftEditing({
       return;
     }
     if (onClear) onClear(userId, date);
+    closeShiftPicker();
+  }
+
+  function saveShiftAssignment() {
+    if (!pickerContext) return;
+    const { userId, date } = pickerContext;
+    
+    if (!selectedShiftId) {
+      alert("Please select a shift first");
+      return;
+    }
+    
+    // Collect override data if in published mode
+    let overrideData = null;
+    if (editMode === "published") {
+      const startTime = document.getElementById("overrideStartTime")?.value?.trim() || null;
+      const endTime = document.getElementById("overrideEndTime")?.value?.trim() || null;
+      const hoursValue = document.getElementById("overrideHours")?.value?.trim();
+      const hours = hoursValue ? parseFloat(hoursValue) : null;
+      const comment = document.getElementById("shiftComment")?.value?.trim() || null;
+      const commentVisibility = document.getElementById("commentVisibilitySelect")?.value || 'admin_only';
+      
+      console.log("[SHIFT PICKER SAVE] Override data:", { startTime, endTime, hours, comment, commentVisibility });
+      
+      // Only create override if at least one field has a value
+      if (startTime || endTime || hours || comment) {
+        overrideData = {
+          override_start_time: startTime,
+          override_end_time: endTime,
+          override_hours: hours,
+          comment: comment,
+          comment_visibility: commentVisibility
+        };
+        console.log("[SHIFT PICKER SAVE] Created overrideData:", overrideData);
+      } else {
+        console.log("[SHIFT PICKER SAVE] No override fields filled");
+      }
+    }
+    
+    console.log("[SHIFT PICKER SAVE] Calling onSave with:", { userId, date, selectedShiftId, overrideData });
+    if (onSave) onSave(userId, date, selectedShiftId, overrideData);
     closeShiftPicker();
   }
 
